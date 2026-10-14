@@ -34,6 +34,15 @@ export type Profile = {
   startWeightKg: number;
   program: ProgramId;
   weeklyGoal: number; // workout days per week
+  /** Onboarding answers. Body shapes are 0 (cut) … 6 (extra) on the body-fat scale. */
+  bodyShape: number;
+  targetShape: number;
+  birthYear: number;
+  experience: string;
+  workoutLevel: string;
+  restDays: string[];
+  dietType: string;
+  rewards: string[];
 };
 
 export type FoodEntry = { id: string; foodId: string; meal: MealKey; qty: number; date: string };
@@ -82,6 +91,14 @@ export const DEFAULT_PROFILE: Profile = {
   startWeightKg: 68,
   program: 'belly',
   weeklyGoal: 3,
+  bodyShape: 4,
+  targetShape: 2,
+  birthYear: new Date().getFullYear() - 29,
+  experience: '',
+  workoutLevel: '',
+  restDays: [],
+  dietType: '',
+  rewards: [],
 };
 
 const INITIAL: AppState = {

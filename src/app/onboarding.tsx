@@ -3,182 +3,114 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  BackHandler,
-  KeyboardAvoidingView,
-  NativeScrollEvent,
-  NativeSyntheticEvent,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-  useWindowDimensions,
-  type TextInputProps,
-} from 'react-native';
-import Animated, {
-  FadeInDown,
-  FadeInRight,
-  FadeOut,
-  ZoomIn,
-  interpolate,
-  interpolateColor,
-  useAnimatedProps,
-  useAnimatedStyle,
-  useReducedMotion,
-  useSharedValue,
-  withDelay,
-  withRepeat,
-  withSequence,
-  withTiming,
-} from 'react-native-reanimated';
+import { useEffect, useMemo, useState } from 'react';
+import { BackHandler, Pressable, ScrollView, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import Animated, { FadeInDown, ZoomIn, interpolateColor, useAnimatedStyle } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Circle, Defs, Line, LinearGradient as SvgGrad, Path, Stop } from 'react-native-svg';
 
-import { IndiaFlag } from '@/components/IndiaFlag';
-import { WheelPicker, range } from '@/components/WheelPicker';
-import { PlanAccordion } from '@/components/program/PlanAccordion';
-import {
-  Button,
-  Card,
-  Chip,
-  CountUp,
-  Dialog,
-  EASE_OUT,
-  Enter,
-  fadeEnter,
-  IconButton,
-  IconTile,
-  MacroBar,
-  nativeOnly,
-  OptionCard,
-  Pill,
-  PressableScale,
-  ProgressBar,
-  Ring,
-  Segmented,
-  T,
-  tap,
-  useToast,
-  type IconName,
-} from '@/components/ui';
+import { BodyFigure, SHAPES, bodyFat } from '@/components/onboarding/BodyFigure';
+import { IMG } from '@/components/onboarding/assets';
+import { Analysis, Motivation, Paywall, PlanResult, Welcome } from '@/components/onboarding/FullScreens';
+import { GoalCurve } from '@/components/onboarding/GoalCurve';
+import { ChoiceRow, GUTTER, OnbHeader, Photo, QTitle, StepSlider, TipCard, UnitToggle, fromUnit, stepIn, toUnit, useOn, type WeightUnit } from '@/components/onboarding/kit';
+import { RulerPicker } from '@/components/onboarding/RulerPicker';
+import { YearWheel } from '@/components/onboarding/YearWheel';
+import { Button, EASE_OUT, nativeOnly, PressableScale, tap, useToast } from '@/components/ui';
 import { bmi, bmiLabel, cmToFtIn, targets } from '@/lib/calc';
-import { DEFAULT_PROFILE, useStore, type Profile } from '@/lib/store';
-import { PLAN_TIERS, formatINR } from '@/data/plans';
-import { programById } from '@/data/program';
-import { BRAND, C, G, MOTION, R, glow, shadow, shadowSm } from '@/theme';
+import { DEFAULT_PROFILE, useStore, type Goal, type Profile } from '@/lib/store';
+import { BRAND, C, MOTION, R, shadowSm } from '@/theme';
+
+/* ---------------- Flow ---------------- */
+
+type StepId =
+  | 'welcome' | 'gender' | 'shape' | 'desired' | 'birth' | 'height' | 'weight' | 'target' | 'preview' | 'timeline' | 'benefits'
+  | 'experience' | 'level' | 'activity' | 'rest' | 'diet' | 'dietinfo' | 'reward' | 'proof' | 'motivation' | 'analysis' | 'result' | 'paywall';
+
+const STEPS: StepId[] = [
+  'welcome', 'gender', 'shape', 'desired', 'birth', 'height', 'weight', 'target', 'preview', 'timeline', 'benefits',
+  'experience', 'level', 'activity', 'rest', 'diet', 'dietinfo', 'reward', 'proof', 'motivation', 'analysis', 'result', 'paywall',
+];
+
+/** Question steps share the persistent header; the rest are full-screen. Value = section label. */
+const SECTION: Partial<Record<StepId, string>> = {
+  gender: 'Goal & Focus',
+  shape: 'Goal & Focus',
+  desired: 'Goal & Focus',
+  birth: 'Know Your Body',
+  height: 'Know Your Body',
+  weight: 'Know Your Body',
+  target: 'Know Your Body',
+  preview: 'Fitness Assessment',
+  timeline: 'Know Your Goal',
+  benefits: 'Program Benefits',
+  experience: 'Fitness Assessment',
+  level: 'Fitness Assessment',
+  activity: 'Fitness Assessment',
+  rest: 'Fitness Assessment',
+  diet: 'Fitness Assessment',
+  dietinfo: 'Nutrition Plan',
+  reward: 'Nutrition Plan',
+  proof: 'Social Proof',
+};
+const QUESTIONS = STEPS.filter((s) => SECTION[s]);
 
 /* ---------------- Options ---------------- */
 
-const GOALS = [
-  { v: 'lose', t: 'Lose weight', s: 'Burn fat and get leaner', i: 'flame-outline' },
-  { v: 'maintain', t: 'Maintain weight', s: 'Stay fit at your current weight', i: 'scale-outline' },
-  { v: 'gain', t: 'Gain weight', s: 'Healthy weight gain with the right food', i: 'restaurant-outline' },
-  { v: 'muscle', t: 'Build muscle', s: 'Get stronger with high-protein eating', i: 'barbell-outline' },
-  { v: 'healthy', t: 'Manage a health condition', s: 'Diabetes, PCOS, thyroid, BP & more', i: 'heart-outline' },
-] as const;
-const MOTIVATIONS: [IconName, string][] = [
-  ['happy-outline', 'Feel more confident'],
-  ['flash-outline', 'Have more energy'],
-  ['document-text-outline', 'Improve my health reports'],
-  ['shirt-outline', 'Fit into my old clothes'],
-  ['calendar-outline', 'Upcoming wedding or event'],
-  ['medkit-outline', "Doctor's advice"],
+const EXPERIENCE = ['I tried but lost motivation', 'I succeeded but regained weight', 'Achieved but plateaued', 'Still trying', 'This is my first time'];
+const LEVELS: { t: string; emoji: string; program: Profile['program']; detail: string }[] = [
+  { t: 'Easy to start', emoji: '🙂', program: 'belly', detail: 'Gentle, beginner-friendly sessions to build the habit without burning out.' },
+  { t: 'Break a light sweat', emoji: '💦', program: 'abs', detail: "We'll tailor effective workouts with the right intensity just for you!" },
+  { t: 'A bit challenging', emoji: '🔥', program: 'sixpack', detail: 'Higher-volume training that pushes you a little further every week.' },
 ];
-const GENDERS = [
-  { v: 'male', t: 'Male', i: 'male' },
-  { v: 'female', t: 'Female', i: 'female' },
-  { v: 'other', t: 'Other', i: 'male-female' },
-] as const;
-const ACTIVITY = [
-  { v: 'sedentary', t: 'Sedentary', s: 'Mostly sitting: desk job, little movement', i: 'desktop-outline' },
-  { v: 'light', t: 'Lightly active', s: 'On your feet sometimes: light walks, chores', i: 'walk-outline' },
-  { v: 'moderate', t: 'Moderately active', s: 'Exercise 3–5 days a week or an active job', i: 'bicycle-outline' },
-  { v: 'very', t: 'Very active', s: 'Intense exercise daily or physical work', i: 'barbell-outline' },
-] as const;
-const EXERCISE: [IconName, string][] = [
-  ['bed-outline', "I don't exercise right now"],
-  ['walk-outline', '1–2 days a week'],
-  ['fitness-outline', '3–4 days a week'],
-  ['flame-outline', '5+ days a week'],
+const ACTIVITY: { t: string; s: string; v: Profile['activity'] }[] = [
+  { t: 'I do some light physical activity', s: '(such as casual walks)', v: 'light' },
+  { t: 'I spend much of the day sitting', s: '(such as desk work)', v: 'sedentary' },
 ];
-const DIETS: [IconName, string, string][] = [
-  ['leaf-outline', 'Vegetarian', 'Plant foods plus dairy'],
-  ['fish-outline', 'Non-vegetarian', 'Includes chicken, fish, meat and eggs'],
-  ['egg-outline', 'Eggetarian', 'Vegetarian plus eggs'],
-  ['nutrition-outline', 'Vegan', 'No animal products at all'],
-  ['flower-outline', 'Jain', 'No root vegetables, onion or garlic'],
+const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const DIETS: { t: string; emoji: string; diet: string }[] = [
+  { t: 'Meat-based', emoji: '🍖', diet: 'Non-vegetarian' },
+  { t: 'Regular diet', emoji: '🍱', diet: 'Non-vegetarian' },
+  { t: 'Vegetarian', emoji: '🥦', diet: 'Vegetarian' },
+  { t: 'Vegan', emoji: '🌱', diet: 'Vegan' },
+  { t: 'Other', emoji: '🥚', diet: '' },
 ];
-const CUISINES = ['North Indian', 'South Indian', 'Gujarati', 'Maharashtrian', 'Bengali', 'Punjabi', 'Rajasthani', 'Continental', 'Chinese', 'Mediterranean'];
-const RESTRICTIONS = ['No restrictions', 'Lactose intolerant', 'Gluten-free', 'Nut allergy', 'No onion & garlic', 'Low sugar', 'Seafood allergy'];
-const CONDITIONS = ['None', 'Diabetes / Pre-diabetes', 'PCOS / PCOD', 'Thyroid', 'Hypertension (BP)', 'High cholesterol', 'Fatty liver'];
-const SLEEP = ['Under 5 hrs', '5–6 hrs', '7–8 hrs', 'Over 8 hrs'];
-const WATER = ['Under 4 glasses', '4–6 glasses', '7–9 glasses', '10+ glasses'];
-const CHALLENGES: [IconName, string][] = [
-  ['time-outline', 'Lack of time'],
-  ['ice-cream-outline', 'Cravings & late-night snacking'],
-  ['sad-outline', 'Stress eating'],
-  ['alarm-outline', 'Irregular meal times'],
-  ['restaurant-outline', 'Eating out often'],
-  ['trending-down-outline', 'Staying motivated'],
+const REWARDS: { t: string; img: number }[] = [
+  { t: 'Treat myself to a nice meal', img: IMG.rewardMeal },
+  { t: 'Buy new gym clothes', img: IMG.rewardClothes },
+  { t: 'Take a trip somewhere', img: IMG.rewardTrip },
+  { t: 'Get a makeover', img: IMG.rewardMakeover },
 ];
-const MEAL_SLOTS = {
-  breakfast: ['6:30 AM', '7:30 AM', '8:00 AM', '8:30 AM', '9:30 AM', '10:30 AM'],
-  lunch: ['12:00 PM', '12:30 PM', '1:00 PM', '1:30 PM', '2:00 PM', '3:00 PM'],
-  dinner: ['7:00 PM', '7:30 PM', '8:00 PM', '8:30 PM', '9:30 PM', '10:30 PM'],
-};
-const MEAL_META: Record<keyof typeof MEAL_SLOTS, { label: string; icon: IconName }> = {
-  breakfast: { label: 'Breakfast', icon: 'cafe-outline' },
-  lunch: { label: 'Lunch', icon: 'sunny-outline' },
-  dinner: { label: 'Dinner', icon: 'moon-outline' },
-};
-const NEXT_UP: [IconName, string, string, string][] = [
-  ['flag', C.accent, C.accentSoft, 'Your goal'],
-  ['body', C.steps, C.stepsSoft, 'Your body'],
-  ['restaurant', C.workout, C.workoutSoft, 'Your food'],
-  ['sparkles', C.ai, C.aiSoft, 'Your plan'],
+/** Goal pace, kg per week, Easy → Master. */
+const PACES: { v: number; emoji: string; note: string }[] = [
+  { v: 0.25, emoji: '🐢', note: 'Slow and steady. Very easy to stick with.' },
+  { v: 0.4, emoji: '👏', note: 'Good choice! This level is easy for most people. Friendly for beginners.' },
+  { v: 0.5, emoji: '💪', note: 'Recommended. The best balance of speed and comfort.' },
+  { v: 0.75, emoji: '⚡', note: 'Faster results. Needs consistent effort every week.' },
+  { v: 1, emoji: '🔥', note: 'Aggressive pace. Best for experienced, disciplined people.' },
 ];
-const PACES = [
-  { v: 0.25, t: 'Slow & steady', s: 'Easiest to sustain' },
-  { v: 0.5, t: 'Recommended', s: 'Best balance of speed and comfort', badge: 'BEST' },
-  { v: 0.75, t: 'Faster', s: 'Needs more discipline' },
-  { v: 1, t: 'Aggressive', s: 'Only with expert guidance' },
+const BENEFITS_LEFT: [React.ComponentProps<typeof Ionicons>['name'], string][] = [
+  ['body-outline', 'Personalized workout plan'],
+  ['restaurant-outline', 'Custom meal plan'],
+  ['ribbon-outline', 'Expert guidance'],
 ];
+const BENEFITS_RIGHT = ['Start up faster', 'Get a toned body', 'Build healthy habits', 'Long-term results'];
 
-type StepId =
-  | 'welcome' | 'signin' | 'name' | 'goal' | 'motivation' | 'gender' | 'age' | 'height' | 'weight' | 'target' | 'pace' | 'projection'
-  | 'activity' | 'exercise' | 'program' | 'diet' | 'cuisines' | 'restrictions' | 'conditions' | 'lifestyle' | 'challenges' | 'meals' | 'permissions' | 'notify'
-  | 'generating' | 'plan' | 'paywall';
+const toggleIn = (list: string[], v: string) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
+const yearNow = new Date().getFullYear();
+const YEARS = Array.from({ length: 78 }, (_, i) => yearNow - 90 + i); // ages 13–90
 
-const ALL_STEPS: StepId[] = [
-  'welcome', 'signin', 'name', 'goal', 'motivation', 'gender', 'age', 'height', 'weight', 'target', 'pace', 'projection',
-  'activity', 'exercise', 'program', 'diet', 'cuisines', 'restrictions', 'conditions', 'lifestyle', 'challenges', 'meals', 'permissions',
-  'notify', 'generating', 'plan', 'paywall',
-];
-const NO_CHROME: StepId[] = ['welcome', 'signin', 'notify', 'generating', 'plan', 'paywall'];
+const goalFor = (p: Profile): Goal => (p.targetKg < p.weightKg - 0.05 ? 'lose' : p.targetKg > p.weightKg + 0.05 ? 'gain' : 'maintain');
 
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const fmtGoalDate = (d: Date) => `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
-/** First word of the name, ignoring stray leading/trailing spaces. */
-const firstName = (name: string) => name.trim().split(/\s+/)[0];
-
-const toggleIn = (list: string[], v: string, exclusive?: string) => {
-  if (v === exclusive) return list.includes(v) ? [] : [v];
-  const base = list.filter((x) => x !== exclusive);
-  return base.includes(v) ? base.filter((x) => x !== v) : [...base, v];
-};
-
-/** Step content entrance: a short slide in the direction of travel. Starts slightly visible so there is no blank frame. */
-const stepIn = (dir: number) =>
-  nativeOnly(
-    FadeInRight.duration(MOTION.base + 80)
-      .easing(EASE_OUT)
-      .withInitialValues({ opacity: 0.15, transform: [{ translateX: dir * 28 }] }),
-  );
+/** Final profile: derived fields the rest of the app reads (goal, age, weekly goal, motivations). */
+function finalize(p: Profile): Profile {
+  return {
+    ...p,
+    goal: goalFor(p),
+    age: Math.max(13, yearNow - p.birthYear),
+    weeklyGoal: Math.max(2, Math.min(6, 7 - p.restDays.length)),
+    motivations: p.rewards,
+  };
+}
 
 /* ---------------- Screen ---------------- */
 
@@ -186,34 +118,33 @@ const stepIn = (dir: number) =>
 let resume: { p: Profile; step: StepId } | null = null;
 
 export default function Onboarding() {
-  const { state, completeOnboarding, subscribe } = useStore();
+  const { state, completeOnboarding, subscribe, updateSettings } = useStore();
   const toast = useToast();
-  const [p, setP] = useState<Profile>(() => resume?.p ?? (state.profile.name ? state.profile : DEFAULT_PROFILE));
+  const [p, setP] = useState<Profile>(() => resume?.p ?? { ...DEFAULT_PROFILE, ...state.profile });
   const set = (patch: Partial<Profile>) => setP((d) => ({ ...d, ...patch }));
-  const [step, setStep] = useState<StepId>(() => (resume?.step === 'generating' ? 'plan' : resume?.step) ?? 'welcome');
+  const [step, setStep] = useState<StepId>(() => (resume?.step === 'analysis' ? 'result' : resume?.step) ?? 'welcome');
+  const [dir, setDir] = useState<1 | -1>(1);
+  const units: WeightUnit = state.settings.units;
+  const setUnits = (u: WeightUnit) => updateSettings({ units: u });
+  const [heightUnit, setHeightUnit] = useState<'cm' | 'ft'>('cm');
+
   useEffect(() => {
     resume = { p, step };
   }, [p, step]);
-  const [dir, setDir] = useState<1 | -1>(1);
-
-  const tracksWeight = p.goal !== 'maintain' && p.goal !== 'healthy';
-  const steps = useMemo(() => ALL_STEPS.filter((s) => tracksWeight || !['target', 'pace', 'projection'].includes(s)), [tracksWeight]);
-  const questions = steps.filter((s) => !NO_CHROME.includes(s));
-  const qIndex = questions.indexOf(step);
-  const t = useMemo(() => targets(p), [p]);
 
   const go = (to: StepId, d: 1 | -1) => {
     setDir(d);
     setStep(to);
   };
   const next = () => {
-    const i = steps.indexOf(step);
-    if (i < steps.length - 1) go(steps[i + 1], 1);
+    const i = STEPS.indexOf(step);
+    if (i < STEPS.length - 1) go(STEPS[i + 1], 1);
   };
   const back = () => {
-    const i = steps.indexOf(step);
-    if (step === 'plan' || step === 'paywall') return go(step === 'plan' ? 'notify' : 'plan', -1);
-    if (i > 0) go(steps[i - 1], -1);
+    // The analysis screen is a one-way transition; going back from the result skips it.
+    if (step === 'result') return go('motivation', -1);
+    const i = STEPS.indexOf(step);
+    if (i > 0) go(STEPS[i - 1], -1);
   };
 
   useEffect(() => {
@@ -225,1446 +156,655 @@ export default function Onboarding() {
     return () => sub.remove();
   });
 
-  const finish = (premiumMonths?: number) => {
+  const finish = (premium: boolean) => {
     resume = null;
-    completeOnboarding({ ...p, name: p.name.trim() });
-    if (premiumMonths) subscribe('smart', premiumMonths);
+    completeOnboarding(finalize(p));
+    if (premium) subscribe('smart', 1);
     router.replace('/(tabs)');
-    setTimeout(() => toast(`Welcome to ${BRAND}, ${firstName(p.name) || 'friend'}! 🎉`, 'sparkles'), 400);
+    setTimeout(() => toast(`Welcome to ${BRAND}! Your plan is ready 🎉`, 'sparkles'), 400);
   };
 
   const canNext = (() => {
     switch (step) {
-      case 'name': return p.name.trim().length >= 2;
-      case 'motivation': return p.motivations.length > 0;
-      case 'target':
-        if (p.goal === 'lose') return p.targetKg < p.weightKg;
-        if (p.goal === 'gain' || p.goal === 'muscle') return p.targetKg > p.weightKg;
-        return true;
-      case 'exercise': return !!p.exercise;
-      case 'diet': return !!p.diet;
-      case 'cuisines': return p.cuisines.length > 0;
-      case 'restrictions': return p.restrictions.length > 0;
-      case 'conditions': return p.conditions.length > 0;
-      case 'lifestyle': return !!p.sleep && !!p.waterHabit;
-      case 'challenges': return p.challenges.length > 0;
+      case 'experience': return !!p.experience;
+      case 'level': return !!p.workoutLevel;
+      case 'rest': return p.restDays.length > 0;
+      case 'diet': return !!p.dietType;
+      case 'reward': return p.rewards.length > 0;
       default: return true;
     }
   })();
 
-  if (step === 'welcome') return <Welcome onStart={next} onLogin={next} />;
-  if (step === 'signin') return <SignIn onBack={back} onDone={(phone) => { set({ phone }); next(); }} />;
-  if (step === 'notify') return <NotifyStep onBack={back} onDone={(allow) => { set({ notifications: allow }); next(); }} />;
-  if (step === 'generating') return <Generating name={p.name} onDone={next} />;
-  if (step === 'plan') return <PlanReady p={p} onBack={back} onNext={next} />;
-  if (step === 'paywall') return <Paywall onSkip={() => finish()} onTrial={(m) => finish(m)} />;
+  const final = useMemo(() => finalize(p), [p]);
+
+  if (step === 'welcome') return <Welcome onNext={next} />;
+  if (step === 'motivation') return <Motivation male={p.gender === 'male'} onNext={next} />;
+  if (step === 'analysis') return <Analysis p={final} units={units} onDone={next} />;
+  if (step === 'result') return <PlanResult p={final} units={units} onBack={back} onNext={next} />;
+  if (step === 'paywall') return <Paywall male={p.gender === 'male'} gaining={final.goal === 'gain'} onSkip={() => finish(false)} onSubscribe={() => finish(true)} />;
+
+  const qIndex = QUESTIONS.indexOf(step);
+  const cta = step === 'gender' ? null : step === 'proof' ? 'Get My Plan' : 'Next';
 
   return (
     <SafeAreaView style={st.screen} edges={['top']}>
       <StatusBar style="dark" />
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <View style={st.topBar}>
-          <IconButton icon="chevron-back" bordered onPress={back} />
-          <ProgressBar value={(qIndex + 1) / questions.length} style={{ flex: 1 }} height={6} track={C.border} />
-          <Text style={st.counter}>
-            {qIndex + 1}
-            <Text style={st.counterOf}>/{questions.length}</Text>
-          </Text>
-        </View>
-        <Animated.View key={step} entering={stepIn(dir)} style={{ flex: 1 }}>
-          {renderStep()}
-        </Animated.View>
+      <OnbHeader section={SECTION[step] ?? ''} progress={(qIndex + 1) / QUESTIONS.length} onBack={back} />
+      <Animated.View key={step} entering={stepIn(dir)} style={{ flex: 1 }}>
+        {renderStep()}
+      </Animated.View>
+      {cta && (
         <CtaBar>
-          <Button title="Continue" disabled={!canNext} onPress={next} />
+          <Button title={cta} disabled={!canNext} onPress={next} />
         </CtaBar>
-      </KeyboardAvoidingView>
+      )}
     </SafeAreaView>
   );
 
   function renderStep() {
     switch (step) {
-      case 'name':
-        return (
-          <Q title="What should we call you?" sub="We'll use this to personalise your plan." fill>
-            <Text style={st.fieldLabel}>First name</Text>
-            <Field
-              value={p.name}
-              onChangeText={(name) => set({ name })}
-              placeholder="e.g. Priya"
-              autoFocus
-              autoCapitalize="words"
-              autoCorrect={false}
-              textContentType="givenName"
-              autoComplete="name-given"
-              returnKeyType="next"
-              onSubmitEditing={() => canNext && next()}
-              maxLength={30}
-              accessibilityLabel="First name"
-              left={<Ionicons name="person-outline" size={20} color={p.name ? C.primaryDark : C.muted} />}
-              right={
-                p.name.length > 0 ? (
-                  <Pressable onPress={() => set({ name: '' })} hitSlop={10} accessibilityRole="button" accessibilityLabel="Clear name">
-                    <Ionicons name="close-circle" size={20} color={C.muted} />
-                  </Pressable>
-                ) : null
-              }
-            />
-            <View style={st.helper}>
-              <Ionicons name="create-outline" size={14} color={C.muted} />
-              <Text style={st.helperText}>You can change this anytime in your profile.</Text>
-            </View>
-            {p.name.trim().length >= 2 && (
-              <Animated.View entering={nativeOnly(FadeInDown.duration(MOTION.base).easing(EASE_OUT))} exiting={nativeOnly(FadeOut.duration(MOTION.fast))} style={st.greet}>
-                <View style={[st.avatar, glow(C.primary)]}>
-                  <Text style={st.avatarText}>{firstName(p.name)[0].toUpperCase()}</Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={st.greetText} numberOfLines={1}>
-                    Nice to meet you, {firstName(p.name)}!
-                  </Text>
-                  <Text style={[T.small, { marginTop: 2 }]}>Let&apos;s build a plan that fits your life.</Text>
-                </View>
-              </Animated.View>
-            )}
-            <View style={{ flex: 1, minHeight: 28 }} />
-            <Enter index={1} style={st.nextCard}>
-              <View style={st.nextHead}>
-                <Ionicons name="time-outline" size={15} color={C.primaryDark} />
-                <Text style={st.nextTitle}>Up next · takes about 2 minutes</Text>
-              </View>
-              <View style={st.nextRow}>
-                {NEXT_UP.map(([icon, color, bg, label]) => (
-                  <View key={label} style={st.nextItem}>
-                    <IconTile icon={icon} color={color} bg={bg} size={40} />
-                    <Text style={st.nextLabel}>{label}</Text>
-                  </View>
-                ))}
-              </View>
-            </Enter>
-          </Q>
-        );
-      case 'goal':
-        return (
-          <Q title={`What's your main goal, ${firstName(p.name)}?`} sub="Your calorie budget and plan are built around this.">
-            {GOALS.map((g, i) => (
-              <Enter key={g.v} index={i}>
-                <OptionCard icon={g.i} title={g.t} subtitle={g.s} selected={p.goal === g.v} onPress={() => set({ goal: g.v, targetKg: g.v === 'lose' ? Math.min(p.targetKg, p.weightKg - 1) : g.v === 'gain' || g.v === 'muscle' ? Math.max(p.targetKg, p.weightKg + 1) : p.weightKg })} />
-              </Enter>
-            ))}
-          </Q>
-        );
-      case 'motivation':
-        return (
-          <Q title="What's motivating you?" sub="Pick all that apply. Knowing your 'why' helps us keep you going.">
-            {MOTIVATIONS.map(([icon, label], i) => (
-              <Enter key={label} index={i}>
-                <OptionCard multi icon={icon} title={label} selected={p.motivations.includes(label)} onPress={() => set({ motivations: toggleIn(p.motivations, label) })} />
-              </Enter>
-            ))}
-          </Q>
-        );
       case 'gender':
         return (
-          <Q title="What's your gender?" sub="This helps us calculate your metabolism accurately.">
-            <View style={{ flexDirection: 'row', gap: 10 }}>
-              {GENDERS.map((g, i) => {
-                const on = p.gender === g.v;
-                return (
-                  <Enter key={g.v} index={i} style={{ flex: 1 }}>
-                    <PressableScale
-                      accessibilityRole="radio"
-                      accessibilityState={{ checked: on }}
-                      onPress={() => { tap(); set({ gender: g.v }); }}
-                      style={[st.genderCard, on && st.genderOn]}>
-                      <View style={[st.genderArt, on && { backgroundColor: C.card }]}>
-                        <Ionicons name={g.i} size={30} color={C.primaryDark} />
-                      </View>
-                      <Text style={[T.h3, { marginTop: 12 }]}>{g.t}</Text>
-                      <View style={[st.radio, on && st.radioOn]}>{on && <View style={st.radioDot} />}</View>
-                    </PressableScale>
-                  </Enter>
-                );
-              })}
-            </View>
-          </Q>
+          <Body>
+            <QTitle text="What's your gender?" />
+            <Rise i={1} style={{ paddingHorizontal: GUTTER, marginTop: 18 }}>
+              <TipCard emoji="💡">
+                <Text style={st.tipText}>Knowing your gender can help us tailor the intensity for you based on different metabolic rates.</Text>
+              </TipCard>
+            </Rise>
+            <Rise i={2} style={st.genderRow}>
+              {(['male', 'female'] as const).map((g) => (
+                <GenderCard
+                  key={g}
+                  label={g === 'male' ? 'Male' : 'Female'}
+                  img={g === 'male' ? IMG.genderMale : IMG.genderFemale}
+                  on={p.gender === g}
+                  onPress={() => {
+                    set({ gender: g });
+                    setTimeout(() => go('shape', 1), 320);
+                  }}
+                />
+              ))}
+            </Rise>
+            <Rise i={3} style={{ alignItems: 'center', marginTop: 18 }}>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => {
+                  tap();
+                  set({ gender: 'other' });
+                  setTimeout(() => go('shape', 1), 200);
+                }}
+                style={({ pressed }) => [st.otherBtn, p.gender === 'other' && st.otherBtnOn, pressed && { opacity: 0.6 }]}>
+                <Text style={[st.otherText, p.gender === 'other' && { color: C.primaryDark }]}>Others / I&apos;d rather not say</Text>
+              </Pressable>
+            </Rise>
+          </Body>
         );
-      case 'age':
+      case 'shape':
+      case 'desired': {
+        const desired = step === 'desired';
+        const level = desired ? p.targetShape : p.bodyShape;
+        const bf = bodyFat(level, p.gender);
+        const toneColor = bf.tone === 'good' ? C.primary : bf.tone === 'ok' ? C.warning : C.accent;
+        const note = desired
+          ? bf.tone === 'good'
+            ? level === 0
+              ? 'Very lean takes serious dedication. We will get you there step by step.'
+              : "You're on the right track! Keep it up for a healthier, more confident you!"
+            : 'A realistic first goal. You can always aim higher later.'
+          : bf.tone === 'high'
+            ? 'You may have a slow metabolism, and face some potential health problems.'
+            : bf.tone === 'ok'
+              ? 'A solid starting point. A little focus will reveal real definition.'
+              : "Great shape already! We'll help you sharpen it even further.";
         return (
-          <Q title="How old are you?" sub="Metabolism changes with age, so this keeps your numbers right." scroll={false}>
-            <WheelPicker key="age" values={range(13, 90)} value={p.age} onChange={(age) => set({ age })} unit="yrs" />
-          </Q>
-        );
-      case 'height':
-        return <HeightStep p={p} set={set} />;
-      case 'weight': {
-        const b = bmi(p.weightKg, p.heightCm);
-        const l = bmiLabel(b);
-        return (
-          <Q title="What's your current weight?" sub="Be honest — this is only for you." scroll={false}>
-            <WheelPicker key="weight" values={range(30, 180, 0.5)} value={p.weightKg} onChange={(weightKg) => set({ weightKg })} unit="kg" format={(v) => v.toFixed(1)} />
-            <Enter index={2} style={[st.infoCard, { marginTop: 22 }]}>
-              <View style={st.bmiHead}>
-                <View>
-                  <Text style={T.label}>Your BMI</Text>
-                  <Text style={[st.bmiNum, { color: l.color }]}>{b.toFixed(1)}</Text>
-                </View>
-                <View style={[st.bmiTag, { borderColor: l.color }]}>
-                  <View style={[st.bmiTagDot, { backgroundColor: l.color }]} />
-                  <Text style={[st.bmiTagText, { color: l.color }]}>{l.label}</Text>
-                </View>
+          <Body>
+            <QTitle text={desired ? "What's your *desired* body shape?" : "What's your *current* body shape?"} />
+            <Rise i={1} style={{ alignItems: 'center', marginTop: 10 }}>
+              <View style={st.figureBox}>
+                <BodyFigure level={level} gender={p.gender} size={210} />
               </View>
-              <BmiScale value={b} />
-            </Enter>
-          </Q>
+              <Text style={st.figureLabel}>{desired ? 'Desired' : 'Current'}</Text>
+            </Rise>
+            <Rise i={2} style={{ marginTop: 6 }}>
+              <StepSlider count={SHAPES} value={level} onChange={(v) => set(desired ? { targetShape: v } : { bodyShape: v, targetShape: Math.min(p.targetShape, v) })} left="Cut" right="Extra" />
+            </Rise>
+            <Rise i={3} style={{ paddingHorizontal: GUTTER, marginTop: 16 }}>
+              <View style={st.fatCard}>
+                <Text style={st.fatTitle}>{desired ? 'Your Target Body Fat (Approx.)' : 'Your Estimated Body Fat (Approx.)'}</Text>
+                <Animated.Text key={level} entering={nativeOnly(FadeInDown.duration(MOTION.base))} style={[st.fatValue, { color: toneColor }]}>
+                  {bf.range} <Text style={st.fatVerdict}>({bf.verdict})</Text>
+                </Animated.Text>
+                <Text style={st.fatNote}>{note}</Text>
+              </View>
+            </Rise>
+          </Body>
         );
       }
-      case 'target': {
-        const diff = Math.abs(p.targetKg - p.weightKg);
-        const losing = p.goal === 'lose';
+      case 'birth':
         return (
-          <Q title="What's your target weight?" sub={losing ? 'Pick a realistic goal — you can always change it later.' : 'Choose where you would like to be.'} scroll={false}>
-            <WheelPicker key="target" values={range(30, 180, 0.5)} value={p.targetKg} onChange={(targetKg) => set({ targetKg })} unit="kg" format={(v) => v.toFixed(1)} />
-            <Animated.View key={canNext ? 'ok' : 'bad'} entering={fadeEnter()} style={[st.status, canNext ? st.statusOk : st.statusBad]}>
-              <Ionicons name={canNext ? 'flag' : 'alert-circle'} size={20} color={canNext ? C.primaryDark : C.danger} />
-              {canNext ? (
-                <Text style={[st.statusText, { color: C.primaryDark }]}>
-                  {losing ? 'You will lose' : 'You will gain'} {diff.toFixed(1)} kg ({((diff / p.weightKg) * 100).toFixed(0)}% of your body weight)
-                </Text>
-              ) : (
-                <Text style={[st.statusText, { color: C.danger }]}>
-                  {losing ? 'Your target should be lower than your current weight' : 'Your target should be higher than your current weight'} ({p.weightKg.toFixed(1)} kg)
-                </Text>
-              )}
-            </Animated.View>
-          </Q>
+          <Body>
+            <QTitle text="What's your *birth* year?" />
+            <Rise i={1} style={{ marginTop: 24 }}>
+              <YearWheel values={YEARS} value={p.birthYear} onChange={(birthYear) => set({ birthYear })} />
+            </Rise>
+            <Rise i={2} style={{ alignItems: 'center', marginTop: 16 }}>
+              <Text style={st.helper}>{yearNow - p.birthYear} years old</Text>
+            </Rise>
+          </Body>
         );
-      }
-      case 'pace':
+      case 'height': {
+        const inches = Math.round(p.heightCm / 2.54);
         return (
-          <Q title={`How fast do you want to ${p.goal === 'lose' ? 'lose' : 'gain'} weight?`} sub="Per week. Slower is easier to sustain.">
-            {PACES.map((o, i) => {
-              const weeks = Math.ceil(Math.abs(p.weightKg - p.targetKg) / o.v);
-              const d = new Date();
-              d.setDate(d.getDate() + weeks * 7);
-              return (
-                <Enter key={o.v} index={i}>
-                  <OptionCard title={`${o.v} kg / week · ${o.t}`} subtitle={`${o.s}. Reach ${p.targetKg} kg by ${fmtGoalDate(d)}`} badge={o.badge} selected={p.pace === o.v} onPress={() => set({ pace: o.v })} />
-                </Enter>
-              );
-            })}
-          </Q>
-        );
-      case 'projection':
-        return (
-          <Q title={`${firstName(p.name)}, you can reach ${p.targetKg} kg by ${fmtGoalDate(t.goalDate)}`} sub="Based on your profile and chosen pace.">
-            <Enter index={0}>
-              <ProjectionChart from={p.weightKg} to={p.targetKg} weeks={t.weeks} />
-            </Enter>
-            <Enter index={1} style={[st.infoCard, st.infoRow, { marginTop: 12 }]}>
-              <IconTile icon="trending-up" size={42} />
-              <Text style={[T.small, { flex: 1, lineHeight: 19 }]}>
-                Members who log their meals at least 5 days a week are <Text style={{ fontWeight: '800', color: C.primaryDark }}>far more likely</Text> to reach their goal. We&apos;ll help you build that habit.
+          <Body>
+            <QTitle text="What's your *height*?" />
+            <Rise i={1} style={{ marginTop: 18 }}>
+              <UnitToggle options={['cm', 'ft']} value={heightUnit} onChange={setHeightUnit} />
+            </Rise>
+            <Rise i={2} style={st.bigValueWrap}>
+              <Text style={st.bigValue}>
+                {heightUnit === 'cm' ? p.heightCm : cmToFtIn(p.heightCm)}
+                {heightUnit === 'cm' && <Text style={st.bigUnit}> cm</Text>}
               </Text>
-            </Enter>
-          </Q>
+            </Rise>
+            <Rise i={3}>
+              {heightUnit === 'cm' ? (
+                <RulerPicker key="cm" min={120} max={220} step={1} major={10} value={p.heightCm} onChange={(heightCm) => set({ heightCm })} />
+              ) : (
+                <RulerPicker key="in" min={48} max={86} step={1} major={12} value={inches} onChange={(v) => set({ heightCm: Math.round(v * 2.54) })} label={(v) => `${Math.round(v / 12)}′`} />
+              )}
+            </Rise>
+          </Body>
+        );
+      }
+      case 'weight':
+      case 'target': {
+        const isTarget = step === 'target';
+        const kg = isTarget ? p.targetKg : p.weightKg;
+        const v = toUnit(kg, units);
+        const b = bmi(kg, p.heightCm);
+        const l = bmiLabel(b);
+        const onChange = (nv: number) => {
+          const nk = fromUnit(nv, units);
+          set(isTarget ? { targetKg: nk } : { weightKg: nk });
+        };
+        return (
+          <Body>
+            <QTitle text={isTarget ? "What's your *target* weight?" : "What's your *current* weight?"} />
+            <Rise i={1} style={{ marginTop: 18 }}>
+              <UnitToggle options={['kg', 'lb']} value={units} onChange={setUnits} />
+            </Rise>
+            <Rise i={2} style={st.bigValueWrap}>
+              <Text style={st.bigValue}>
+                {v.toFixed(1)}
+                <Text style={st.bigUnit}> {units}</Text>
+              </Text>
+            </Rise>
+            <Rise i={3}>
+              <RulerPicker key={units} min={units === 'kg' ? 30 : 66} max={units === 'kg' ? 200 : 440} step={0.1} major={10} value={v} onChange={onChange} />
+            </Rise>
+            <Rise i={4} style={{ paddingHorizontal: GUTTER, marginTop: 20 }}>
+              {isTarget ? <TargetNote p={p} units={units} /> : <BmiCard value={b} label={l.label} color={l.color} />}
+            </Rise>
+          </Body>
+        );
+      }
+      case 'preview':
+        return (
+          <Body>
+            <QTitle text={`See incredible changes with your personal ${BRAND} plan!`} />
+            <View style={st.previewRow}>
+              <Rise i={1} style={st.previewCard}>
+                <View style={st.previewArt}>
+                  <BodyFigure level={p.bodyShape} gender={p.gender} size={140} />
+                </View>
+                <Text style={st.previewLabel}>Before</Text>
+              </Rise>
+              <Animated.View entering={nativeOnly(ZoomIn.duration(MOTION.enter).delay(420))} style={st.previewArrow}>
+                <Ionicons name="arrow-forward" size={18} color={C.white} />
+              </Animated.View>
+              <Rise i={3} style={[st.previewCard, st.previewCardOn]}>
+                <View style={[st.previewArt, { backgroundColor: C.primarySoft }]}>
+                  <BodyFigure level={p.targetShape} gender={p.gender} size={140} />
+                </View>
+                <View style={st.previewTag}>
+                  <Text style={[st.previewLabel, { color: C.white, marginTop: 0 }]}>After</Text>
+                </View>
+              </Rise>
+            </View>
+            <Rise i={4} style={{ paddingHorizontal: GUTTER, marginTop: 18 }}>
+              <TipCard emoji="📈" tone="good">
+                <Text style={st.tipText}>
+                  From <Text style={st.bold}>{bodyFat(p.bodyShape, p.gender).range}</Text> to <Text style={st.bold}>{bodyFat(p.targetShape, p.gender).range}</Text> body fat with a plan built around your answers.
+                </Text>
+              </TipCard>
+            </Rise>
+          </Body>
+        );
+      case 'timeline': {
+        const pi = Math.max(0, PACES.findIndex((x) => x.v === p.pace));
+        const pace = PACES[pi];
+        const t = targets({ ...p, goal: goalFor(p) });
+        return (
+          <Body>
+            <QTitle text="How fast do you want to reach your goal?" />
+            <Rise i={1} style={[st.card, { marginHorizontal: GUTTER, marginTop: 20, paddingTop: 16 }]}>
+              <GoalCurve from={toUnit(p.weightKg, units)} to={toUnit(p.targetKg, units)} fromText={`${toUnit(p.weightKg, units).toFixed(1)} ${units}`} toText={`${toUnit(p.targetKg, units).toFixed(1)} ${units}`} height={130} />
+            </Rise>
+            <Rise i={2} style={{ alignItems: 'center', marginTop: 18 }}>
+              <Animated.Text key={t.weeks} entering={nativeOnly(ZoomIn.duration(MOTION.base))} style={st.weeks}>
+                {t.weeks === 0 ? 'Maintain' : `${t.weeks} Week${t.weeks === 1 ? '' : 's'}`}
+              </Animated.Text>
+              <Text style={st.paceKg}>
+                {toUnit(pace.v, units)} {units} per week
+              </Text>
+            </Rise>
+            <Rise i={3} style={{ paddingHorizontal: GUTTER, marginTop: 12 }}>
+              <TipCard emoji={pace.emoji}>
+                <Animated.Text key={pi} entering={nativeOnly(FadeInDown.duration(MOTION.base))} style={st.tipText}>
+                  {pace.note}
+                </Animated.Text>
+              </TipCard>
+            </Rise>
+            <Rise i={4} style={{ marginTop: 20 }}>
+              <StepSlider count={PACES.length} value={pi} onChange={(i) => set({ pace: PACES[i].v })} left="Easy" right="Master" />
+            </Rise>
+          </Body>
+        );
+      }
+      case 'benefits':
+        return (
+          <Body>
+            <QTitle text={`Discover the benefits of ${BRAND}'s program`} />
+            <View style={st.benefitRow}>
+              <Rise i={1} style={st.benefitLeft}>
+                {BENEFITS_LEFT.map(([icon, label]) => (
+                  <View key={label} style={st.benefitItem}>
+                    <View style={st.benefitIcon}>
+                      <Ionicons name={icon} size={22} color={C.primaryDark} />
+                    </View>
+                    <Text style={st.benefitText}>{label}</Text>
+                  </View>
+                ))}
+              </Rise>
+              <Rise i={2} style={st.benefitCard}>
+                <LinearGradient colors={[C.primary, C.primaryDark]} style={StyleSheet.absoluteFill} />
+                <Photo source={p.gender === 'male' ? IMG.benefitsMale : IMG.benefits} position="top" style={st.benefitPhoto} />
+                <View style={st.benefitBadge}>
+                  <Text style={st.benefitBadgeText}>Your {BRAND} plan</Text>
+                </View>
+                <View style={{ padding: 12, gap: 8 }}>
+                  {BENEFITS_RIGHT.map((b) => (
+                    <View key={b} style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
+                      <Ionicons name="checkmark-circle" size={16} color={C.white} />
+                      <Text style={st.benefitCardText}>{b}</Text>
+                    </View>
+                  ))}
+                </View>
+              </Rise>
+            </View>
+          </Body>
+        );
+      case 'experience':
+        return (
+          <Body>
+            <QTitle text="How was your last experience with weight loss?" />
+            <View style={st.list}>
+              {EXPERIENCE.map((e, i) => (
+                <Rise key={e} i={i + 1}>
+                  <ChoiceRow radio title={e} selected={p.experience === e} onPress={() => set({ experience: e })} />
+                </Rise>
+              ))}
+            </View>
+          </Body>
+        );
+      case 'level':
+        return (
+          <Body>
+            <QTitle text="Choose your preferred workout level" />
+            <View style={st.list}>
+              {LEVELS.map((l, i) => (
+                <Rise key={l.t} i={i + 1}>
+                  <ChoiceRow emoji={l.emoji} title={l.t} detail={l.detail} selected={p.workoutLevel === l.t} onPress={() => set({ workoutLevel: l.t, program: l.program })} />
+                </Rise>
+              ))}
+            </View>
+          </Body>
         );
       case 'activity':
         return (
-          <Q title="How active are you in a typical day?" sub="Not counting workouts.">
-            {ACTIVITY.map((a, i) => (
-              <Enter key={a.v} index={i}>
-                <OptionCard icon={a.i} title={a.t} subtitle={a.s} selected={p.activity === a.v} onPress={() => set({ activity: a.v })} />
-              </Enter>
-            ))}
-          </Q>
+          <Body>
+            <QTitle text="What's your activity level?" />
+            <Rise i={1} style={{ alignItems: 'center', marginTop: 16 }}>
+              <Photo source={IMG.activity} style={st.activityArt} />
+            </Rise>
+            <View style={st.list}>
+              {ACTIVITY.map((a, i) => (
+                <Rise key={a.v} i={i + 2}>
+                  <ChoiceRow radio title={a.t} sub={a.s} selected={p.activity === a.v} onPress={() => set({ activity: a.v })} />
+                </Rise>
+              ))}
+            </View>
+          </Body>
         );
-      case 'exercise':
+      case 'rest':
         return (
-          <Q title="How often do you work out?" sub="Walking, yoga, gym, sports — everything counts.">
-            {EXERCISE.map(([icon, label], i) => (
-              <Enter key={label} index={i}>
-                <OptionCard
-                  icon={icon}
-                  title={label}
-                  selected={p.exercise === label}
-                  onPress={() => {
-                    const lvl = EXERCISE.findIndex((x) => x[1] === label);
-                    set({ exercise: label, program: lvl >= 3 ? 'sixpack' : lvl === 2 ? 'abs' : 'belly', weeklyGoal: [3, 3, 4, 5][lvl] ?? 3 });
-                  }}
-                />
-              </Enter>
-            ))}
-          </Q>
-        );
-      case 'program':
-        return (
-          <Q title="Pick your 30-day training plan" sub="Short daily home workouts. We've suggested one based on your fitness level — you can switch anytime.">
-            <Enter index={0}>
-              <PlanAccordion value={p.program} onChange={(program) => set({ program })} onStart={() => next()} cta="Choose this plan" />
-            </Enter>
-          </Q>
+          <Body>
+            <QTitle
+              text="Which days do you want to rest each week?"
+              sub={p.restDays.length ? `${7 - p.restDays.length} workout days · ${p.restDays.length} rest day${p.restDays.length === 1 ? '' : 's'}` : 'Pick at least one day to recover.'}
+            />
+            <Rise i={1} style={st.dayGrid}>
+              {DAYS.map((d) => (
+                <DayChip key={d} label={d} on={p.restDays.includes(d)} onPress={() => set({ restDays: p.restDays.includes(d) || p.restDays.length < 5 ? toggleIn(p.restDays, d) : p.restDays })} />
+              ))}
+            </Rise>
+          </Body>
         );
       case 'diet':
         return (
-          <Q title="What's your diet preference?" sub="We'll only suggest foods that fit how you eat.">
-            {DIETS.map(([icon, label, sub], i) => (
-              <Enter key={label} index={i}>
-                <OptionCard icon={icon} title={label} subtitle={sub} selected={p.diet === label} onPress={() => set({ diet: label })} />
-              </Enter>
-            ))}
-          </Q>
-        );
-      case 'cuisines':
-        return (
-          <Q title="Which cuisines do you enjoy?" sub="Pick all that you eat regularly.">
-            <View style={st.chipWrap}>
-              {CUISINES.map((c, i) => (
-                <Enter key={c} index={i}>
-                  <Chip label={c} selected={p.cuisines.includes(c)} onPress={() => set({ cuisines: toggleIn(p.cuisines, c) })} style={st.bigChip} />
-                </Enter>
+          <Body>
+            <QTitle text="What's your diet type?" />
+            <View style={st.list}>
+              {DIETS.map((d, i) => (
+                <Rise key={d.t} i={i + 1}>
+                  <ChoiceRow emoji={d.emoji} title={d.t} selected={p.dietType === d.t} onPress={() => set({ dietType: d.t, diet: d.diet })} />
+                </Rise>
               ))}
             </View>
-          </Q>
+          </Body>
         );
-      case 'restrictions':
+      case 'dietinfo':
         return (
-          <Q title="Any food allergies or restrictions?" sub="Select all that apply.">
-            {RESTRICTIONS.map((r, i) => (
-              <Enter key={r} index={i}>
-                <OptionCard multi title={r} selected={p.restrictions.includes(r)} onPress={() => set({ restrictions: toggleIn(p.restrictions, r, 'No restrictions') })} />
-              </Enter>
-            ))}
-          </Q>
+          <Body>
+            <QTitle text="Get the best diet for your goals" />
+            <Rise i={1} style={st.dietArt}>
+              <Photo source={IMG.diet} style={StyleSheet.absoluteFill} />
+              <LinearGradient colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.28)']} style={StyleSheet.absoluteFill} />
+              <Animated.View entering={nativeOnly(ZoomIn.duration(MOTION.enter).delay(380))} style={[st.dietTag, { left: 14, bottom: 16, backgroundColor: C.white }]}>
+                <Text style={[st.dietTagText, { color: C.primaryDark }]}>LOW CALORIES</Text>
+              </Animated.View>
+              <Animated.View entering={nativeOnly(ZoomIn.duration(MOTION.enter).delay(520))} style={[st.dietTag, { right: 14, top: 18, backgroundColor: C.accent }]}>
+                <Text style={st.dietTagText}>HIGH PROTEIN</Text>
+              </Animated.View>
+              <Animated.View entering={nativeOnly(ZoomIn.duration(MOTION.enter).delay(660))} style={[st.dietTag, { right: 18, bottom: 16, backgroundColor: C.primary }]}>
+                <Text style={st.dietTagText}>BALANCED CARBS</Text>
+              </Animated.View>
+            </Rise>
+            <Rise i={2} style={{ paddingHorizontal: GUTTER + 8, marginTop: 18 }}>
+              <Text style={st.centerCopy}>Help you achieve the goal faster and with the least effort possible.</Text>
+            </Rise>
+          </Body>
         );
-      case 'conditions':
+      case 'reward':
         return (
-          <Q title="Do you have any medical conditions?" sub="This helps our experts tailor your nutrition safely.">
-            {CONDITIONS.map((r, i) => (
-              <Enter key={r} index={i}>
-                <OptionCard multi title={r} selected={p.conditions.includes(r)} onPress={() => set({ conditions: toggleIn(p.conditions, r, 'None') })} />
-              </Enter>
-            ))}
-            <View style={st.privacy}>
-              <Ionicons name="lock-closed" size={13} color={C.muted} />
-              <Text style={[T.tiny, { flex: 1, lineHeight: 15 }]}>Your health information is private and stays on this device in this demo.</Text>
+          <Body>
+            <QTitle text="How would you reward yourself after reaching your goals?" />
+            <View style={st.rewardGrid}>
+              {REWARDS.map((r, i) => (
+                <Rise key={r.t} i={i + 1} style={st.rewardCell}>
+                  <RewardCard label={r.t} img={r.img} on={p.rewards.includes(r.t)} onPress={() => set({ rewards: toggleIn(p.rewards, r.t) })} />
+                </Rise>
+              ))}
             </View>
-          </Q>
+          </Body>
         );
-      case 'lifestyle':
+      case 'proof':
         return (
-          <Q title="Tell us about your lifestyle" sub="Sleep and hydration affect hunger and energy.">
-            <Enter index={0}>
-              <GroupLabel icon="moon" color={C.steps} bg={C.stepsSoft} text="How many hours do you sleep?" />
-              <View style={st.chipWrap}>
-                {SLEEP.map((x) => (
-                  <Chip key={x} label={x} selected={p.sleep === x} onPress={() => set({ sleep: x })} style={st.bigChip} />
-                ))}
+          <Body>
+            <QTitle text={"Don't worry.\nWe can help!"} />
+            <Rise i={1} style={{ paddingHorizontal: GUTTER, marginTop: 8 }}>
+              <Text style={st.centerCopy}>
+                We&apos;ve helped <Text style={{ color: C.primary, fontWeight: '800' }}>1M+</Text> users get their dream body!
+              </Text>
+            </Rise>
+            <Rise i={2} style={[st.card, { marginHorizontal: GUTTER, marginTop: 18, padding: 0, overflow: 'hidden' }]}>
+              <Photo source={IMG.testimonial} style={{ height: 190 }} />
+              <View style={{ padding: 16 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Text style={st.proofTitle}>Seeing real changes</Text>
+                  <View style={{ flexDirection: 'row', gap: 2 }}>
+                    {[0, 1, 2, 3, 4].map((n) => (
+                      <Animated.View key={n} entering={nativeOnly(ZoomIn.duration(MOTION.base).delay(500 + n * 70))}>
+                        <Ionicons name="star" size={15} color={C.gold} />
+                      </Animated.View>
+                    ))}
+                  </View>
+                </View>
+                <Text style={st.proofQuote}>
+                  &ldquo;Incredibly intuitive! The crafted plan is just right for my beginner level. Workouts are interesting, by the way. Gonna recommend it to all my pals.&rdquo;
+                </Text>
+                <Text style={st.proofName}>Priya, 31 · lost 9 kg</Text>
               </View>
-            </Enter>
-            <Enter index={1} style={{ marginTop: 28 }}>
-              <GroupLabel icon="water" color={C.water} bg={C.waterSoft} text="How much water do you drink daily?" />
-              <View style={st.chipWrap}>
-                {WATER.map((x) => (
-                  <Chip key={x} label={x} selected={p.waterHabit === x} onPress={() => set({ waterHabit: x })} style={st.bigChip} />
-                ))}
-              </View>
-            </Enter>
-          </Q>
+            </Rise>
+          </Body>
         );
-      case 'challenges':
-        return (
-          <Q title="What gets in the way of eating healthy?" sub="Pick your biggest challenges — we'll plan around them.">
-            {CHALLENGES.map(([icon, label], i) => (
-              <Enter key={label} index={i}>
-                <OptionCard multi icon={icon} title={label} selected={p.challenges.includes(label)} onPress={() => set({ challenges: toggleIn(p.challenges, label) })} />
-              </Enter>
-            ))}
-          </Q>
-        );
-      case 'meals':
-        return (
-          <Q title="When do you usually eat?" sub="We'll remind you to log at the right time.">
-            {(['breakfast', 'lunch', 'dinner'] as const).map((m, i) => (
-              <Enter key={m} index={i} style={{ marginBottom: 24 }}>
-                <GroupLabel icon={MEAL_META[m].icon} color={C.accent} bg={C.accentSoft} text={MEAL_META[m].label} />
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -GUTTER }} contentContainerStyle={{ gap: 8, paddingHorizontal: GUTTER }}>
-                  {MEAL_SLOTS[m].map((slot) => (
-                    <Chip key={slot} label={slot} selected={p.mealTimes[m] === slot} onPress={() => set({ mealTimes: { ...p.mealTimes, [m]: slot } })} style={st.slotChip} />
-                  ))}
-                </ScrollView>
-              </Enter>
-            ))}
-          </Q>
-        );
-      case 'permissions':
-        return <PermissionsStep p={p} set={set} />;
       default:
         return null;
     }
   }
 }
 
-/* ---------------- Local building blocks ---------------- */
+/* ---------------- Building blocks ---------------- */
 
-const GUTTER = 16;
-
-/** `fill` stretches the body to the viewport so a flex spacer can pin trailing content above the CTA. */
-function Q({ title, sub, children, scroll = true, fill }: { title: string; sub?: string; children: React.ReactNode; scroll?: boolean; fill?: boolean }) {
-  const inner = (
-    <>
-      <Text style={st.qTitle}>{title}</Text>
-      {sub && <Text style={st.qSub}>{sub}</Text>}
-      <View style={[{ marginTop: 24 }, fill && { flex: 1 }]}>{children}</View>
-    </>
-  );
-  return scroll ? (
-    <ScrollView contentContainerStyle={[st.qBody, fill && { flexGrow: 1 }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-      {inner}
+/** Scrollable step body with consistent top/bottom spacing. */
+function Body({ children }: { children: React.ReactNode }) {
+  return (
+    <ScrollView contentContainerStyle={{ paddingTop: 10, paddingBottom: 28 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+      {children}
     </ScrollView>
-  ) : (
-    <View style={st.qBody}>{inner}</View>
   );
 }
 
-/** Pinned bottom action bar: white, hairline top border, safe-area aware. */
-function CtaBar({ children, dark }: { children: React.ReactNode; dark?: boolean }) {
+/** Staggered entrance for step content: title first, then content in reading order. */
+function Rise({ i, children, style }: { i: number; children: React.ReactNode; style?: StyleProp<ViewStyle> }) {
+  return (
+    <Animated.View entering={nativeOnly(FadeInDown.duration(MOTION.enter).delay(80 + Math.min(i, 8) * 70).easing(EASE_OUT).withInitialValues({ transform: [{ translateY: 16 }] }))} style={style}>
+      {children}
+    </Animated.View>
+  );
+}
+
+function CtaBar({ children }: { children: React.ReactNode }) {
   const insets = useSafeAreaInsets();
-  return <View style={[st.ctaBar, dark && st.ctaBarDark, { paddingBottom: Math.max(insets.bottom, 12) + 4 }]}>{children}</View>;
+  return <View style={[st.ctaBar, { paddingBottom: Math.max(insets.bottom, 12) + 4 }]}>{children}</View>;
 }
 
-/** Text input with a focus ring and optional leading/trailing adornments. */
-function Field({ left, right, error, onFocus, onBlur, ...props }: TextInputProps & { left?: React.ReactNode; right?: React.ReactNode; error?: boolean }) {
-  const [focused, setFocused] = useState(false);
-  const inputRef = useRef<TextInput>(null);
-  // Tapping anywhere on the field (flag, prefix, padding) focuses the input.
-  return (
-    <Pressable onPress={() => inputRef.current?.focus()} style={[st.field, focused && st.fieldFocus, error && st.fieldError]}>
-      {left}
-      <TextInput
-        ref={inputRef}
-        {...props}
-        placeholderTextColor={C.muted}
-        onFocus={(e) => {
-          setFocused(true);
-          onFocus?.(e);
-        }}
-        onBlur={(e) => {
-          setFocused(false);
-          onBlur?.(e);
-        }}
-        style={st.fieldInput}
-      />
-      {right}
-    </Pressable>
-  );
-}
-
-function GroupLabel({ icon, color, bg, text }: { icon: IconName; color: string; bg: string; text: string }) {
-  return (
-    <View style={st.groupRow}>
-      <IconTile icon={icon} color={color} bg={bg} size={30} />
-      <Text style={st.groupLabel}>{text}</Text>
-    </View>
-  );
-}
-
-/** Low-opacity decorative circles for gradient hero surfaces. */
-function HeroOrbs({ tint = C.white }: { tint?: string }) {
-  return (
-    <View style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}>
-      <Svg width="100%" height="100%">
-        <Circle cx="92%" cy="4%" r={92} fill={tint} opacity={0.07} />
-        <Circle cx="92%" cy="4%" r={148} stroke={tint} strokeWidth={1} fill="none" opacity={0.1} />
-        <Circle cx="2%" cy="100%" r={64} fill={tint} opacity={0.06} />
-      </Svg>
-    </View>
-  );
-}
-
-/* ---------------- Sub-steps ---------------- */
-
-function HeightStep({ p, set }: { p: Profile; set: (x: Partial<Profile>) => void }) {
-  const [unit, setUnit] = useState<'cm' | 'ft'>('cm');
-  return (
-    <Q title="How tall are you?" scroll={false}>
-      <Segmented options={[{ value: 'cm', label: 'cm' }, { value: 'ft', label: 'ft / in' }]} value={unit} onChange={setUnit} style={{ marginBottom: 24, alignSelf: 'center', width: 200 }} />
-      {unit === 'cm' ? (
-        <WheelPicker key="cm" values={range(120, 220)} value={p.heightCm} onChange={(heightCm) => set({ heightCm })} unit="cm" />
-      ) : (
-        <WheelPicker key="ft" values={range(48, 86)} value={Math.round(p.heightCm / 2.54)} onChange={(inch) => set({ heightCm: Math.round(inch * 2.54) })} format={(v) => `${Math.floor(v / 12)}′ ${v % 12}″`} />
-      )}
-      <View style={st.heightPill}>
-        <Ionicons name="resize-outline" size={14} color={C.textSoft} />
-        <Text style={st.heightPillText}>
-          {p.heightCm} cm · {cmToFtIn(p.heightCm)}
-        </Text>
-      </View>
-    </Q>
-  );
-}
-
-function PermissionsStep({ p, set }: { p: Profile; set: (x: Partial<Profile>) => void }) {
-  const [ask, setAsk] = useState<null | 'health' | 'notif'>(null);
-  const toast = useToast();
-  const healthName = Platform.OS === 'ios' ? 'Apple Health' : 'Google Fit';
-  const answer = (allow: boolean) => {
-    if (ask === 'health') set({ healthSync: allow });
-    if (ask === 'notif') set({ notifications: allow });
-    if (allow) toast(ask === 'health' ? `${healthName} connected` : 'Reminders turned on', 'checkmark-circle');
-    setAsk(null);
-  };
-  const card = (on: boolean, icon: IconName, title: string, sub: string, onPress: () => void) => (
-    <View style={[st.permCard, on && st.permOn]}>
-      <IconTile icon={icon} color={C.steps} bg={on ? C.card : C.stepsSoft} size={48} />
-      <View style={{ flex: 1 }}>
-        <Text style={T.h3}>{title}</Text>
-        <Text style={[T.small, { marginTop: 3 }]}>{sub}</Text>
-      </View>
-      {on ? (
-        <Animated.View entering={nativeOnly(ZoomIn.duration(MOTION.base))} style={st.connected}>
-          <Ionicons name="checkmark" size={16} color={C.white} />
-        </Animated.View>
-      ) : (
-        <Button title="Allow" small onPress={onPress} />
-      )}
-    </View>
-  );
-  return (
-    <Q title="Connect your health app" sub="Optional, but it makes activity tracking effortless.">
-      <Enter index={0}>{card(p.healthSync, 'footsteps', `Sync with ${healthName}`, 'Automatically track steps and workouts.', () => setAsk('health'))}</Enter>
-      <Enter index={1} style={[st.infoCard, st.infoRow]}>
-        <IconTile icon="lock-closed" color={C.textSoft} bg={C.surfaceAlt} size={42} />
-        <Text style={[T.small, { flex: 1, lineHeight: 18 }]}>We only read steps, workouts and weight. Your data never leaves this device in the demo.</Text>
-      </Enter>
-      <Text style={[T.tiny, { textAlign: 'center', marginTop: 14 }]}>You can change these anytime in Profile → Settings.</Text>
-      <Dialog
-        visible={!!ask}
-        icon={ask === 'health' ? '👟' : '🔔'}
-        title={ask === 'health' ? `"${BRAND}" would like to access your step count and workouts` : `"${BRAND}" would like to send you notifications`}
-        text={ask === 'health' ? `Data from ${healthName} is used to show your activity and calories burned.` : 'Notifications may include alerts, sounds and icon badges.'}
-        cancel="Don't allow"
-        confirm="Allow"
-        onCancel={() => answer(false)}
-        onConfirm={() => answer(true)}
-      />
-    </Q>
-  );
-}
-
-function BmiScale({ value }: { value: number }) {
-  const pct = Math.max(0, Math.min(1, (value - 15) / 20));
-  const x = useSharedValue(pct);
-  useEffect(() => {
-    x.set(withTiming(pct, { duration: MOTION.base, easing: EASE_OUT }));
-  }, [pct, x]);
-  const marker = useAnimatedStyle(() => ({ left: `${x.get() * 100}%` }));
-  return (
-    <View style={{ marginTop: 14 }}>
-      <View style={st.bmiBar}>
-        <View style={{ flex: 3.5, backgroundColor: '#3B82F6' }} />
-        <View style={{ flex: 4.5, backgroundColor: C.primary }} />
-        <View style={{ flex: 4.5, backgroundColor: C.carbs }} />
-        <View style={{ flex: 7.5, backgroundColor: C.danger }} />
-      </View>
-      <Animated.View style={[st.bmiMarker, marker]} />
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 }}>
-        {['Under', 'Healthy', 'Over', 'Obese'].map((x) => (
-          <Text key={x} style={T.tiny}>
-            {x}
-          </Text>
-        ))}
-      </View>
-    </View>
-  );
-}
-
-const APath = Animated.createAnimatedComponent(Path);
-
-function ProjectionChart({ from, to, weeks }: { from: number; to: number; weeks: number }) {
-  const [w, setW] = useState(300);
-  const h = 180;
-  const pad = 22;
-  const y = (kg: number) => {
-    const hi = Math.max(from, to);
-    const lo = Math.min(from, to);
-    return pad + ((hi - kg) / Math.max(hi - lo, 0.1)) * (h - pad * 2);
-  };
-  const x0 = pad;
-  const x1 = w - pad;
-  const path = `M ${x0} ${y(from)} C ${x0 + (x1 - x0) * 0.4} ${y(from)}, ${x0 + (x1 - x0) * 0.55} ${y(to)}, ${x1} ${y(to)}`;
-  const area = `${path} L ${x1} ${h} L ${x0} ${h} Z`;
-  // Generous over-estimate of the curve length so the dash fully covers it while it draws in.
-  const len = Math.hypot(x1 - x0, y(to) - y(from)) * 1.25 + 24;
-
-  const prog = useSharedValue(0);
-  useEffect(() => {
-    prog.set(withDelay(120, withTiming(1, { duration: 900, easing: EASE_OUT })));
-  }, [prog]);
-  const lineProps = useAnimatedProps(() => ({ strokeDashoffset: len * (1 - prog.get()) }));
-  const areaProps = useAnimatedProps(() => ({ opacity: prog.get() }));
-  const endDot = useAnimatedStyle(() => ({ opacity: interpolate(prog.get(), [0.75, 1], [0, 1], 'clamp') }));
-
-  return (
-    <View style={st.chartCard} onLayout={(e) => setW(e.nativeEvent.layout.width - 32)}>
-      <View>
-        <Svg width={w} height={h}>
-          <Defs>
-            <SvgGrad id="projFill" x1="0" y1="0" x2="0" y2="1">
-              <Stop offset="0" stopColor={C.primary} stopOpacity={0.22} />
-              <Stop offset="1" stopColor={C.primary} stopOpacity={0} />
-            </SvgGrad>
-          </Defs>
-          <Line x1={x0} x2={x1} y1={y(to)} y2={y(to)} stroke={C.border} strokeDasharray="4 4" />
-          <APath d={area} fill="url(#projFill)" animatedProps={areaProps} />
-          <APath d={path} stroke={C.primary} strokeWidth={4} fill="none" strokeLinecap="round" strokeDasharray={`${len} ${len}`} animatedProps={lineProps} />
-          <Circle cx={x0} cy={y(from)} r={7} fill={C.white} stroke={C.accent} strokeWidth={4} />
-        </Svg>
-        <Animated.View style={[st.chartEnd, { left: x1 - 9, top: y(to) - 9 }, endDot]} />
-      </View>
-      <View style={st.chartFoot}>
-        <View>
-          <Text style={T.label}>Today</Text>
-          <Text style={[st.chartVal, { color: C.accent }]}>{from.toFixed(1)} kg</Text>
-        </View>
-        <View style={{ alignItems: 'flex-end' }}>
-          <Text style={T.label}>In {weeks} weeks</Text>
-          <Text style={[st.chartVal, { color: C.primaryDark }]}>{to.toFixed(1)} kg</Text>
-        </View>
-      </View>
-    </View>
-  );
-}
-
-/* ---------------- Full-screen steps ---------------- */
-
-const WELCOME_IMAGE = require('@/assets/images/welcome-bg.jpg');
-
-const SLIDES: { icon: IconName; color: string; bg: string; title: string; text: string }[] = [
-  { icon: 'camera', color: C.accent, bg: C.accentSoft, title: 'Track calories with a snap', text: 'Photo-log your meals and get calories & macros instantly. Built for Indian food — from roti to rajma.' },
-  { icon: 'barbell', color: C.workout, bg: C.workoutSoft, title: '30-day home workout plans', text: 'Short daily routines for every level — lose belly fat, build rock-hard abs, no equipment needed.' },
-  { icon: 'sparkles', color: C.ai, bg: C.aiSoft, title: 'Experts & AI in your pocket', text: 'Personal plans from certified coaches, plus Ria — your 24×7 AI nutrition coach.' },
-];
-
-function Dot({ on, light }: { on: boolean; light?: boolean }) {
-  const p = useSharedValue(on ? 1 : 0);
-  useEffect(() => {
-    p.set(withTiming(on ? 1 : 0, { duration: MOTION.base, easing: EASE_OUT }));
-  }, [on, p]);
-  const style = useAnimatedStyle(() => ({
-    width: interpolate(p.get(), [0, 1], [7, 22]),
-    backgroundColor: interpolateColor(p.get(), [0, 1], light ? ['rgba(255,255,255,0.35)', '#FFFFFF'] : ['#D6D3D1', C.primary]),
-  }));
-  return <Animated.View style={[st.dot, style]} />;
-}
-
-function Welcome({ onStart, onLogin }: { onStart: () => void; onLogin: () => void }) {
-  const { width } = useWindowDimensions();
-  const [i, setI] = useState(0);
-  const ref = useRef<ScrollView>(null);
-  const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => setI(Math.round(e.nativeEvent.contentOffset.x / width));
-  useEffect(() => {
-    const id = setInterval(() => {
-      setI((n) => {
-        const nx = (n + 1) % SLIDES.length;
-        ref.current?.scrollTo({ x: nx * width, animated: true });
-        return nx;
-      });
-    }, 3500);
-    return () => clearInterval(id);
-  }, [width]);
-  return (
-    <View style={st.welcome}>
-      <StatusBar style="light" />
-      {/* Full-bleed photo with a brand-tinted scrim that deepens towards the copy */}
-      {/* Portrait photo fills the top ~70% and melts into the dark base where the copy and CTAs sit */}
-      <View style={st.welcomePhoto}>
-        <Image source={WELCOME_IMAGE} style={StyleSheet.absoluteFill} contentFit="cover" contentPosition="center" transition={300} />
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(21,94,80,0.14)' }]} />
-        <LinearGradient colors={['rgba(11,26,23,0.6)', 'rgba(11,26,23,0)', 'rgba(11,26,23,0)', '#0B1A17']} locations={[0, 0.2, 0.5, 0.94]} style={StyleSheet.absoluteFill} />
-      </View>
-
-      <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
-        <Enter index={0} style={st.brandRow}>
-          <View style={[st.brandMark, glow(C.primary)]}>
-            <Ionicons name="leaf" size={20} color={C.white} />
-          </View>
-          <View>
-            <Text style={st.brandName}>{BRAND}</Text>
-            <Text style={st.brandTag}>NUTRITION + FITNESS</Text>
-          </View>
-        </Enter>
-
-        <View style={{ flex: 1 }} />
-
-        <View style={st.welcomeCopy}>
-          <Enter index={1}>
-            <Text style={st.welcomeHead}>
-              <Text style={{ color: '#3BE3A6' }}>Eat right.</Text>
-              {'\n'}Train hard.
-            </Text>
-          </Enter>
-          <Enter index={2}>
-            <Text style={st.welcomeLead}>A personalised 30-day plan for your food, fitness and goals.</Text>
-          </Enter>
-        </View>
-
-        <Enter index={3}>
-          <ScrollView ref={ref} horizontal pagingEnabled showsHorizontalScrollIndicator={false} onScroll={onScroll} scrollEventThrottle={32} style={{ flexGrow: 0 }}>
-            {SLIDES.map((s) => (
-              <View key={s.title} style={[st.slidePage, { width }]}>
-                <View style={st.glassCard}>
-                  <View style={[st.glassIcon, { backgroundColor: s.bg }]}>
-                    <Ionicons name={s.icon} size={22} color={s.color} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={st.glassTitle} numberOfLines={1}>
-                      {s.title}
-                    </Text>
-                    <Text style={st.glassText} numberOfLines={2}>
-                      {s.text}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-            ))}
-          </ScrollView>
-          <View style={st.dots}>
-            {SLIDES.map((_, n) => (
-              <Dot key={n} on={n === i} light />
-            ))}
-          </View>
-        </Enter>
-
-        <Enter index={4} style={st.welcomeCtas}>
-          <Button title="Get started" onPress={onStart} style={st.ctaLight} textStyle={{ color: C.primaryDark }} />
-          <Button title="I already have an account" variant="outline" onPress={onLogin} style={st.ctaGlass} textStyle={{ color: C.white }} />
-        </Enter>
-      </SafeAreaView>
-    </View>
-  );
-}
-
-function NotifyStep({ onBack, onDone }: { onBack: () => void; onDone: (allow: boolean) => void }) {
-  const [ask, setAsk] = useState(false);
-  const toast = useToast();
-  const now = new Date();
-  return (
-    <SafeAreaView style={st.screen} edges={['top', 'bottom']}>
-      <StatusBar style="dark" />
-      <View style={st.topBar}>
-        <IconButton icon="chevron-back" bordered onPress={onBack} />
-      </View>
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 }}>
-        <Enter index={0}>
-          <View style={st.phone}>
-            <LinearGradient colors={[C.primarySoft, C.card]} style={StyleSheet.absoluteFill} />
-            <View style={st.phoneNotch} />
-            <Text style={st.phoneTime}>
-              {now.getHours()}:{String(now.getMinutes()).padStart(2, '0')}
-            </Text>
-            <Text style={st.phoneDate}>{fmtGoalDate(now)}</Text>
-            <Animated.View entering={nativeOnly(FadeInDown.delay(560).springify().damping(16).stiffness(180))} style={st.notifCard}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <View style={st.notifLogo}>
-                  <Ionicons name="leaf" size={10} color={C.white} />
-                </View>
-                <Text style={{ fontSize: 11, fontWeight: '700', color: C.textSoft, flex: 1 }}>{BRAND}</Text>
-                <Text style={{ fontSize: 10, color: C.muted }}>now</Text>
-              </View>
-              <Text style={{ fontSize: 12, color: C.text, marginTop: 6, lineHeight: 16 }}>Small steps, big changes! Log your breakfast and start today&apos;s Day 1 workout 💪</Text>
-            </Animated.View>
-          </View>
-          <LinearGradient colors={[G.glow[1], C.bg]} style={st.phoneFade} />
-        </Enter>
-        <Enter index={1}>
-          <Text style={st.notifyTitle}>
-            <Text style={{ color: C.primary }}>85%</Text> of users get better results with reminders
-          </Text>
-          <Text style={[T.body, { textAlign: 'center', marginTop: 10 }]}>With reminders, you&apos;ll easily stick to your meal and workout plan and stay motivated every day.</Text>
-        </Enter>
-      </View>
-      <Enter index={2} style={{ paddingHorizontal: GUTTER, paddingBottom: 8 }}>
-        <Button title="Grant now" icon="notifications-outline" onPress={() => setAsk(true)} />
-        <Pressable onPress={() => onDone(false)} style={({ pressed }) => [st.textBtn, pressed && { opacity: 0.6 }]}>
-          <Text style={st.textBtnLabel}>Maybe later</Text>
-        </Pressable>
-      </Enter>
-      <Dialog
-        visible={ask}
-        icon="🔔"
-        title={`"${BRAND}" would like to send you notifications`}
-        text="Notifications may include alerts, sounds and icon badges."
-        cancel="Don't allow"
-        confirm="Allow"
-        onCancel={() => { setAsk(false); onDone(false); }}
-        onConfirm={() => { setAsk(false); toast('Reminders turned on', 'notifications'); onDone(true); }}
-      />
-    </SafeAreaView>
-  );
-}
-
-const TRUST: [IconName, string][] = [
-  ['lock-closed', 'Secure login'],
-  ['notifications-off', 'No spam'],
-  ['flash', 'Takes 30 sec'],
-];
-
-/** Google's four-colour "G" mark (brand guidelines require the full-colour logo on sign-in buttons). */
-function GoogleG({ size = 19 }: { size?: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 48 48">
-      <Path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
-      <Path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
-      <Path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
-      <Path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
-    </Svg>
-  );
-}
-
-function SocialButton({ label, icon, loading, disabled, onPress }: { label: string; icon: React.ReactNode; loading?: boolean; disabled?: boolean; onPress: () => void }) {
-  return (
-    <PressableScale
-      scaleTo={0.97}
-      disabled={disabled}
-      accessibilityRole="button"
-      accessibilityLabel={`Continue with ${label}`}
-      accessibilityState={{ disabled: !!disabled, busy: !!loading }}
-      onPress={() => {
-        tap();
-        onPress();
-      }}
-      style={[st.social, disabled && !loading && { opacity: 0.55 }]}>
-      {loading ? (
-        <ActivityIndicator color={C.text} />
-      ) : (
-        <>
-          {icon}
-          <Text style={st.socialText}>{label}</Text>
-        </>
-      )}
-    </PressableScale>
-  );
-}
-
-/** Blinking text caret for the active OTP box (static when reduced motion is on). */
-function Caret() {
-  const reduce = useReducedMotion();
-  const o = useSharedValue(1);
-  useEffect(() => {
-    if (reduce) return;
-    o.set(withRepeat(withSequence(withDelay(420, withTiming(0, { duration: 90 })), withDelay(420, withTiming(1, { duration: 90 }))), -1, false));
-  }, [o, reduce]);
-  const style = useAnimatedStyle(() => ({ opacity: o.get() }));
-  return <Animated.View style={[st.caret, style]} />;
-}
-
-function SignIn({ onBack, onDone }: { onBack: () => void; onDone: (phone: string) => void }) {
-  const [phone, setPhone] = useState('');
-  const [otp, setOtp] = useState('');
-  const [sent, setSent] = useState(false);
-  const [loading, setLoading] = useState<null | 'otp' | 'verify' | 'google' | 'email'>(null);
-  const toast = useToast();
-  const otpRef = useRef<TextInput>(null);
-  // Indian mobile numbers are 10 digits starting 6–9; flag a wrong prefix as soon as it's typed.
-  const badPrefix = /^[0-5]/.test(phone);
-  const validPhone = phone.length === 10 && !badPrefix;
-
-  const run = (kind: 'otp' | 'verify' | 'google' | 'email', then: () => void) => {
-    setLoading(kind);
-    setTimeout(() => {
-      setLoading(null);
-      then();
-    }, 900);
-  };
-
-  return (
-    <SafeAreaView style={st.screen} edges={['top', 'bottom']}>
-      <LinearGradient colors={G.glow} style={st.signGlow} />
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <StatusBar style="dark" />
-        <View style={st.topBar}>
-          <IconButton icon="chevron-back" bordered onPress={sent ? () => { setSent(false); setOtp(''); } : onBack} />
-          <View style={{ flex: 1 }} />
-          <Pressable onPress={() => onDone('')} hitSlop={10} style={({ pressed }) => [st.skip, pressed && { opacity: 0.6 }]}>
-            <Text style={st.skipText}>Skip</Text>
-          </Pressable>
-        </View>
-        <ScrollView contentContainerStyle={[st.qBody, { flexGrow: 1 }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-          {!sent ? (
-            <Animated.View key="phone" entering={fadeEnter()} style={{ flex: 1 }}>
-              <Enter index={0}>
-                <View style={[st.signMark, glow(C.primary)]}>
-                  <Ionicons name="leaf" size={26} color={C.white} />
-                </View>
-                <Text style={[st.qTitle, { marginTop: 20 }]}>Sign up or log in</Text>
-                <Text style={st.qSub}>One number, one OTP. No passwords to remember.</Text>
-              </Enter>
-              <Enter index={1} style={{ marginTop: 28 }}>
-                <Text style={st.fieldLabel}>Mobile number</Text>
-                <Field
-                  value={phone.length > 5 ? `${phone.slice(0, 5)} ${phone.slice(5)}` : phone}
-                  onChangeText={(v) => setPhone(v.replace(/\D/g, '').slice(0, 10))}
-                  placeholder="98765 43210"
-                  keyboardType="phone-pad"
-                  textContentType="telephoneNumber"
-                  autoComplete="tel"
-                  maxLength={11}
-                  error={badPrefix}
-                  accessibilityLabel="Mobile number"
-                  left={
-                    <View style={st.cc}>
-                      <IndiaFlag width={24} />
-                      <Text style={st.ccText}>+91</Text>
-                      <View style={st.ccDivider} />
-                    </View>
-                  }
-                  right={
-                    validPhone ? (
-                      <Animated.View entering={nativeOnly(ZoomIn.duration(MOTION.base))}>
-                        <Ionicons name="checkmark-circle" size={22} color={C.primary} />
-                      </Animated.View>
-                    ) : null
-                  }
-                />
-                <View style={st.helper}>
-                  <Ionicons name={badPrefix ? 'alert-circle' : 'shield-checkmark'} size={14} color={badPrefix ? C.danger : C.primary} />
-                  <Text style={[st.helperText, badPrefix && { color: C.danger }]}>
-                    {badPrefix ? 'Indian mobile numbers start with 6, 7, 8 or 9' : "We'll text a 4-digit code to verify it's you"}
-                  </Text>
-                </View>
-                <Button
-                  title="Get OTP"
-                  style={{ marginTop: 20 }}
-                  disabled={!validPhone}
-                  loading={loading === 'otp'}
-                  onPress={() =>
-                    run('otp', () => {
-                      setSent(true);
-                      toast('OTP sent (demo: enter any 4 digits)', 'chatbubble-ellipses');
-                      setTimeout(() => otpRef.current?.focus(), 300);
-                    })
-                  }
-                />
-              </Enter>
-              <Enter index={2}>
-                <View style={st.orRow}>
-                  <View style={st.orLine} />
-                  <Text style={st.orText}>or continue with</Text>
-                  <View style={st.orLine} />
-                </View>
-                <View style={st.socialRow}>
-                  <SocialButton label="Google" icon={<GoogleG />} loading={loading === 'google'} disabled={!!loading} onPress={() => run('google', () => onDone(''))} />
-                  <SocialButton
-                    label="Email"
-                    icon={<Ionicons name="mail" size={19} color={C.text} />}
-                    loading={loading === 'email'}
-                    disabled={!!loading}
-                    onPress={() => run('email', () => onDone(''))}
-                  />
-                </View>
-              </Enter>
-              <View style={{ flex: 1, minHeight: 28 }} />
-              <Enter index={3}>
-                <View style={st.trustRow}>
-                  {TRUST.map(([icon, label]) => (
-                    <View key={label} style={st.trustItem}>
-                      <Ionicons name={icon} size={14} color={C.primaryDark} />
-                      <Text style={st.trustText}>{label}</Text>
-                    </View>
-                  ))}
-                </View>
-                <Text style={st.legal}>
-                  By continuing you agree to our <Text style={st.legalLink}>Terms of Service</Text> and <Text style={st.legalLink}>Privacy Policy</Text>.
-                </Text>
-              </Enter>
-            </Animated.View>
-          ) : (
-            <Animated.View key="otp" entering={stepIn(1)}>
-              <IconTile icon="chatbubble-ellipses-outline" size={52} />
-              <Text style={[st.qTitle, { marginTop: 18 }]}>Enter the OTP</Text>
-              <Text style={st.qSub}>
-                Sent to{' '}
-                <Text style={{ color: C.text, fontWeight: '700' }}>
-                  +91 {phone.slice(0, 5)} {phone.slice(5)}
-                </Text>
-                . Demo mode: any 4 digits work.
-              </Text>
-              <Pressable onPress={() => otpRef.current?.focus()} style={st.otpRow}>
-                {[0, 1, 2, 3].map((n) => {
-                  const digit = otp[n];
-                  const active = otp.length === n;
-                  return (
-                    <View key={n} style={[st.otpBox, !!digit && st.otpFilled, active && st.otpActive]}>
-                      {digit ? (
-                        <Animated.Text key={digit} entering={nativeOnly(ZoomIn.duration(MOTION.fast))} style={st.otpText}>
-                          {digit}
-                        </Animated.Text>
-                      ) : active ? (
-                        <Caret />
-                      ) : null}
-                    </View>
-                  );
-                })}
-                <TextInput
-                  ref={otpRef}
-                  value={otp}
-                  onChangeText={(v) => setOtp(v.replace(/\D/g, '').slice(0, 4))}
-                  keyboardType="number-pad"
-                  maxLength={4}
-                  autoFocus
-                  style={st.otpHidden}
-                />
-              </Pressable>
-              <Button title="Verify & continue" style={{ marginTop: 26 }} disabled={otp.length !== 4} loading={loading === 'verify'} onPress={() => run('verify', () => onDone(phone))} />
-              <Pressable onPress={() => toast('A new OTP has been sent', 'refresh')} style={({ pressed }) => [st.resend, pressed && { opacity: 0.6 }]}>
-                <Ionicons name="refresh" size={15} color={C.primary} />
-                <Text style={{ color: C.primary, fontWeight: '700' }}>Resend OTP</Text>
-              </Pressable>
-            </Animated.View>
-          )}
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
-  );
-}
-
-const GEN_STEPS = ['Analysing your profile', 'Calculating your calorie budget', 'Balancing your macros', 'Personalising meals for your diet', 'Finalising your plan'];
-
-function Generating({ name, onDone }: { name: string; onDone: () => void }) {
-  const [pct, setPct] = useState(0);
-  useEffect(() => {
-    const id = setInterval(() => setPct((v) => Math.min(100, v + 2)), 55);
-    return () => clearInterval(id);
-  }, []);
-  useEffect(() => {
-    if (pct >= 100) {
-      const t = setTimeout(onDone, 500);
-      return () => clearTimeout(t);
-    }
-  }, [pct, onDone]);
-  const done = Math.floor((pct / 100) * GEN_STEPS.length);
-  return (
-    <SafeAreaView style={st.screen}>
-      <StatusBar style="dark" />
-      <LinearGradient colors={G.glow} style={st.welcomeGlow} />
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 }}>
-        <Enter index={0}>
-          <Ring size={176} stroke={14} value={pct / 100} gradient={G.brand} track={C.border}>
-            <Text style={st.genPct}>
-              {pct}
-              <Text style={st.genPctSign}>%</Text>
-            </Text>
-          </Ring>
-        </Enter>
-        <Enter index={1}>
-          <Text style={[T.h2, { marginTop: 28, textAlign: 'center' }]}>Creating your plan, {firstName(name)}</Text>
-        </Enter>
-        <Enter index={2} style={st.genCard}>
-          {GEN_STEPS.map((g, n) => {
-            const isDone = n < done;
-            return (
-              <View key={g} style={[st.genRow, { opacity: n <= done ? 1 : 0.4 }]}>
-                <View style={st.genIcon}>
-                  {isDone ? (
-                    <Animated.View entering={nativeOnly(ZoomIn.duration(MOTION.base))}>
-                      <Ionicons name="checkmark-circle" size={22} color={C.primary} />
-                    </Animated.View>
-                  ) : n === done ? (
-                    <ActivityIndicator size="small" color={C.primary} />
-                  ) : (
-                    <Ionicons name="ellipse-outline" size={22} color={C.muted} />
-                  )}
-                </View>
-                <Text style={[T.body, { flex: 1, color: isDone ? C.text : C.textSoft, fontWeight: isDone ? '600' : '400' }]}>{g}</Text>
-              </View>
-            );
-          })}
-        </Enter>
-      </View>
-    </SafeAreaView>
-  );
-}
-
-function PlanReady({ p, onBack, onNext }: { p: Profile; onBack: () => void; onNext: () => void }) {
-  const t = targets(p);
-  const l = bmiLabel(t.bmi);
-  const prog = programById(p.program);
-  const goalLine =
-    p.goal === 'maintain' || p.goal === 'healthy'
-      ? `Maintain around ${p.weightKg.toFixed(1)} kg`
-      : `${p.goal === 'lose' ? 'Lose' : 'Gain'} ${Math.abs(p.weightKg - p.targetKg).toFixed(1)} kg by ${fmtGoalDate(t.goalDate)}`;
-  const stats: [IconName, string, string, string, string, string][] = [
-    ['scale-outline', C.weight, C.weightSoft, 'BMI', t.bmi.toFixed(1), l.label],
-    ['water', C.water, C.waterSoft, 'Water', `${t.water} glasses`, '2 litres'],
-    ['footsteps', C.steps, C.stepsSoft, 'Steps', t.stepGoal.toLocaleString('en-IN'), 'per day'],
-  ];
-  return (
-    <SafeAreaView style={st.screen} edges={['top']}>
-      <StatusBar style="dark" />
-      <View style={st.topBar}>
-        <IconButton icon="chevron-back" bordered onPress={onBack} />
-      </View>
-      <ScrollView contentContainerStyle={{ paddingHorizontal: GUTTER, paddingTop: 4, paddingBottom: 24 }} showsVerticalScrollIndicator={false}>
-        <Enter index={0}>
-          <Pill text="PLAN READY" icon="checkmark-circle" />
-          <Text style={[st.qTitle, { marginTop: 10 }]}>Your plan is ready, {firstName(p.name)}!</Text>
-          <Text style={[T.body, { marginTop: 6 }]}>{goalLine}</Text>
-        </Enter>
-
-        <Enter index={1}>
-          <LinearGradient colors={G.deep} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.hero}>
-            <HeroOrbs />
-            <Text style={st.heroLabel}>DAILY CALORIE BUDGET</Text>
-            <View style={{ alignItems: 'center', marginTop: 16 }}>
-              <Ring size={170} stroke={12} value={1} track="rgba(255,255,255,0.14)" gradient={['#8FE8C6', '#FFFFFF']}>
-                <CountUp value={t.budget} fromZero style={st.heroNum} />
-                <Text style={st.heroUnit}>kcal / day</Text>
-              </Ring>
-            </View>
-            <View style={st.heroStats}>
-              <View style={st.heroStat}>
-                <Text style={st.heroStatLabel}>Maintenance</Text>
-                <Text style={st.heroStatValue}>{t.tdee.toLocaleString('en-IN')} kcal</Text>
-              </View>
-              <View style={st.heroDivider} />
-              <View style={st.heroStat}>
-                <Text style={st.heroStatLabel}>BMR</Text>
-                <Text style={st.heroStatValue}>{t.bmr.toLocaleString('en-IN')} kcal</Text>
-              </View>
-            </View>
-          </LinearGradient>
-        </Enter>
-
-        <Enter index={2}>
-          <Card style={{ marginTop: 12 }}>
-            <Text style={[T.h3, { marginBottom: 14 }]}>Daily macro targets</Text>
-            <View style={{ flexDirection: 'row', gap: 14 }}>
-              <MacroBar label="Carbs" value={t.carbs} target={t.carbs} color={C.carbs} />
-              <MacroBar label="Protein" value={t.protein} target={t.protein} color={C.protein} />
-              <MacroBar label="Fat" value={t.fat} target={t.fat} color={C.fat} />
-            </View>
-          </Card>
-        </Enter>
-
-        <Enter index={3} style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
-          {stats.map(([icon, color, bg, k, v, sub]) => (
-            <Card key={k} style={st.miniStat}>
-              <IconTile icon={icon} color={color} bg={bg} size={34} />
-              <Text style={[T.label, { marginTop: 10, fontSize: 11 }]}>{k}</Text>
-              <Text style={st.miniVal} numberOfLines={1}>
-                {v}
-              </Text>
-              <Text style={T.tiny}>{sub}</Text>
-            </Card>
-          ))}
-        </Enter>
-
-        <Enter index={4}>
-          <LinearGradient colors={prog.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.progCard}>
-            <HeroOrbs />
-            <View style={st.progArt}>
-              <Text style={{ fontSize: 32 }}>{prog.emoji}</Text>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={st.progEyebrow}>YOUR 30-DAY TRAINING PLAN</Text>
-              <Text style={st.progTitle}>{prog.title}</Text>
-              <Text style={st.progMeta}>
-                {prog.level} · {p.weeklyGoal} workouts / week · starts today
-              </Text>
-            </View>
-          </LinearGradient>
-        </Enter>
-
-        <Enter index={5}>
-          <Card style={st.dietCard}>
-            <IconTile icon="restaurant" color={C.accent} bg={C.accentSoft} size={40} />
-            <Text style={[T.small, { flex: 1, lineHeight: 19 }]}>
-              Built for a <Text style={{ fontWeight: '700', color: C.text }}>{(p.diet || 'balanced').toLowerCase()}</Text> diet
-              {p.cuisines.length ? ` with ${p.cuisines.slice(0, 2).join(' & ')} favourites` : ''}
-              {p.conditions.length && p.conditions[0] !== 'None' ? `, mindful of ${p.conditions.join(', ')}` : ''}.
-            </Text>
-          </Card>
-        </Enter>
-      </ScrollView>
-      <CtaBar>
-        <Button title="Start my journey" icon="arrow-forward" onPress={onNext} />
-      </CtaBar>
-    </SafeAreaView>
-  );
-}
-
-type Duration = (typeof PLAN_TIERS)[number]['durations'][number];
-
-/** Paywall duration row with an eased selected state (border, fill and radio). */
-function PayOption({ d, on, onPress }: { d: Duration; on: boolean; onPress: () => void }) {
-  const p = useSharedValue(on ? 1 : 0);
-  useEffect(() => {
-    p.set(withTiming(on ? 1 : 0, { duration: MOTION.base, easing: EASE_OUT }));
-  }, [on, p]);
+function GenderCard({ label, img, on, onPress }: { label: string; img: number; on: boolean; onPress: () => void }) {
+  const p = useOn(on);
   const box = useAnimatedStyle(() => ({
-    borderColor: interpolateColor(p.get(), [0, 1], ['rgba(255,255,255,0.14)', C.gold]),
-    backgroundColor: interpolateColor(p.get(), [0, 1], ['rgba(255,255,255,0.05)', 'rgba(245,196,81,0.12)']),
+    backgroundColor: interpolateColor(p.get(), [0, 1], [C.surfaceAlt, C.primary]),
+    borderColor: interpolateColor(p.get(), [0, 1], [C.border, C.primary]),
   }));
-  const ring = useAnimatedStyle(() => ({ borderColor: interpolateColor(p.get(), [0, 1], ['rgba(255,255,255,0.4)', C.gold]) }));
-  const dot = useAnimatedStyle(() => ({ opacity: p.get(), transform: [{ scale: p.get() }] }));
+  const text = useAnimatedStyle(() => ({ color: interpolateColor(p.get(), [0, 1], [C.text, C.white]) }));
   return (
-    <PressableScale scaleTo={0.98} accessibilityRole="radio" accessibilityState={{ checked: on }} onPress={onPress}>
-      <Animated.View style={[st.payOpt, box]}>
-        <Animated.View style={[st.payRadio, ring]}>
-          <Animated.View style={[st.payDot, dot]} />
-        </Animated.View>
-        <View style={{ flex: 1 }}>
-          <Text style={st.payMonths}>{d.months} months</Text>
-          <Text style={st.payPer}>{formatINR(Math.round(d.price / d.months))}/month</Text>
-        </View>
-        <View style={{ alignItems: 'flex-end' }}>
-          {d.badge && (
-            <View style={st.payBadge}>
-              <Text style={st.payBadgeText}>{d.badge.toUpperCase()}</Text>
-            </View>
-          )}
-          <Text style={st.payPrice}>{formatINR(d.price)}</Text>
-          <Text style={st.payWas}>{formatINR(d.was)}</Text>
-        </View>
+    <PressableScale scaleTo={0.97} accessibilityRole="radio" accessibilityState={{ checked: on }} onPress={() => { tap(); onPress(); }} style={{ flex: 1 }}>
+      <Animated.View style={[st.genderCard, box]}>
+        <Image source={img} style={StyleSheet.absoluteFill} contentFit="cover" contentPosition="top" transition={200} />
+        <LinearGradient colors={['rgba(0,0,0,0)', on ? 'rgba(18,168,125,0.92)' : 'rgba(255,255,255,0.94)']} locations={[0.55, 1]} style={StyleSheet.absoluteFill} />
+        <Animated.Text style={[st.genderLabel, text]}>{label}</Animated.Text>
+        {on && (
+          <Animated.View entering={nativeOnly(ZoomIn.duration(MOTION.base))} style={st.genderCheck}>
+            <Ionicons name="checkmark" size={15} color={C.primary} />
+          </Animated.View>
+        )}
       </Animated.View>
     </PressableScale>
   );
 }
 
-function Paywall({ onSkip, onTrial }: { onSkip: () => void; onTrial: (months: number) => void }) {
-  const tier = PLAN_TIERS[0];
-  const [months, setMonths] = useState(6);
-  const [confirm, setConfirm] = useState(false);
-  const [loading, setLoading] = useState(false);
+function DayChip({ label, on, onPress }: { label: string; on: boolean; onPress: () => void }) {
+  const p = useOn(on);
+  const box = useAnimatedStyle(() => ({
+    backgroundColor: interpolateColor(p.get(), [0, 1], [C.card, C.primary]),
+    borderColor: interpolateColor(p.get(), [0, 1], [C.border, C.primary]),
+  }));
+  const text = useAnimatedStyle(() => ({ color: interpolateColor(p.get(), [0, 1], [C.text, C.white]) }));
   return (
-    <LinearGradient colors={G.premium} start={{ x: 0, y: 0 }} end={{ x: 0.4, y: 1 }} style={{ flex: 1 }}>
-      <StatusBar style="light" />
-      <HeroOrbs tint={C.gold} />
-      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-        <View style={[st.topBar, { justifyContent: 'flex-end' }]}>
-          <IconButton icon="close" bg="rgba(255,255,255,0.12)" color={C.white} onPress={onSkip} />
+    <PressableScale scaleTo={0.95} accessibilityRole="checkbox" accessibilityState={{ checked: on }} onPress={() => { tap(); onPress(); }} style={st.dayCell}>
+      <Animated.View style={[st.day, box]}>
+        <Animated.Text style={[st.dayText, text]}>{label}</Animated.Text>
+      </Animated.View>
+    </PressableScale>
+  );
+}
+
+function RewardCard({ label, img, on, onPress }: { label: string; img: number; on: boolean; onPress: () => void }) {
+  const p = useOn(on);
+  const box = useAnimatedStyle(() => ({ borderColor: interpolateColor(p.get(), [0, 1], [C.border, C.primary]) }));
+  return (
+    <PressableScale scaleTo={0.97} accessibilityRole="checkbox" accessibilityState={{ checked: on }} onPress={() => { tap(); onPress(); }}>
+      <Animated.View style={[st.reward, box]}>
+        <Photo source={img} style={st.rewardImg} />
+        <Text style={st.rewardText} numberOfLines={2}>
+          {label}
+        </Text>
+        {on && (
+          <Animated.View entering={nativeOnly(ZoomIn.duration(MOTION.base))} style={st.rewardCheck}>
+            <Ionicons name="checkmark" size={14} color={C.white} />
+          </Animated.View>
+        )}
+      </Animated.View>
+    </PressableScale>
+  );
+}
+
+function BmiCard({ value, label, color }: { value: number; label: string; color: string }) {
+  const msg =
+    value < 18.5
+      ? 'You have a great potential to build a better shape. Move now!'
+      : value < 23
+        ? "You're in a healthy range. Let's sculpt and tone!"
+        : value < 27.5
+          ? 'A few smart changes will make a big difference. You can do it!'
+          : "Let's start with small, steady steps toward a healthier you.";
+  return (
+    <View style={st.bmiCard}>
+      <Text style={st.bmiKey}>Current BMI</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 4 }}>
+        <Text style={[st.bmiVal, { color }]}>{value.toFixed(1)}</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={[st.bmiLabel, { color }]}>{label}</Text>
+          <Text style={st.bmiMsg}>{msg}</Text>
         </View>
-        <ScrollView contentContainerStyle={{ paddingHorizontal: GUTTER, paddingBottom: 24 }} showsVerticalScrollIndicator={false}>
-          <Enter index={0} style={{ alignItems: 'center' }}>
-            <LinearGradient colors={['#FBDD8A', '#E5A631']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[st.crown, glow(C.gold)]}>
-              <Ionicons name="diamond" size={32} color={C.navy} />
-            </LinearGradient>
-          </Enter>
-          <Enter index={1}>
-            <Text style={st.payTitle}>Reach your goal 3× faster with {tier.name}</Text>
-            <Text style={st.paySub}>{tier.tagline}</Text>
-          </Enter>
-          <Enter index={2} style={st.featCard}>
-            {tier.features.map((f) => (
-              <View key={f} style={st.featRow}>
-                <Ionicons name="checkmark-circle" size={20} color={C.gold} />
-                <Text style={st.featText}>{f}</Text>
-              </View>
-            ))}
-          </Enter>
-          <View style={{ marginTop: 18, gap: 10 }}>
-            {tier.durations.map((d, n) => (
-              <Enter key={d.months} index={3 + n}>
-                <PayOption d={d} on={d.months === months} onPress={() => { tap(); setMonths(d.months); }} />
-              </Enter>
-            ))}
-          </View>
-        </ScrollView>
-        <CtaBar dark>
-          <Button
-            title="Start 7-day free trial"
-            loading={loading}
-            onPress={() => {
-              setLoading(true);
-              setTimeout(() => {
-                setLoading(false);
-                setConfirm(true);
-              }, 1000);
-            }}
-            style={{ backgroundColor: C.gold, borderColor: C.gold, ...glow(C.gold) }}
-            textStyle={{ color: C.navy }}
-          />
-          <Pressable onPress={onSkip} style={({ pressed }) => [st.textBtn, pressed && { opacity: 0.6 }]}>
-            <Text style={[st.textBtnLabel, { color: 'rgba(255,255,255,0.8)' }]}>Maybe later</Text>
-          </Pressable>
-          <Text style={st.payNote}>Demo mode: no payment will be taken. Cancel anytime.</Text>
-        </CtaBar>
-        <Dialog visible={confirm} icon="🎉" title="Your free trial has started!" text={`You now have full access to ${tier.name} for 7 days. Enjoy unlimited Snap scans and Ria AI coaching.`} confirm="Let's go" onConfirm={() => { setConfirm(false); onTrial(months); }} />
-      </SafeAreaView>
-    </LinearGradient>
+      </View>
+    </View>
+  );
+}
+
+function TargetNote({ p, units }: { p: Profile; units: WeightUnit }) {
+  const diff = p.targetKg - p.weightKg;
+  const pct = Math.abs(diff / p.weightKg) * 100;
+  const tb = bmi(p.targetKg, p.heightCm);
+  const amount = `${Math.abs(toUnit(p.targetKg, units) - toUnit(p.weightKg, units)).toFixed(1)} ${units}`;
+  let tone: 'warn' | 'good' = 'good';
+  let emoji = '👍';
+  let title: string;
+  let text: string;
+  if (tb < 18.5) {
+    tone = 'warn';
+    emoji = '⚠️';
+    title = 'A healthier target weight for you';
+    text = 'This target is below a healthy BMI. Consider a slightly higher goal; you can adjust it later in your plan.';
+  } else if (Math.abs(diff) < 0.05) {
+    title = 'Maintain & tone';
+    text = "We'll focus on strength and definition while keeping your weight steady.";
+  } else if (pct > 20) {
+    tone = 'warn';
+    emoji = '⚠️';
+    title = `Ambitious: ${diff < 0 ? 'lose' : 'gain'} ${amount}`;
+    text = `That's ${pct.toFixed(0)}% of your body weight. We'll get there step by step; you can always adjust it later.`;
+  } else {
+    title = `Realistic target: ${diff < 0 ? 'lose' : 'gain'} ${amount}`;
+    text = `${pct.toFixed(0)}% of your body weight. A healthy, achievable goal for you.`;
+  }
+  return (
+    <TipCard emoji={emoji} tone={tone}>
+      <Text style={st.tipTitle}>{title}</Text>
+      <Text style={[st.tipText, { marginTop: 2 }]}>{text}</Text>
+    </TipCard>
   );
 }
 
 /* ---------------- Styles ---------------- */
 
-const focusRing = Platform.select<object>({ ios: { shadowColor: C.primary, shadowOpacity: 0.18, shadowRadius: 8, shadowOffset: { width: 0, height: 0 } }, default: {} }) as object;
-
 const st = StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.bg },
-  topBar: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: GUTTER, paddingVertical: 8, minHeight: 56 },
-  counter: { fontSize: 14, fontWeight: '700', color: C.text, minWidth: 40, textAlign: 'right', fontVariant: ['tabular-nums'] },
-  counterOf: { color: C.muted, fontWeight: '600' },
-  qBody: { paddingHorizontal: GUTTER, paddingTop: 14, paddingBottom: 28 },
-  qTitle: { fontSize: 28, fontWeight: '800', color: C.text, letterSpacing: -0.7, lineHeight: 34 },
-  qSub: { fontSize: 15, color: C.textSoft, lineHeight: 22, marginTop: 8 },
-  ctaBar: { paddingHorizontal: GUTTER, paddingTop: 12, backgroundColor: C.card, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: C.border },
-  ctaBarDark: { backgroundColor: 'transparent', borderTopColor: 'rgba(255,255,255,0.1)' },
+  ctaBar: { paddingHorizontal: GUTTER, paddingTop: 12, backgroundColor: C.bg },
+  card: { backgroundColor: C.card, borderRadius: R.lg, padding: 16, borderWidth: 1, borderColor: C.borderSoft, ...shadowSm },
+  list: { paddingHorizontal: GUTTER, gap: 10, marginTop: 22 },
+  bold: { fontWeight: '800', color: C.text },
+  helper: { fontSize: 14, fontWeight: '600', color: C.muted },
+  centerCopy: { fontSize: 15, color: C.textSoft, lineHeight: 22, textAlign: 'center' },
+  tipTitle: { fontSize: 14, fontWeight: '800', color: C.text },
+  tipText: { fontSize: 13, color: C.textSoft, lineHeight: 18 },
 
-  field: { flexDirection: 'row', alignItems: 'center', gap: 10, height: 56, borderRadius: R.md, borderWidth: 1, borderColor: C.border, backgroundColor: C.card, paddingHorizontal: 16 },
-  fieldFocus: { borderColor: C.primary, ...focusRing },
-  fieldInput: { flex: 1, height: '100%', fontSize: 18, fontWeight: '600', color: C.text, letterSpacing: 0.2 },
-  greet: { flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 20, padding: 14, borderRadius: R.lg, backgroundColor: C.card, borderWidth: StyleSheet.hairlineWidth, borderColor: C.borderSoft, ...shadow },
-  greetText: { fontSize: 16, fontWeight: '700', color: C.text, letterSpacing: -0.2 },
-  avatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { fontSize: 21, fontWeight: '800', color: C.white },
-  nextCard: { padding: 16, borderRadius: R.lg, backgroundColor: C.surfaceAlt, borderWidth: StyleSheet.hairlineWidth * 2, borderColor: C.border },
-  nextHead: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  nextTitle: { fontSize: 13, fontWeight: '700', color: C.primaryDark },
-  nextRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 14 },
-  nextItem: { flex: 1, alignItems: 'center', gap: 8 },
-  nextLabel: { fontSize: 12, fontWeight: '600', color: C.textSoft },
+  genderRow: { flexDirection: 'row', gap: 12, paddingHorizontal: GUTTER, marginTop: 18 },
+  genderCard: { height: 250, borderRadius: R.lg, borderWidth: 2, overflow: 'hidden', justifyContent: 'flex-end', alignItems: 'center' },
+  genderLabel: { fontSize: 16, fontWeight: '800', marginBottom: 14 },
+  genderCheck: { position: 'absolute', top: 10, right: 10, width: 24, height: 24, borderRadius: 12, backgroundColor: C.white, alignItems: 'center', justifyContent: 'center' },
+  otherBtn: { paddingHorizontal: 18, paddingVertical: 11, borderRadius: R.pill, borderWidth: 1, borderColor: C.border, backgroundColor: C.card },
+  otherBtnOn: { borderColor: C.primary, backgroundColor: C.primarySoft },
+  otherText: { fontSize: 13, fontWeight: '600', color: C.textSoft },
 
-  infoCard: { backgroundColor: C.card, borderRadius: R.lg, padding: 16, borderWidth: StyleSheet.hairlineWidth, borderColor: C.borderSoft, ...shadow },
-  infoRow: { flexDirection: 'row', gap: 12, alignItems: 'center' },
-  status: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 22, borderRadius: R.md, padding: 14, borderWidth: 1 },
-  statusOk: { backgroundColor: C.primarySoft, borderColor: C.primaryTint },
-  statusBad: { backgroundColor: C.dangerSoft, borderColor: '#F8D3D4' },
-  statusText: { flex: 1, fontSize: 14, fontWeight: '700', lineHeight: 20 },
+  figureBox: { width: 230, height: 230, borderRadius: R.xl, backgroundColor: '#ECEAE8', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  figureLabel: { fontSize: 13, fontWeight: '700', color: C.textSoft, marginTop: 10 },
+  fatCard: { backgroundColor: C.card, borderRadius: R.md, padding: 16, borderWidth: 1, borderColor: C.borderSoft },
+  fatTitle: { fontSize: 13, fontWeight: '700', color: C.text },
+  fatValue: { fontSize: 19, fontWeight: '800', marginTop: 6, fontVariant: ['tabular-nums'] },
+  fatVerdict: { fontSize: 14, fontWeight: '700' },
+  fatNote: { fontSize: 12.5, color: C.textSoft, lineHeight: 17, marginTop: 4 },
 
-  bmiHead: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
-  bmiNum: { fontSize: 30, fontWeight: '800', letterSpacing: -0.8, fontVariant: ['tabular-nums'], marginTop: 2 },
-  bmiTag: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderRadius: R.pill, paddingHorizontal: 10, paddingVertical: 4, marginBottom: 4 },
-  bmiTagDot: { width: 7, height: 7, borderRadius: 4 },
-  bmiTagText: { fontSize: 12, fontWeight: '700' },
-  bmiBar: { flexDirection: 'row', height: 8, borderRadius: 4, overflow: 'hidden', gap: 2 },
-  bmiMarker: { position: 'absolute', top: -5, marginLeft: -9, width: 18, height: 18, borderRadius: 9, backgroundColor: C.white, borderWidth: 4, borderColor: C.text, ...shadowSm },
+  bigValueWrap: { alignItems: 'center', marginTop: 26, marginBottom: 14 },
+  bigValue: { fontSize: 52, fontWeight: '800', color: C.text, letterSpacing: -1.5, fontVariant: ['tabular-nums'] },
+  bigUnit: { fontSize: 18, fontWeight: '700', color: C.textSoft, letterSpacing: 0 },
+  bmiCard: { backgroundColor: C.card, borderRadius: R.md, padding: 16, borderWidth: 1, borderColor: C.borderSoft },
+  bmiKey: { fontSize: 13, fontWeight: '700', color: C.text },
+  bmiVal: { fontSize: 30, fontWeight: '900', fontVariant: ['tabular-nums'], letterSpacing: -0.5 },
+  bmiLabel: { fontSize: 13, fontWeight: '800' },
+  bmiMsg: { fontSize: 12.5, color: C.textSoft, lineHeight: 17, marginTop: 1 },
 
-  genderCard: { alignItems: 'center', paddingVertical: 20, borderRadius: R.lg, borderWidth: 1.5, borderColor: C.border, backgroundColor: C.card },
-  genderOn: { borderColor: C.primary, backgroundColor: C.primarySoft },
-  genderArt: { width: 64, height: 64, borderRadius: 22, backgroundColor: C.surfaceAlt, alignItems: 'center', justifyContent: 'center' },
-  radio: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: C.border, alignItems: 'center', justifyContent: 'center', marginTop: 12 },
-  radioOn: { borderColor: C.primary },
-  radioDot: { width: 11, height: 11, borderRadius: 6, backgroundColor: C.primary },
+  previewRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: GUTTER, marginTop: 24 },
+  previewCard: { flex: 1, borderRadius: R.lg, backgroundColor: C.card, borderWidth: 2, borderColor: C.border, overflow: 'hidden', alignItems: 'center', paddingBottom: 12 },
+  previewCardOn: { borderColor: C.primary },
+  previewArt: { alignSelf: 'stretch', height: 190, backgroundColor: '#ECEAE8', alignItems: 'center', justifyContent: 'center' },
+  previewLabel: { fontSize: 14, fontWeight: '800', color: C.text, marginTop: 10 },
+  previewTag: { marginTop: 10, backgroundColor: C.primary, borderRadius: R.pill, paddingHorizontal: 16, paddingVertical: 4 },
+  previewArrow: { width: 34, height: 34, borderRadius: 17, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center', marginHorizontal: -10, zIndex: 2, borderWidth: 3, borderColor: C.bg },
 
-  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  bigChip: { height: 44, paddingHorizontal: 18 },
-  slotChip: { height: 40, paddingHorizontal: 16 },
-  groupRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
-  groupLabel: { fontSize: 16, fontWeight: '700', color: C.text, letterSpacing: -0.2, flex: 1 },
-  privacy: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8, paddingHorizontal: 2 },
-  heightPill: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'center', marginTop: 18, backgroundColor: C.card, borderRadius: R.pill, paddingHorizontal: 12, paddingVertical: 6, borderWidth: StyleSheet.hairlineWidth * 2, borderColor: C.border },
-  heightPillText: { fontSize: 13, fontWeight: '600', color: C.textSoft, fontVariant: ['tabular-nums'] },
+  weeks: { fontSize: 30, fontWeight: '900', color: C.text, letterSpacing: -0.5 },
+  paceKg: { fontSize: 13, fontWeight: '600', color: C.muted, marginTop: 2 },
 
-  permCard: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16, borderRadius: R.lg, borderWidth: 1.5, borderColor: C.border, backgroundColor: C.card, marginBottom: 12 },
-  permOn: { borderColor: C.primary, backgroundColor: C.primarySoft },
-  connected: { width: 32, height: 32, borderRadius: 16, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center' },
+  benefitRow: { flexDirection: 'row', gap: 12, paddingHorizontal: GUTTER, marginTop: 22 },
+  benefitLeft: { flex: 0.9, gap: 10 },
+  benefitItem: { backgroundColor: C.card, borderRadius: R.md, padding: 12, borderWidth: 1, borderColor: C.borderSoft, gap: 8 },
+  benefitIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: C.primarySoft, alignItems: 'center', justifyContent: 'center' },
+  benefitText: { fontSize: 13, fontWeight: '700', color: C.text, lineHeight: 17 },
+  benefitCard: { flex: 1.1, borderRadius: R.lg, overflow: 'hidden', paddingBottom: 6 },
+  benefitPhoto: { height: 190 },
+  benefitBadge: { position: 'absolute', top: 10, left: 10, backgroundColor: C.accent, borderRadius: R.pill, paddingHorizontal: 9, paddingVertical: 4 },
+  benefitBadgeText: { color: C.white, fontSize: 10.5, fontWeight: '800' },
+  benefitCardText: { color: C.white, fontSize: 12.5, fontWeight: '700', flex: 1 },
 
-  chartCard: { backgroundColor: C.card, borderRadius: R.lg, padding: 16, borderWidth: StyleSheet.hairlineWidth, borderColor: C.borderSoft, ...shadow },
-  chartEnd: { position: 'absolute', width: 18, height: 18, borderRadius: 9, backgroundColor: C.primary, borderWidth: 3, borderColor: C.white, ...shadowSm },
-  chartFoot: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: C.borderSoft },
-  chartVal: { fontSize: 18, fontWeight: '800', letterSpacing: -0.3, marginTop: 3, fontVariant: ['tabular-nums'] },
+  activityArt: { width: 170, height: 170, borderRadius: R.xl },
 
-  welcomeGlow: { position: 'absolute', top: 0, left: 0, right: 0, height: '62%' },
-  welcome: { flex: 1, backgroundColor: '#0B1A17' },
-  welcomePhoto: { position: 'absolute', top: 0, left: 0, right: 0, height: '72%' },
-  brandRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: GUTTER, paddingTop: 10 },
-  brandMark: { width: 40, height: 40, borderRadius: 13, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center' },
-  brandName: { fontSize: 20, fontWeight: '800', color: C.white, letterSpacing: -0.4 },
-  brandTag: { fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.7)', letterSpacing: 1.4, marginTop: 1 },
-  welcomeCopy: { paddingHorizontal: GUTTER, marginBottom: 18 },
-  welcomeHead: { fontSize: 44, lineHeight: 48, fontWeight: '800', color: C.white, letterSpacing: -1.6 },
-  welcomeLead: { fontSize: 16, lineHeight: 23, color: 'rgba(255,255,255,0.82)', marginTop: 12, maxWidth: 320 },
-  slidePage: { paddingHorizontal: GUTTER, paddingVertical: 4 },
-  glassCard: { height: 92, flexDirection: 'row', alignItems: 'center', gap: 14, borderRadius: R.lg, paddingHorizontal: 16, backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: StyleSheet.hairlineWidth * 2, borderColor: 'rgba(255,255,255,0.18)' },
-  glassIcon: { width: 46, height: 46, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
-  glassTitle: { fontSize: 16, fontWeight: '800', color: C.white, letterSpacing: -0.2 },
-  glassText: { fontSize: 13, lineHeight: 18, color: 'rgba(255,255,255,0.72)', marginTop: 3 },
-  ctaLight: { backgroundColor: C.white, borderColor: C.white },
-  ctaGlass: { backgroundColor: 'rgba(255,255,255,0.1)', borderColor: 'rgba(255,255,255,0.32)' },
-  dots: { flexDirection: 'row', justifyContent: 'center', gap: 6, paddingTop: 10, paddingBottom: 18 },
-  dot: { height: 7, borderRadius: 4 },
-  welcomeCtas: { paddingHorizontal: GUTTER, paddingBottom: 8, gap: 10 },
+  dayGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 10, paddingHorizontal: GUTTER, marginTop: 26 },
+  dayCell: { width: '30%' },
+  day: { height: 52, borderRadius: R.md, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center', ...shadowSm },
+  dayText: { fontSize: 14, fontWeight: '700' },
 
-  textBtn: { alignSelf: 'center', paddingVertical: 14, paddingHorizontal: 16 },
-  textBtnLabel: { color: C.textSoft, fontWeight: '700', fontSize: 15 },
-  skip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: R.pill, backgroundColor: C.card, borderWidth: StyleSheet.hairlineWidth * 2, borderColor: C.border },
-  skipText: { color: C.textSoft, fontWeight: '700', fontSize: 14 },
-  cc: { flexDirection: 'row', alignItems: 'center', gap: 8, height: '100%' },
-  ccText: { fontWeight: '700', fontSize: 17, color: C.text, fontVariant: ['tabular-nums'] },
-  ccDivider: { width: 1, height: 24, backgroundColor: C.border, marginLeft: 6 },
-  orRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginVertical: 24 },
-  orLine: { flex: 1, height: StyleSheet.hairlineWidth * 2, backgroundColor: C.border },
-  orText: { fontSize: 12, fontWeight: '600', color: C.muted },
-  signGlow: { position: 'absolute', top: 0, left: 0, right: 0, height: 360 },
-  signMark: { width: 56, height: 56, borderRadius: 18, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center' },
-  fieldLabel: { fontSize: 13, fontWeight: '700', color: C.textSoft, marginBottom: 8, marginLeft: 2 },
-  fieldError: { borderColor: C.danger, shadowColor: C.danger },
-  helper: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10, marginLeft: 2 },
-  helperText: { flex: 1, fontSize: 13, color: C.textSoft, lineHeight: 18 },
-  socialRow: { flexDirection: 'row', gap: 10 },
-  social: { flex: 1, height: 54, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, borderRadius: R.md, borderWidth: 1, borderColor: C.border, backgroundColor: C.card, ...shadowSm },
-  socialText: { fontSize: 16, fontWeight: '700', color: C.text },
-  trustRow: { flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: 8 },
-  trustItem: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 6, borderRadius: R.pill, backgroundColor: C.primarySoft },
-  trustText: { fontSize: 12, fontWeight: '700', color: C.primaryDark },
-  legal: { fontSize: 12, color: C.muted, textAlign: 'center', lineHeight: 18, marginTop: 14, paddingHorizontal: 12 },
-  legalLink: { color: C.textSoft, fontWeight: '700', textDecorationLine: 'underline' },
-  otpRow: { flexDirection: 'row', gap: 12, marginTop: 28, justifyContent: 'center' },
-  otpBox: { width: 62, height: 68, borderRadius: R.md, borderWidth: 1, borderColor: C.border, backgroundColor: C.card, alignItems: 'center', justifyContent: 'center' },
-  otpFilled: { backgroundColor: C.primarySoft, borderColor: C.primaryTint },
-  otpActive: { borderColor: C.primary, borderWidth: 2, ...focusRing },
-  otpText: { fontSize: 28, fontWeight: '800', color: C.text, fontVariant: ['tabular-nums'] },
-  otpHidden: { position: 'absolute', width: '100%', height: '100%', opacity: 0.01, color: 'transparent' },
-  caret: { width: 2, height: 28, borderRadius: 1, backgroundColor: C.primary },
-  resend: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'center', marginTop: 14, paddingVertical: 8, paddingHorizontal: 12 },
+  dietArt: { marginHorizontal: GUTTER, marginTop: 22, height: 300, borderRadius: R.xl, overflow: 'hidden' },
+  dietTag: { position: 'absolute', borderRadius: R.pill, paddingHorizontal: 12, paddingVertical: 6, ...shadowSm },
+  dietTagText: { color: C.white, fontSize: 11, fontWeight: '900', letterSpacing: 0.6 },
 
-  phone: { width: 228, height: 252, borderRadius: 38, borderWidth: 7, borderColor: C.navy, borderBottomWidth: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 0, paddingHorizontal: 12, paddingTop: 12, overflow: 'hidden' },
-  phoneNotch: { width: 74, height: 20, borderRadius: 10, backgroundColor: C.navy, alignSelf: 'center' },
-  phoneTime: { fontSize: 48, fontWeight: '300', color: C.text, textAlign: 'center', marginTop: 8, letterSpacing: -1, fontVariant: ['tabular-nums'] },
-  phoneDate: { textAlign: 'center', color: C.textSoft, fontWeight: '600', fontSize: 12 },
-  phoneFade: { position: 'absolute', left: -8, right: -8, bottom: 0, height: 56, pointerEvents: 'none' },
-  notifCard: { backgroundColor: 'rgba(255,255,255,0.96)', borderRadius: 16, padding: 11, marginTop: 16, ...shadow },
-  notifLogo: { width: 18, height: 18, borderRadius: 6, backgroundColor: C.primaryDark, alignItems: 'center', justifyContent: 'center' },
-  notifyTitle: { fontSize: 24, fontWeight: '800', color: C.text, letterSpacing: -0.5, lineHeight: 30, textAlign: 'center', marginTop: 28 },
+  rewardGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, paddingHorizontal: GUTTER, marginTop: 22 },
+  rewardCell: { width: '47.8%' },
+  reward: { borderRadius: R.lg, borderWidth: 2, backgroundColor: C.card, overflow: 'hidden', paddingBottom: 10 },
+  rewardImg: { height: 128 },
+  rewardText: { fontSize: 13, fontWeight: '700', color: C.text, textAlign: 'center', marginTop: 8, paddingHorizontal: 8, minHeight: 34 },
+  rewardCheck: { position: 'absolute', top: 8, right: 8, width: 24, height: 24, borderRadius: 12, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: C.white },
 
-  genPct: { fontSize: 40, fontWeight: '800', color: C.text, letterSpacing: -1, fontVariant: ['tabular-nums'] },
-  genPctSign: { fontSize: 20, color: C.muted, fontWeight: '700' },
-  genCard: { marginTop: 24, alignSelf: 'stretch', gap: 14, backgroundColor: C.card, borderRadius: R.lg, padding: 18, borderWidth: StyleSheet.hairlineWidth, borderColor: C.borderSoft, ...shadow },
-  genRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  genIcon: { width: 24, height: 24, alignItems: 'center', justifyContent: 'center' },
-
-  hero: { borderRadius: R.xl, padding: 20, marginTop: 20, overflow: 'hidden' },
-  heroLabel: { color: 'rgba(255,255,255,0.78)', fontWeight: '700', fontSize: 12, letterSpacing: 1, textAlign: 'center' },
-  heroNum: { color: C.white, fontSize: 40, fontWeight: '800', letterSpacing: -1.2, fontVariant: ['tabular-nums'] },
-  heroUnit: { color: 'rgba(255,255,255,0.75)', fontSize: 13, fontWeight: '600', marginTop: -2 },
-  heroStats: { flexDirection: 'row', alignItems: 'center', marginTop: 18, paddingTop: 14, borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: 'rgba(255,255,255,0.14)' },
-  heroStat: { flex: 1, alignItems: 'center' },
-  heroStatLabel: { color: 'rgba(255,255,255,0.7)', fontSize: 12, fontWeight: '600' },
-  heroStatValue: { color: C.white, fontSize: 15, fontWeight: '700', marginTop: 2, fontVariant: ['tabular-nums'] },
-  heroDivider: { width: 1, height: 28, backgroundColor: 'rgba(255,255,255,0.16)' },
-  miniStat: { flex: 1, padding: 12 },
-  miniVal: { fontSize: 15, fontWeight: '800', color: C.text, letterSpacing: -0.2, marginTop: 1, fontVariant: ['tabular-nums'] },
-  progCard: { borderRadius: R.lg, padding: 16, marginTop: 12, flexDirection: 'row', alignItems: 'center', gap: 14, overflow: 'hidden' },
-  progArt: { width: 58, height: 58, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center' },
-  progEyebrow: { color: 'rgba(255,255,255,0.82)', fontWeight: '700', fontSize: 11, letterSpacing: 0.8 },
-  progTitle: { color: C.white, fontWeight: '800', fontSize: 18, letterSpacing: -0.3, marginTop: 2 },
-  progMeta: { color: 'rgba(255,255,255,0.88)', fontSize: 13, marginTop: 2 },
-  dietCard: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 12 },
-
-  crown: { width: 72, height: 72, borderRadius: 24, alignItems: 'center', justifyContent: 'center', marginTop: 4 },
-  payTitle: { fontSize: 28, fontWeight: '800', color: C.white, letterSpacing: -0.7, lineHeight: 34, textAlign: 'center', marginTop: 18 },
-  paySub: { fontSize: 15, lineHeight: 22, color: 'rgba(255,255,255,0.72)', textAlign: 'center', marginTop: 8 },
-  featCard: { marginTop: 22, gap: 12, padding: 16, borderRadius: R.lg, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
-  featRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  featText: { color: C.white, fontSize: 15, fontWeight: '600', flex: 1 },
-  payOpt: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16, borderRadius: R.lg, borderWidth: 1.5 },
-  payRadio: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
-  payDot: { width: 11, height: 11, borderRadius: 6, backgroundColor: C.gold },
-  payMonths: { color: C.white, fontWeight: '800', fontSize: 16 },
-  payPer: { color: 'rgba(255,255,255,0.65)', fontSize: 13, marginTop: 2, fontVariant: ['tabular-nums'] },
-  payBadge: { backgroundColor: C.gold, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, marginBottom: 4 },
-  payBadgeText: { fontSize: 10, fontWeight: '800', color: C.navy, letterSpacing: 0.4 },
-  payPrice: { color: C.white, fontWeight: '800', fontSize: 17, fontVariant: ['tabular-nums'] },
-  payWas: { color: 'rgba(255,255,255,0.5)', fontSize: 12, textDecorationLine: 'line-through', fontVariant: ['tabular-nums'] },
-  payNote: { color: 'rgba(255,255,255,0.45)', fontSize: 11, textAlign: 'center' },
+  proofTitle: { fontSize: 15, fontWeight: '800', color: C.text },
+  proofQuote: { fontSize: 13.5, color: C.textSoft, lineHeight: 20, marginTop: 8, fontStyle: 'italic' },
+  proofName: { fontSize: 12, fontWeight: '700', color: C.muted, marginTop: 10 },
 });
