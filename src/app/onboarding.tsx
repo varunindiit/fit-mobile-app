@@ -111,7 +111,7 @@ function finalize(p: Profile): Profile {
 /* ---------------- Screen ---------------- */
 
 // Survives remounts (e.g. a reload mid-onboarding) so answers and position are never lost.
-let resume: { p: Profile; step: StepId } | null = null;
+let resume: { p: Profile; step: StepId; genderPicked: boolean } | null = null;
 
 export default function Onboarding() {
   const { state, completeOnboarding, subscribe, updateSettings } = useStore();
@@ -120,6 +120,8 @@ export default function Onboarding() {
   // Updater form reads the latest answers, so rapid taps on multi-selects never drop a choice.
   const set = (patch: Partial<Profile> | ((d: Profile) => Partial<Profile>)) => setP((d) => ({ ...d, ...(typeof patch === 'function' ? patch(d) : patch) }));
   const [step, setStep] = useState<StepId>(() => (resume?.step === 'analysis' ? 'result' : resume?.step) ?? 'intro');
+  // Nothing is pre-selected on a fresh start; once picked, going back shows the choice.
+  const [genderPicked, setGenderPicked] = useState(() => resume?.genderPicked ?? false);
   const [login, setLogin] = useState(false);
   const [dir, setDir] = useState<1 | -1>(1);
   const units: WeightUnit = state.settings.units;
@@ -127,8 +129,8 @@ export default function Onboarding() {
   const [heightUnit, setHeightUnit] = useState<'cm' | 'ft'>('cm');
 
   useEffect(() => {
-    resume = { p, step };
-  }, [p, step]);
+    resume = { p, step, genderPicked };
+  }, [p, step, genderPicked]);
 
   const go = (to: StepId, d: 1 | -1) => {
     setDir(d);
@@ -238,9 +240,10 @@ export default function Onboarding() {
                   key={g}
                   label={g === 'male' ? 'Male' : 'Female'}
                   img={g === 'male' ? IMG.genderMale : IMG.genderFemale}
-                  on={p.gender === g}
+                  on={genderPicked && p.gender === g}
                   onPress={() => {
                     set({ gender: g });
+                    setGenderPicked(true);
                     setTimeout(() => go('shape', 1), 320);
                   }}
                 />
@@ -252,10 +255,11 @@ export default function Onboarding() {
                 onPress={() => {
                   tap();
                   set({ gender: 'other' });
+                  setGenderPicked(true);
                   setTimeout(() => go('shape', 1), 200);
                 }}
-                style={({ pressed }) => [st.otherBtn, p.gender === 'other' && st.otherBtnOn, pressed && { opacity: 0.6 }]}>
-                <Text style={[st.otherText, p.gender === 'other' && { color: C.primaryDark }]}>Others / I&apos;d rather not say</Text>
+                style={({ pressed }) => [st.otherBtn, genderPicked && p.gender === 'other' && st.otherBtnOn, pressed && { opacity: 0.6 }]}>
+                <Text style={[st.otherText, genderPicked && p.gender === 'other' && { color: C.primaryDark }]}>Others / I&apos;d rather not say</Text>
               </Pressable>
             </Rise>
           </Body>
