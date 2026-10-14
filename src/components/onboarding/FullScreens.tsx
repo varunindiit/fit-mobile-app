@@ -414,7 +414,7 @@ export function Paywall({ male, gaining, onSkip, onSubscribe }: { male: boolean;
       </Cta>
       <Dialog
         visible={confirm}
-        icon="🎉"
+        iconName="gift"
         title={plan === 'trial' ? 'Your free trial has started!' : `Welcome to ${tier.name}!`}
         text={plan === 'trial' ? `Enjoy full access to ${tier.name} for 7 days. Demo mode: no payment is taken.` : 'Your monthly plan is active. Demo mode: no payment is taken.'}
         confirm="Let's go"

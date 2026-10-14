@@ -76,11 +76,11 @@ export function QTitle({ text, sub, style }: { text: string; sub?: string; style
 
 /* ---------------- Choice row ---------------- */
 
-/** Full-width selectable row. Filled brand colour when selected; leading radio, emoji or icon; trailing check. */
+/** Full-width selectable row. Filled brand colour when selected; leading radio, image or icon; trailing check. */
 export function ChoiceRow({
   title,
   sub,
-  emoji,
+  image,
   icon,
   radio,
   selected,
@@ -89,7 +89,8 @@ export function ChoiceRow({
 }: {
   title: string;
   sub?: string;
-  emoji?: string;
+  /** Small round illustration (e.g. a food icon) shown before the title. */
+  image?: number;
   icon?: React.ComponentProps<typeof Ionicons>['name'];
   radio?: boolean;
   selected: boolean;
@@ -121,9 +122,9 @@ export function ChoiceRow({
               {selected && <View style={s.radioDot} />}
             </View>
           )}
-          {emoji && (
+          {image !== undefined && (
             <View style={[s.rowEmoji, selected && { backgroundColor: 'rgba(255,255,255,0.22)' }]}>
-              <Text style={{ fontSize: 18 }}>{emoji}</Text>
+              <Image source={image} style={s.rowImage} contentFit="contain" />
             </View>
           )}
           {icon && (
@@ -154,11 +155,14 @@ export function ChoiceRow({
 
 /* ---------------- Tip card ---------------- */
 
-export function TipCard({ emoji, icon, tone = 'neutral', children, style }: { emoji?: string; icon?: React.ComponentProps<typeof Ionicons>['name']; tone?: 'neutral' | 'warn' | 'good'; children: React.ReactNode; style?: StyleProp<ViewStyle> }) {
+export function TipCard({ icon, tone = 'neutral', children, style }: { icon: React.ComponentProps<typeof Ionicons>['name']; tone?: 'neutral' | 'warn' | 'good'; children: React.ReactNode; style?: StyleProp<ViewStyle> }) {
   const bg = tone === 'warn' ? C.warningSoft : tone === 'good' ? C.primarySoft : C.surfaceAlt;
+  const fg = tone === 'warn' ? C.warning : C.primaryDark;
   return (
     <View style={[s.tip, { backgroundColor: bg }, style]}>
-      {emoji ? <Text style={{ fontSize: 18 }}>{emoji}</Text> : icon ? <Ionicons name={icon} size={18} color={tone === 'warn' ? C.warning : C.primaryDark} /> : null}
+      <View style={[s.tipIcon, { backgroundColor: tone === 'neutral' ? C.primarySoft : C.white }]}>
+        <Ionicons name={icon} size={17} color={fg} />
+      </View>
       <View style={{ flex: 1 }}>{children}</View>
     </View>
   );
@@ -286,7 +290,8 @@ const s = StyleSheet.create({
   sub: { fontSize: 14, color: C.textSoft, lineHeight: 20, textAlign: 'center', marginTop: 8 },
 
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 56, paddingHorizontal: 16, paddingVertical: 12, borderRadius: R.md, borderWidth: 1.5, ...shadowSm },
-  rowEmoji: { width: 34, height: 34, borderRadius: 17, backgroundColor: C.surfaceAlt, alignItems: 'center', justifyContent: 'center' },
+  rowEmoji: { width: 34, height: 34, borderRadius: 17, backgroundColor: C.surfaceAlt, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  rowImage: { width: 30, height: 30 },
   rowTitle: { fontSize: 15, fontWeight: '700', letterSpacing: -0.1 },
   rowSub: { fontSize: 12.5, marginTop: 2, lineHeight: 17 },
   rowCheck: { width: 24, height: 24, borderRadius: 12, backgroundColor: C.white, alignItems: 'center', justifyContent: 'center' },
@@ -296,7 +301,8 @@ const s = StyleSheet.create({
   detail: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 8, padding: 14, borderRadius: R.md, backgroundColor: C.primarySoft },
   detailText: { flex: 1, fontSize: 13, color: C.primaryDark, lineHeight: 18, fontWeight: '600' },
 
-  tip: { flexDirection: 'row', gap: 12, padding: 14, borderRadius: R.md, alignItems: 'flex-start' },
+  tip: { flexDirection: 'row', gap: 12, padding: 14, borderRadius: R.md, alignItems: 'center' },
+  tipIcon: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
 
   sliderHit: { height: 40, justifyContent: 'center' },
   sliderTrack: { position: 'absolute', left: 0, right: 0, height: 4, borderRadius: 2, backgroundColor: C.border },

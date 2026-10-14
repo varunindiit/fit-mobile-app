@@ -606,13 +606,14 @@ export function Sheet({ visible, onClose, title, children, scroll = false }: { v
 }
 
 /** Centered dialog used for simulated system permission prompts and confirmations. */
-export function Dialog({ visible, title, text, icon, confirm = 'OK', cancel, onConfirm, onCancel, danger }: { visible: boolean; title: string; text?: string; icon?: string; confirm?: string; cancel?: string; onConfirm: () => void; onCancel?: () => void; danger?: boolean }) {
+export function Dialog({ visible, title, text, icon, iconName, confirm = 'OK', cancel, onConfirm, onCancel, danger }: { visible: boolean; title: string; text?: string; icon?: string; /** Vector icon shown in the badge instead of an emoji `icon`. */ iconName?: IconName; confirm?: string; cancel?: string; onConfirm: () => void; onCancel?: () => void; danger?: boolean }) {
   const mounted = usePresence(visible, MOTION.fast);
   // Hold each field separately (primitives) so closing doesn't flash new/empty content.
   const held = {
     title: useHeldWhileVisible(title, visible),
     text: useHeldWhileVisible(text, visible),
     icon: useHeldWhileVisible(icon, visible),
+    iconName: useHeldWhileVisible(iconName, visible),
     confirm: useHeldWhileVisible(confirm, visible),
     cancel: useHeldWhileVisible(cancel, visible),
     danger: useHeldWhileVisible(danger, visible),
@@ -630,11 +631,15 @@ export function Dialog({ visible, title, text, icon, confirm = 'OK', cancel, onC
       <View style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center', padding: 32 }]}>
         <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: C.overlay }, backdrop]} />
         <Animated.View style={[s.dialog, box]}>
-          {held.icon && (
+          {held.iconName ? (
+            <View style={s.dialogIcon}>
+              <Ionicons name={held.iconName} size={30} color={held.danger ? C.danger : C.primaryDark} />
+            </View>
+          ) : held.icon ? (
             <View style={s.dialogIcon}>
               <Text style={{ fontSize: 30 }}>{held.icon}</Text>
             </View>
-          )}
+          ) : null}
           <Text style={[T.h3, { textAlign: 'center', fontSize: 18 }]}>{held.title}</Text>
           {held.text && <Text style={[T.small, { textAlign: 'center', marginTop: 8, lineHeight: 20 }]}>{held.text}</Text>}
           <View style={{ flexDirection: 'row', gap: 10, marginTop: 22 }}>

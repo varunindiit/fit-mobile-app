@@ -15,7 +15,7 @@ import { GoalCurve } from '@/components/onboarding/GoalCurve';
 import { ChoiceRow, GUTTER, OnbHeader, Photo, QTitle, StepSlider, TipCard, UnitToggle, fromUnit, stepIn, toUnit, useOn, type WeightUnit } from '@/components/onboarding/kit';
 import { RulerPicker } from '@/components/onboarding/RulerPicker';
 import { YearWheel } from '@/components/onboarding/YearWheel';
-import { Button, Dialog, EASE_OUT, nativeOnly, PressableScale, tap, useToast } from '@/components/ui';
+import { Button, Dialog, EASE_OUT, nativeOnly, PressableScale, tap, useToast, type IconName } from '@/components/ui';
 import { bmi, bmiLabel, cmToFtIn, targets } from '@/lib/calc';
 import { DEFAULT_PROFILE, useStore, type Goal, type Profile } from '@/lib/store';
 import { BRAND, C, MOTION, R, shadowSm } from '@/theme';
@@ -57,22 +57,22 @@ const QUESTIONS = STEPS.filter((s) => SECTION[s]);
 /* ---------------- Options ---------------- */
 
 const EXPERIENCE = ['I tried but lost motivation', 'I succeeded but regained weight', 'Achieved but plateaued', 'Still trying', 'This is my first time'];
-const LEVELS: { t: string; emoji: string; program: Profile['program']; detail: string }[] = [
-  { t: 'Easy to start', emoji: '🙂', program: 'belly', detail: 'Gentle, beginner-friendly sessions to build the habit without burning out.' },
-  { t: 'Break a light sweat', emoji: '💦', program: 'abs', detail: "We'll tailor effective workouts with the right intensity just for you!" },
-  { t: 'A bit challenging', emoji: '🔥', program: 'sixpack', detail: 'Higher-volume training that pushes you a little further every week.' },
+const LEVELS: { t: string; icon: IconName; program: Profile['program']; detail: string }[] = [
+  { t: 'Easy to start', icon: 'happy-outline', program: 'belly', detail: 'Gentle, beginner-friendly sessions to build the habit without burning out.' },
+  { t: 'Break a light sweat', icon: 'water-outline', program: 'abs', detail: "We'll tailor effective workouts with the right intensity just for you!" },
+  { t: 'A bit challenging', icon: 'flame-outline', program: 'sixpack', detail: 'Higher-volume training that pushes you a little further every week.' },
 ];
 const ACTIVITY: { t: string; s: string; v: Profile['activity'] }[] = [
   { t: 'I do some light physical activity', s: '(such as casual walks)', v: 'light' },
   { t: 'I spend much of the day sitting', s: '(such as desk work)', v: 'sedentary' },
 ];
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-const DIETS: { t: string; emoji: string; diet: string }[] = [
-  { t: 'Meat-based', emoji: '🍖', diet: 'Non-vegetarian' },
-  { t: 'Regular diet', emoji: '🍱', diet: 'Non-vegetarian' },
-  { t: 'Vegetarian', emoji: '🥦', diet: 'Vegetarian' },
-  { t: 'Vegan', emoji: '🌱', diet: 'Vegan' },
-  { t: 'Other', emoji: '🥚', diet: '' },
+const DIETS: { t: string; img: number; diet: string }[] = [
+  { t: 'Meat-based', img: IMG.dietMeat, diet: 'Non-vegetarian' },
+  { t: 'Regular diet', img: IMG.dietRegular, diet: 'Non-vegetarian' },
+  { t: 'Vegetarian', img: IMG.dietVegetarian, diet: 'Vegetarian' },
+  { t: 'Vegan', img: IMG.dietVegan, diet: 'Vegan' },
+  { t: 'Other', img: IMG.dietOther, diet: '' },
 ];
 const REWARDS: { t: string; img: number }[] = [
   { t: 'Treat myself to a nice meal', img: IMG.rewardMeal },
@@ -81,12 +81,12 @@ const REWARDS: { t: string; img: number }[] = [
   { t: 'Get a makeover', img: IMG.rewardMakeover },
 ];
 /** Goal pace, kg per week, Easy → Master. */
-const PACES: { v: number; emoji: string; note: string }[] = [
-  { v: 0.25, emoji: '🐢', note: 'Slow and steady. Very easy to stick with.' },
-  { v: 0.4, emoji: '👏', note: 'Good choice! This level is easy for most people. Friendly for beginners.' },
-  { v: 0.5, emoji: '💪', note: 'Recommended. The best balance of speed and comfort.' },
-  { v: 0.75, emoji: '⚡', note: 'Faster results. Needs consistent effort every week.' },
-  { v: 1, emoji: '🔥', note: 'Aggressive pace. Best for experienced, disciplined people.' },
+const PACES: { v: number; icon: IconName; note: string }[] = [
+  { v: 0.25, icon: 'walk-outline', note: 'Slow and steady. Very easy to stick with.' },
+  { v: 0.4, icon: 'thumbs-up-outline', note: 'Good choice! This level is easy for most people. Friendly for beginners.' },
+  { v: 0.5, icon: 'barbell-outline', note: 'Recommended. The best balance of speed and comfort.' },
+  { v: 0.75, icon: 'flash-outline', note: 'Faster results. Needs consistent effort every week.' },
+  { v: 1, icon: 'flame-outline', note: 'Aggressive pace. Best for experienced, disciplined people.' },
 ];
 const BENEFITS_LEFT = ['Personalized workout plan', 'Custom meal plan', 'Expert guidance'];
 const BENEFITS_RIGHT = ['Start up faster', 'Get a toned body', 'Build healthy habits', 'Long-term results'];
@@ -159,7 +159,7 @@ export default function Onboarding() {
     completeOnboarding(finalize(p));
     if (premium) subscribe('smart', 1);
     router.replace('/(tabs)');
-    setTimeout(() => toast(`Welcome to ${BRAND}! Your plan is ready 🎉`, 'sparkles'), 400);
+    setTimeout(() => toast(`Welcome to ${BRAND}! Your plan is ready`, 'sparkles'), 400);
   };
 
   const canNext = (() => {
@@ -181,7 +181,7 @@ export default function Onboarding() {
         <Intro onStart={next} onLogin={() => setLogin(true)} />
         <Dialog
           visible={login}
-          icon="👋"
+          iconName="person-circle"
           title="Welcome back!"
           text={`Log in to continue with your saved ${BRAND} plan. Demo mode: no account is needed.`}
           cancel="Cancel"
@@ -192,7 +192,7 @@ export default function Onboarding() {
             resume = null;
             completeOnboarding(finalize(p));
             router.replace('/(tabs)');
-            setTimeout(() => toast('Welcome back! 👋', 'person-circle'), 400);
+            setTimeout(() => toast('Welcome back!', 'person-circle'), 400);
           }}
         />
       </>
@@ -228,7 +228,7 @@ export default function Onboarding() {
           <Body>
             <QTitle text="What's your gender?" />
             <Rise i={1} style={{ paddingHorizontal: GUTTER, marginTop: 18 }}>
-              <TipCard emoji="💡">
+              <TipCard icon="bulb">
                 <Text style={st.tipText}>Knowing your gender can help us tailor the intensity for you based on different metabolic rates.</Text>
               </TipCard>
             </Rise>
@@ -387,7 +387,7 @@ export default function Onboarding() {
               </Rise>
             </View>
             <Rise i={4} style={{ paddingHorizontal: GUTTER, marginTop: 18 }}>
-              <TipCard emoji="📈" tone="good">
+              <TipCard icon="trending-up" tone="good">
                 <Text style={st.tipText}>
                   From <Text style={st.bold}>{bodyFat(p.bodyShape, p.gender).range}</Text> to <Text style={st.bold}>{bodyFat(p.targetShape, p.gender).range}</Text> body fat with a plan built around your answers.
                 </Text>
@@ -414,7 +414,7 @@ export default function Onboarding() {
               </Text>
             </Rise>
             <Rise i={3} style={{ paddingHorizontal: GUTTER, marginTop: 12 }}>
-              <TipCard emoji={pace.emoji}>
+              <TipCard icon={pace.icon}>
                 <Animated.Text key={pi} entering={nativeOnly(FadeInDown.duration(MOTION.base))} style={st.tipText}>
                   {pace.note}
                 </Animated.Text>
@@ -482,7 +482,7 @@ export default function Onboarding() {
             <View style={st.list}>
               {LEVELS.map((l, i) => (
                 <Rise key={l.t} i={i + 1}>
-                  <ChoiceRow emoji={l.emoji} title={l.t} detail={l.detail} selected={p.workoutLevel === l.t} onPress={() => set({ workoutLevel: l.t, program: l.program })} />
+                  <ChoiceRow icon={l.icon} title={l.t} detail={l.detail} selected={p.workoutLevel === l.t} onPress={() => set({ workoutLevel: l.t, program: l.program })} />
                 </Rise>
               ))}
             </View>
@@ -525,7 +525,7 @@ export default function Onboarding() {
             <View style={st.list}>
               {DIETS.map((d, i) => (
                 <Rise key={d.t} i={i + 1}>
-                  <ChoiceRow emoji={d.emoji} title={d.t} selected={p.dietType === d.t} onPress={() => set({ dietType: d.t, diet: d.diet })} />
+                  <ChoiceRow image={d.img} title={d.t} selected={p.dietType === d.t} onPress={() => set({ dietType: d.t, diet: d.diet })} />
                 </Rise>
               ))}
             </View>
@@ -714,12 +714,12 @@ function TargetNote({ p, units }: { p: Profile; units: WeightUnit }) {
   const tb = bmi(p.targetKg, p.heightCm);
   const amount = `${Math.abs(toUnit(p.targetKg, units) - toUnit(p.weightKg, units)).toFixed(1)} ${units}`;
   let tone: 'warn' | 'good' = 'good';
-  let emoji = '👍';
+  let icon: IconName = 'thumbs-up';
   let title: string;
   let text: string;
   if (tb < 18.5) {
     tone = 'warn';
-    emoji = '⚠️';
+    icon = 'warning';
     title = 'A healthier target weight for you';
     text = 'This target is below a healthy BMI. Consider a slightly higher goal; you can adjust it later in your plan.';
   } else if (Math.abs(diff) < 0.05) {
@@ -727,7 +727,7 @@ function TargetNote({ p, units }: { p: Profile; units: WeightUnit }) {
     text = "We'll focus on strength and definition while keeping your weight steady.";
   } else if (pct > 20) {
     tone = 'warn';
-    emoji = '⚠️';
+    icon = 'warning';
     title = `Ambitious: ${diff < 0 ? 'lose' : 'gain'} ${amount}`;
     text = `That's ${pct.toFixed(0)}% of your body weight. We'll get there step by step; you can always adjust it later.`;
   } else {
@@ -735,7 +735,7 @@ function TargetNote({ p, units }: { p: Profile; units: WeightUnit }) {
     text = `${pct.toFixed(0)}% of your body weight. A healthy, achievable goal for you.`;
   }
   return (
-    <TipCard emoji={emoji} tone={tone}>
+    <TipCard icon={icon} tone={tone}>
       <Text style={st.tipTitle}>{title}</Text>
       <Text style={[st.tipText, { marginTop: 2 }]}>{text}</Text>
     </TipCard>
