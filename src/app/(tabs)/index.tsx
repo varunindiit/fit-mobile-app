@@ -1,10 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { setStatusBarStyle } from 'expo-status-bar';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { Extrapolation, interpolate, useAnimatedScrollHandler, useAnimatedStyle, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { scheduleOnRN } from 'react-native-worklets';
 import Svg, { Circle } from 'react-native-svg';
 
 import { ProgramBadge } from '@/components/home/ProgramBadge';
@@ -42,6 +45,11 @@ import { programById, programDay, sessionStats } from '@/data/program';
 import { fmtDate, kmFromSteps, todayKey } from '@/lib/calc';
 import { burnedOn, dayTotals, useStore, weekProgress, workoutStreak } from '@/lib/store';
 import { C, G, MOTION, R, shadow, shadowSm } from '@/theme';
+
+const HERO_IMAGE = require('@/assets/images/home-hero.jpg');
+/** Visible photo height below the status bar (the sheet overlaps its last ~28 px). */
+const HERO_BODY = 268;
+const GLASS = 'rgba(255,255,255,0.2)';
 
 const TIPS: { icon: IconName; title: string; short: string; body: string }[] = [
   { icon: 'nutrition', title: 'Protein at every meal', short: 'Keeps you fuller for longer', body: 'Add a protein source to each meal: dal, paneer, curd, eggs, sprouts or chicken. Protein keeps you full, protects muscle while you lose fat and reduces evening cravings.' },
@@ -124,12 +132,40 @@ export default function Home() {
   const tipTint = TIP_TINT[Math.max(0, tip ? TIPS.indexOf(tip) : 0) % TIP_TINT.length];
   const openDay = () => router.push({ pathname: '/program-day', params: { key: nextSession.key } });
 
-  // Status-bar scrim fades in once content scrolls under it (the glow sits behind the bar at rest).
+  // Photo hero: parallax + fade as you scroll, stretches on pull-down; a compact bar takes over once it's gone.
+  // Photo height follows where the content sheet actually starts (safe area, font scale, title length).
+  const [sheetY, setSheetY] = useState(0);
+  const heroH = sheetY > 0 ? sheetY + 34 : insets.top + HERO_BODY;
+  const barAt = heroH - insets.top - 70;
   const scrollY = useSharedValue(0);
+  const solidSV = useSharedValue(false);
+  const [solid, setSolid] = useState(false);
   const onScroll = useAnimatedScrollHandler((e) => {
-    scrollY.set(e.contentOffset.y);
+    const y = e.contentOffset.y;
+    scrollY.set(y);
+    const v = y > barAt;
+    if (v !== solidSV.get()) {
+      solidSV.set(v);
+      scheduleOnRN(setSolid, v);
+    }
   });
-  const scrim = useAnimatedStyle(() => ({ opacity: interpolate(scrollY.get(), [0, 28], [0, 1], Extrapolation.CLAMP) }));
+  const heroStyle = useAnimatedStyle(() => {
+    const y = scrollY.get();
+    return {
+      opacity: interpolate(y, [0, heroH * 0.8], [1, 0], Extrapolation.CLAMP),
+      transform: [{ translateY: y < 0 ? -y / 2 : -y * 0.45 }, { scale: y < 0 ? 1 + -y / heroH : 1 }],
+    };
+  });
+  const barStyle = useAnimatedStyle(() => ({ opacity: interpolate(scrollY.get(), [barAt - 40, barAt], [0, 1], Extrapolation.CLAMP) }));
+  // Light status bar over the photo, dark once the compact bar is showing; reset when leaving the tab.
+  useFocusEffect(
+    useCallback(() => {
+      setStatusBarStyle(solid ? 'dark' : 'light');
+      return () => setStatusBarStyle('dark');
+    }, [solid]),
+  );
+  const heroTitle = doneToday ? `Day ${doneDays} complete!` : nextSession.restDay ? 'Recovery day' : `Ready for Day ${nextDay}?`;
+  const heroSub = doneToday ? 'Workout complete · see you tomorrow' : nextSession.restDay ? 'Light stretching & a walk count too' : `${nextStats.exercises} exercises · ${nextStats.minutes} min · ~${nextStats.kcal} kcal`;
 
   const sync = () => {
     setSyncing(true);
@@ -151,12 +187,21 @@ export default function Home() {
 
   return (
     <Screen edges={[]}>
+      {/* Photo hero (behind the scroll content) */}
+      <Animated.View pointerEvents="none" style={[st.photoHero, { height: heroH }, heroStyle]}>
+        <Image source={HERO_IMAGE} style={StyleSheet.absoluteFill} contentFit="cover" contentPosition="center" transition={250} />
+        {/* Brand-tinted scrims: deep green-ink top & bottom, darker on the left where the copy sits */}
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(21,94,80,0.16)' }]} />
+        <LinearGradient colors={['rgba(8,22,19,0.72)', 'rgba(8,22,19,0.28)', 'rgba(8,22,19,0.82)']} locations={[0, 0.42, 1]} style={StyleSheet.absoluteFill} />
+        <LinearGradient colors={['rgba(8,22,19,0.55)', 'rgba(8,22,19,0)']} start={{ x: 0, y: 0.5 }} end={{ x: 0.85, y: 0.5 }} style={StyleSheet.absoluteFill} />
+        <LinearGradient colors={['rgba(245,245,244,0)', C.bg]} style={st.heroFade} />
+      </Animated.View>
+
       <Animated.ScrollView
         onScroll={onScroll}
         scrollEventThrottle={16}
         contentContainerStyle={{ paddingTop: insets.top, paddingHorizontal: 16, paddingBottom: 36 }}
         showsVerticalScrollIndicator={false}>
-        <LinearGradient pointerEvents="none" colors={G.glow} style={[st.glow, { height: insets.top + 320 }]} />
 
         {/* Header */}
         <Animated.View entering={enter(0)} style={st.header}>
@@ -183,7 +228,7 @@ export default function Home() {
           </PressableScale>
           <View style={{ flex: 1 }}>
             <View style={st.greetRow}>
-              <Ionicons name={timeIcon.name} size={14} color={timeIcon.color} />
+              <Ionicons name={timeIcon.name} size={14} color={C.gold} />
               <Text style={st.greet} numberOfLines={1}>
                 {greet} · {fmtDate(today)}
               </Text>
@@ -207,8 +252,42 @@ export default function Home() {
             </View>
             <Text style={st.streakText}>{streak}</Text>
           </PressableScale>
-          <IconButton icon="notifications-outline" bordered badge={unread} onPress={() => router.push('/notifications')} />
+          <IconButton icon="notifications-outline" color={C.white} bg={GLASS} style={st.glassBtn} badge={unread} onPress={() => router.push('/notifications')} />
         </Animated.View>
+
+        {/* Today's workout, on the photo */}
+        <Animated.View entering={enter(1)} style={st.heroCopy}>
+          <View style={st.heroPill}>
+            <Ionicons name="barbell" size={12} color={C.white} />
+            <Text style={st.heroPillText} numberOfLines={1}>
+              {program.title} · {doneDays}/30 days
+            </Text>
+          </View>
+          <Text style={st.photoTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
+            {heroTitle}
+          </Text>
+          <View style={st.heroRow}>
+            <Text style={st.heroSub} numberOfLines={1}>
+              {heroSub}
+            </Text>
+            <PressableScale
+              scaleTo={0.94}
+              onPress={() => {
+                tap();
+                openDay();
+              }}
+              style={st.heroCta}
+              accessibilityRole="button"
+              accessibilityLabel={doneToday ? 'View today\'s workout' : `Start day ${nextDay}`}>
+              <Ionicons name={doneToday ? 'eye' : 'play'} size={13} color={C.primaryDark} />
+              <Text style={st.heroCtaText}>{doneToday ? 'View' : 'Start'}</Text>
+            </PressableScale>
+          </View>
+        </Animated.View>
+
+        {/* Content sheet slides over the photo */}
+        <View style={st.sheet} onLayout={(e) => setSheetY(e.nativeEvent.layout.y)}>
+          <View style={st.sheetGrabber} />
 
         {/* Calorie budget (hero) */}
         <Animated.View entering={enter(1)}>
@@ -493,7 +572,7 @@ export default function Home() {
               </View>
               <View style={st.workoutPill}>
                 <View style={st.workoutArt}>
-                  {todaysWorkout ? <Text style={{ fontSize: 18 }}>{todaysWorkout.emoji}</Text> : <Ionicons name="flame" size={17} color={C.workout} />}
+                  <Ionicons name={todaysWorkout ? 'checkmark-circle' : 'flame'} size={17} color={C.workout} />
                 </View>
                 <Text style={st.workoutName} numberOfLines={2}>
                   {todaysWorkout ? todaysWorkout.title : `${program.title} · Day ${nextDay}`}
@@ -602,10 +681,18 @@ export default function Home() {
             ))}
           </ScrollView>
         </Animated.View>
+        </View>
       </Animated.ScrollView>
 
-      {/* Solid strip behind the status bar once content scrolls under it */}
-      <Animated.View pointerEvents="none" style={[st.scrim, { height: insets.top }, scrim]} />
+      {/* Compact bar fades in once the photo hero has scrolled away */}
+      <Animated.View pointerEvents="none" style={[st.bar, { paddingTop: insets.top, height: insets.top + 48 }, barStyle]}>
+        <Text style={st.barTitle} numberOfLines={1}>
+          {greet}, {first}
+        </Text>
+        <Text style={st.barMeta} numberOfLines={1}>
+          {fmtDate(today)}
+        </Text>
+      </Animated.View>
 
       <Sheet visible={!!tip} onClose={() => setTip(null)} title={tip?.title}>
         <View style={[st.sheetArt, { backgroundColor: tipTint.bg }]}>
@@ -663,20 +750,34 @@ function Glass({ index, filled, onPress }: { index: number; filled: boolean; onP
 }
 
 const st = StyleSheet.create({
-  glow: { position: 'absolute', top: 0, left: 0, right: 0 },
-  scrim: { position: 'absolute', top: 0, left: 0, right: 0, backgroundColor: C.bg },
+  photoHero: { position: 'absolute', top: 0, left: 0, right: 0, overflow: 'hidden', backgroundColor: C.navy },
+  heroFade: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 56 },
+  heroCopy: { marginTop: 22, paddingBottom: 34 },
+  heroPill: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', backgroundColor: GLASS, borderColor: 'rgba(255,255,255,0.28)', borderWidth: StyleSheet.hairlineWidth * 2, paddingHorizontal: 10, height: 26, borderRadius: 13, maxWidth: '100%' },
+  heroPillText: { color: C.white, fontSize: 12, fontWeight: '700', letterSpacing: 0.2 },
+  photoTitle: { color: C.white, fontSize: 28, lineHeight: 34, fontWeight: '800', letterSpacing: -0.6, marginTop: 10, textShadowColor: 'rgba(0,0,0,0.25)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 6 },
+  heroRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 8 },
+  heroSub: { flex: 1, color: 'rgba(255,255,255,0.9)', fontSize: 13, fontWeight: '600' },
+  heroCta: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: C.white, paddingHorizontal: 14, height: 34, borderRadius: 17, ...shadowSm },
+  heroCtaText: { color: C.primaryDark, fontSize: 13, fontWeight: '800', letterSpacing: 0.2 },
+  sheet: { backgroundColor: C.bg, borderTopLeftRadius: R.xl, borderTopRightRadius: R.xl, marginHorizontal: -16, paddingHorizontal: 16, marginTop: -2 },
+  sheetGrabber: { alignSelf: 'center', width: 40, height: 5, borderRadius: 3, backgroundColor: C.border, marginTop: 10, marginBottom: 6 },
+  glassBtn: { borderWidth: StyleSheet.hairlineWidth * 2, borderColor: 'rgba(255,255,255,0.28)' },
+  bar: { position: 'absolute', top: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, backgroundColor: C.bg, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.border },
+  barTitle: { flex: 1, fontSize: 17, fontWeight: '700', color: C.text, letterSpacing: -0.3 },
+  barMeta: { fontSize: 13, fontWeight: '600', color: C.muted },
   header: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingTop: 12, paddingBottom: 14 },
   avatarWrap: { width: 48, height: 48, borderRadius: 24, ...shadowSm },
-  avatarRing: { width: 48, height: 48, borderRadius: 24, padding: 2, alignItems: 'center', justifyContent: 'center' },
+  avatarRing: { width: 48, height: 48, borderRadius: 24, padding: 2, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: C.primaryDark, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: C.card },
   avatarText: { color: C.white, fontWeight: '700', fontSize: 18 },
   premiumDot: { position: 'absolute', bottom: -3, right: -3, width: 20, height: 20, borderRadius: 10, backgroundColor: C.navy, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: C.card },
   greetRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  greet: { flexShrink: 1, fontSize: 13, color: C.textSoft, fontWeight: '500' },
-  hello: { fontSize: 22, fontWeight: '800', color: C.text, letterSpacing: -0.5, marginTop: 1 },
-  streak: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: C.card, paddingLeft: 5, paddingRight: 12, height: 40, borderRadius: 20, borderWidth: StyleSheet.hairlineWidth * 2, borderColor: C.border, ...shadowSm },
-  streakIcon: { width: 28, height: 28, borderRadius: 14, backgroundColor: C.accentSoft, alignItems: 'center', justifyContent: 'center' },
-  streakText: { fontWeight: '700', color: C.text, fontSize: 15, fontVariant: ['tabular-nums'] },
+  greet: { flexShrink: 1, fontSize: 13, color: 'rgba(255,255,255,0.88)', fontWeight: '600' },
+  hello: { fontSize: 22, fontWeight: '800', color: C.white, letterSpacing: -0.5, marginTop: 1 },
+  streak: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: GLASS, paddingLeft: 5, paddingRight: 12, height: 40, borderRadius: 20, borderWidth: StyleSheet.hairlineWidth * 2, borderColor: 'rgba(255,255,255,0.28)' },
+  streakIcon: { width: 28, height: 28, borderRadius: 14, backgroundColor: C.white, alignItems: 'center', justifyContent: 'center' },
+  streakText: { fontWeight: '700', color: C.white, fontSize: 15, fontVariant: ['tabular-nums'] },
   rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   link: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   linkText: { color: C.primary, fontWeight: '600', fontSize: 13 },
