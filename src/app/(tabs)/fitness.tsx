@@ -3,13 +3,13 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View, type ViewStyle } from 'react-native';
-import Animated, { FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import Svg, { Circle } from 'react-native-svg';
 
 import { WeekStrip } from '@/components/charts/Calendar';
 import { fmtNum } from '@/components/charts/Charts';
 import { Bolts } from '@/components/program/PlanAccordion';
-import { Button, Card, Chip, CountUp, Dialog, EmptyState, enter, IconButton, IconTile, PressableScale, ProgressBar, Ring, Screen, ScreenTitle, SectionTitle, Sheet, Stepper, T, tap, useToast, type IconName } from '@/components/ui';
+import { Button, Card, Chip, CountUp, Dialog, EmptyState, enter, IconButton, IconTile, layoutTransition, nativeOnly, PressableScale, ProgressBar, Ring, Screen, ScreenTitle, SectionTitle, Sheet, Stepper, T, tap, useToast, type IconName } from '@/components/ui';
 import { ACTIVITIES, WORKOUT_CATEGORIES, WORKOUTS } from '@/data/fitness';
 import { BODY_PARTS, FOCUS_SESSIONS, programById, programDay, PROGRAM_DAYS, sessionStats, type Session } from '@/data/program';
 import { kcalFromSteps, kmFromSteps, todayKey } from '@/lib/calc';
@@ -26,9 +26,9 @@ const openSession = (key: string) => router.push({ pathname: '/program-day', par
 const PUSH = FOCUS_SESSIONS.filter((s) => !s.equipment && (s.level === 'Advanced' || s.level === 'Intermediate'));
 const EQUIP = FOCUS_SESSIONS.filter((s) => s.equipment);
 
-const listLayout = LinearTransition.duration(MOTION.base);
-const rowIn = FadeIn.duration(MOTION.base);
-const rowOut = FadeOut.duration(MOTION.fast);
+const listLayout = layoutTransition;
+const rowIn = nativeOnly(FadeIn.duration(MOTION.base));
+const rowOut = nativeOnly(FadeOut.duration(MOTION.fast));
 
 export default function TrainingScreen() {
   const { state, targets, addSteps, logWorkout, removeWorkout, updateProfile, resetProgram } = useStore();
@@ -181,7 +181,7 @@ export default function TrainingScreen() {
         {/* Daily challenge */}
         <Animated.View entering={enter(2)}>
           <SectionTitle title="Daily challenge" action="Change plan" onAction={() => router.push('/select-plan')} />
-          <PressableScale scaleTo={0.98} accessibilityRole="button" accessibilityLabel={finished ? `Restart ${program.title}` : `Start day ${day}`} onPress={openChallenge} style={[st.heroShell, { backgroundColor: program.colors[1] }]}>
+          <PressableScale scaleTo={0.98} accessibilityLabel={finished ? `Restart ${program.title}` : `Start day ${day}`} onPress={openChallenge} style={[st.heroShell, { backgroundColor: program.colors[1] }]}>
             <LinearGradient colors={program.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.challenge}>
               <Deco size={260} style={{ top: -70, right: -80 }} />
               <View style={st.kickerPill}>
@@ -360,12 +360,12 @@ export default function TrainingScreen() {
                     </Text>
                     <View style={[st.metaRow, { marginTop: 4 }]}>
                       <Ionicons name="flame" size={12} color={C.accent} />
-                      <Text style={st.wMeta}>
-                        {w.kcal} kcal · {w.level}
+                      <Text style={st.wMeta} numberOfLines={1}>
+                        {w.kcal} kcal
                       </Text>
                     </View>
                     <Text style={st.wCoach} numberOfLines={1}>
-                      {w.coach}
+                      {w.level} · {w.coach}
                     </Text>
                   </View>
                 </PressableScale>

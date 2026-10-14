@@ -9,7 +9,6 @@ import Animated, {
   FadeOut,
   interpolate,
   interpolateColor,
-  LinearTransition,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
@@ -20,7 +19,7 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { dietKind, firstName, fmtNum, fmtWeight, goalSummary, useKeyboardShown, type DietKind } from '@/components/profile/shared';
-import { EASE_OUT, IconButton, PressableScale, Screen, T, tap, useToast, type IconName } from '@/components/ui';
+import { EASE_OUT, IconButton, layoutTransition, nativeOnly, PressableScale, Screen, T, tap, useToast, type IconName } from '@/components/ui';
 import { foodById, type Food } from '@/data/foods';
 import { workoutById } from '@/data/fitness';
 import { exerciseById, PROGRAM_DAYS, programById, programDay, sessionStats } from '@/data/program';
@@ -289,8 +288,8 @@ function reply(raw: string, c: Ctx): Reply {
 /* ---------- Screen ---------- */
 
 const replyDelay = () => 900 + Math.random() * 600;
-const BUBBLE_IN = FadeInDown.duration(MOTION.base).easing(EASE_OUT).withInitialValues({ transform: [{ translateY: 10 }] });
-const LIST = LinearTransition.duration(MOTION.base);
+const BUBBLE_IN = nativeOnly(FadeInDown.duration(MOTION.base).easing(EASE_OUT).withInitialValues({ transform: [{ translateY: 10 }] }));
+const LIST = layoutTransition;
 // Hide the browser focus ring on react-native-web.
 const webNoOutline = Platform.OS === 'web' ? ({ outlineStyle: 'none' } as object) : null;
 
@@ -428,7 +427,7 @@ export default function CoachScreen() {
             ),
           )}
           {typing && (
-            <Animated.View entering={FadeIn.duration(MOTION.base)} exiting={FadeOut.duration(MOTION.fast)} layout={LIST} style={st.botRow}>
+            <Animated.View entering={nativeOnly(FadeIn.duration(MOTION.base))} exiting={nativeOnly(FadeOut.duration(MOTION.fast))} layout={LIST} style={st.botRow}>
               <RiaAvatar />
               <View style={[st.bubble, st.bot, st.typingBubble]}>
                 <TypingDots />

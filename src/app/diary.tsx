@@ -10,7 +10,6 @@ import Animated, {
   FadeOutDown,
   FadeOutUp,
   interpolate,
-  LinearTransition,
   useAnimatedScrollHandler,
   useAnimatedStyle,
   useSharedValue,
@@ -19,7 +18,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { EmojiTile, fmtNum, fmtQty, isDateKey, MiniMacro } from '@/components/food/shared';
-import { Button, Card, CountUp, Divider, EASE_OUT, enter, IconButton, IconTile, MacroBar, PressableScale, ProgressBar, Ring, Screen, T, tap, useToast, type IconName } from '@/components/ui';
+import { Button, Card, CountUp, Divider, EASE_OUT, enter, IconButton, IconTile, layoutTransition, MacroBar, nativeOnly, PressableScale, ProgressBar, Ring, Screen, T, tap, useToast, type IconName } from '@/components/ui';
 import { foodById, MEALS, mealLabel, type MealKey } from '@/data/foods';
 import { addDays, currentMeal, dayShort, fmtDate, parseKey, relDay, todayKey } from '@/lib/calc';
 import { burnedOn, dayTotals, useStore, type FoodEntry } from '@/lib/store';
@@ -29,7 +28,7 @@ const dayTitle = (k: string) => {
   const r = relDay(k);
   return r === 'Today' || r === 'Yesterday' || r === 'Tomorrow' ? `${r}, ${fmtDate(k)}` : r;
 };
-const LIST = LinearTransition.duration(MOTION.base);
+const LIST = layoutTransition;
 
 export default function DiaryScreen() {
   const { state, targets, removeFood, addFood } = useStore();
@@ -105,7 +104,7 @@ export default function DiaryScreen() {
           <Text style={[T.small, { marginTop: 1 }]}>{dayTitle(date)}</Text>
         </View>
         {date !== today && (
-          <Animated.View entering={FadeIn.duration(MOTION.base)} exiting={FadeOut.duration(MOTION.fast)}>
+          <Animated.View entering={nativeOnly(FadeIn.duration(MOTION.base))} exiting={nativeOnly(FadeOut.duration(MOTION.fast))}>
             <PressableScale
               scaleTo={0.94}
               onPress={() => {
@@ -163,7 +162,7 @@ export default function DiaryScreen() {
                 <Stat icon="flame" color={C.accent} bg={C.accentSoft} label="Burned" value={burned} />
               </View>
               {over ? (
-                <Animated.View entering={FadeIn.duration(MOTION.base)} style={st.overBox}>
+                <Animated.View entering={nativeOnly(FadeIn.duration(MOTION.base))} style={st.overBox}>
                   <Ionicons name="alert-circle" size={16} color={C.danger} />
                   <Text style={st.overText}>{fmtNum(-remaining)} kcal over budget. A 30 min brisk walk burns ~140 kcal.</Text>
                 </Animated.View>
@@ -213,7 +212,7 @@ export default function DiaryScreen() {
 
           {/* Copy previous day */}
           {dayEntries.length === 0 && prevEntries.length > 0 && (
-            <Animated.View entering={FadeIn.duration(MOTION.base)} exiting={FadeOut.duration(MOTION.fast)} layout={LIST}>
+            <Animated.View entering={nativeOnly(FadeIn.duration(MOTION.base))} exiting={nativeOnly(FadeOut.duration(MOTION.fast))} layout={LIST}>
               <Card style={st.copyCard}>
                 <IconTile icon="calendar-outline" color={C.primaryDark} bg={C.primarySoft} size={42} />
                 <View style={{ flex: 1 }}>
@@ -241,7 +240,6 @@ export default function DiaryScreen() {
                     setCollapsed((c) => ({ ...c, [m.key]: isOpen }));
                   }}
                   style={st.mealHead}
-                  accessibilityRole="button"
                   accessibilityState={{ expanded: isOpen }}>
                   <IconTile icon={m.icon as IconName} size={42} color={has ? C.white : C.primaryDark} bg={has ? C.primaryDark : C.primarySoft} />
                   <View style={{ flex: 1 }}>
@@ -268,9 +266,9 @@ export default function DiaryScreen() {
                 <ProgressBar value={kcal / Math.max(1, rec)} color={kcal > rec * 1.15 ? C.danger : C.primary} height={3} track={C.borderSoft} style={st.mealBar} />
 
                 {isOpen && (
-                  <Animated.View entering={FadeInDown.duration(MOTION.base).withInitialValues({ transform: [{ translateY: -6 }] })} exiting={FadeOutUp.duration(MOTION.fast)} layout={LIST} style={st.mealBody}>
+                  <Animated.View entering={nativeOnly(FadeInDown.duration(MOTION.base).withInitialValues({ transform: [{ translateY: -6 }] }))} exiting={nativeOnly(FadeOutUp.duration(MOTION.fast))} layout={LIST} style={st.mealBody}>
                     {!has ? (
-                      <Animated.View entering={FadeIn.duration(MOTION.base)} style={st.emptyMeal}>
+                      <Animated.View entering={nativeOnly(FadeIn.duration(MOTION.base))} style={st.emptyMeal}>
                         <View style={st.emptyIcon}>
                           <Ionicons name="add-circle-outline" size={20} color={C.muted} />
                         </View>
@@ -288,7 +286,7 @@ export default function DiaryScreen() {
                           const f = foodById(e.foodId);
                           if (!f) return null;
                           return (
-                            <Animated.View key={e.id} entering={FadeIn.duration(MOTION.base)} exiting={FadeOut.duration(MOTION.fast)} layout={LIST}>
+                            <Animated.View key={e.id} entering={nativeOnly(FadeIn.duration(MOTION.base))} exiting={nativeOnly(FadeOut.duration(MOTION.fast))} layout={LIST}>
                               {i > 0 && <View style={st.entrySep} />}
                               <Pressable
                                 onPress={() => {
@@ -338,9 +336,7 @@ export default function DiaryScreen() {
               </Animated.View>
             );
           })}
-          <Animated.Text layout={LIST} style={st.footNote}>
-            Tap an item to edit portion or meal · values are approximate
-          </Animated.Text>
+          <Text style={st.footNote}>Tap an item to edit portion or meal · values are approximate</Text>
         </Animated.ScrollView>
 
         {/* Compact summary (appears when the summary card scrolls out of view) */}
@@ -357,7 +353,7 @@ export default function DiaryScreen() {
       </View>
 
       {undo && (
-        <Animated.View entering={FadeInDown.duration(MOTION.base).easing(EASE_OUT)} exiting={FadeOutDown.duration(MOTION.base)} style={st.undo}>
+        <Animated.View entering={nativeOnly(FadeInDown.duration(MOTION.base).easing(EASE_OUT))} exiting={nativeOnly(FadeOutDown.duration(MOTION.base))} style={st.undo}>
           <View style={st.undoIcon}>
             <Ionicons name="trash" size={15} color={C.white} />
           </View>

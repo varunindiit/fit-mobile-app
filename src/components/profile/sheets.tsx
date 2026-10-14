@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
-import { Button, Divider, IconTile, ListRow, OptionCard, PressableScale, Segmented, Sheet, Stepper, T, Toggle, tap, useToast } from '@/components/ui';
+import { Button, Divider, IconTile, ListRow, nativeOnly, OptionCard, PressableScale, Segmented, Sheet, Stepper, T, Toggle, tap, useToast } from '@/components/ui';
 import { useStore } from '@/lib/store';
 import { C, MOTION, R } from '@/theme';
 import { tint } from './shared';
@@ -133,7 +133,7 @@ export function RateSheet({ visible, onClose }: SheetProps) {
           </PressableScale>
         ))}
       </View>
-      <Animated.Text key={rating} entering={FadeIn.duration(MOTION.base)} style={st.ratingText}>
+      <Animated.Text key={rating} entering={nativeOnly(FadeIn.duration(MOTION.base))} style={st.ratingText}>
         {RATING_TEXT[rating]}
       </Animated.Text>
       <Button

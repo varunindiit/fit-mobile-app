@@ -2,21 +2,21 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import Animated, { FadeInDown, FadeOutUp, LinearTransition, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import Animated, { FadeInDown, FadeOutUp, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import Svg, { Circle } from 'react-native-svg';
 
-import { EASE_OUT, ProgressBar, PressableScale, tap } from '@/components/ui';
+import { EASE_OUT, layoutTransition, nativeOnly, PressableScale, ProgressBar, tap } from '@/components/ui';
 import { PROGRAMS, type ProgramId } from '@/data/program';
 import { C, MOTION, R } from '@/theme';
 
 type Program = (typeof PROGRAMS)[number];
 
-const layout = LinearTransition.duration(MOTION.base).easing(EASE_OUT);
-const bodyIn = FadeInDown.duration(MOTION.base + 60)
+const layout = layoutTransition;
+const bodyIn = nativeOnly(FadeInDown.duration(MOTION.base + 60)
   .delay(60)
   .easing(EASE_OUT)
-  .withInitialValues({ transform: [{ translateY: -8 }] });
-const bodyOut = FadeOutUp.duration(MOTION.fast);
+  .withInitialValues({ transform: [{ translateY: -8 }] }));
+const bodyOut = nativeOnly(FadeOutUp.duration(MOTION.fast));
 
 export function Bolts({ n, color = C.white }: { n: number; color?: string }) {
   return (
@@ -50,7 +50,6 @@ function PlanCard({ p, open, done, cta, onChange, onStart }: { p: Program; open:
     <Animated.View layout={layout} style={[s.shell, { backgroundColor: p.colors[1] }]}>
       <PressableScale
         scaleTo={0.985}
-        accessibilityRole="button"
         accessibilityState={{ expanded: open }}
         onPress={() => {
           tap();

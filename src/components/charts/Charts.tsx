@@ -1,5 +1,5 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
-import { LayoutChangeEvent, Pressable, StyleSheet, Text, View } from 'react-native';
+import { LayoutChangeEvent, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { Extrapolation, interpolate, useAnimatedProps, useAnimatedStyle, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
 import Svg, { Circle, Defs, G, Line, LinearGradient, Path, Rect, Stop, Text as SvgText } from 'react-native-svg';
 
@@ -10,6 +10,9 @@ import { C, MOTION } from '@/theme';
 export const fmtK = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1).replace(/\.0$/, '')}k` : `${Math.round(n)}`);
 /** 10450 → "10,450" */
 export const fmtNum = (n: number) => Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+/** SVG text defaults to a serif face on web; native already uses the system font. */
+const SVG_FONT = Platform.OS === 'web' ? 'system-ui, -apple-system, Segoe UI, Roboto, sans-serif' : undefined;
 
 const APath = Animated.createAnimatedComponent(Path);
 const AG = Animated.createAnimatedComponent(G);
@@ -54,9 +57,11 @@ function Bar({ x, width, height, bottom, fill, faded, index, label, strong }: { 
     <Animated.View pointerEvents="none" style={[{ position: 'absolute', left: x, width, bottom }, grow]}>
       <View style={[StyleSheet.absoluteFill, { backgroundColor: fill, opacity: faded ? 0.32 : 1, borderTopLeftRadius: r, borderTopRightRadius: r, borderBottomLeftRadius: 2, borderBottomRightRadius: 2 }]} />
       {!!label && (
-        <Text numberOfLines={1} style={[s.barValue, { left: width / 2 - 30 }, strong && { color: C.text, fontWeight: '800' }]}>
-          {label}
-        </Text>
+        <View style={[s.barValueWrap, { left: width / 2 - 30 }]}>
+          <Text numberOfLines={1} ellipsizeMode="clip" style={[s.barValue, strong && { color: C.text, fontWeight: '800' }]}>
+            {label}
+          </Text>
+        </View>
       )}
     </Animated.View>
   );
@@ -84,6 +89,12 @@ export function BarChart({ data, height = 170, color = C.primary, goal, format =
             ))}
             <Line x1={0} x2={w} y1={top + plotH} y2={top + plotH} stroke={C.border} strokeWidth={1} />
           </Svg>
+          {/* Goal line sits behind bars and value labels */}
+          {!!goal && (
+            <Svg width={w} height={height} style={StyleSheet.absoluteFill} pointerEvents="none">
+              <Line x1={0} x2={w} y1={y(goal)} y2={y(goal)} stroke={C.textSoft} strokeOpacity={0.5} strokeWidth={1.3} strokeDasharray="5 5" />
+            </Svg>
+          )}
           {data.map((d, i) => {
             const bh = d.value > 0 ? Math.max(6, (d.value / max) * plotH) : 4;
             return (
@@ -106,11 +117,6 @@ export function BarChart({ data, height = 170, color = C.primary, goal, format =
               {d.label}
             </Text>
           ))}
-          {!!goal && (
-            <Svg width={w} height={height} style={StyleSheet.absoluteFill} pointerEvents="none">
-              <Line x1={0} x2={w} y1={y(goal)} y2={y(goal)} stroke={C.textSoft} strokeOpacity={0.5} strokeWidth={1.3} strokeDasharray="5 5" />
-            </Svg>
-          )}
         </>
       )}
     </View>
@@ -242,7 +248,7 @@ function LinePlot({
         {yLabels.map((v) => (
           <G key={`y${v}`}>
             <Line x1={padL} x2={w - padR} y1={Y(v)} y2={Y(v)} stroke={C.borderSoft} strokeWidth={1} />
-            <SvgText x={padL - 8} y={Y(v) + 4} fontSize={10} fontWeight="600" fill={C.muted} textAnchor="end">
+            <SvgText fontFamily={SVG_FONT} x={padL - 8} y={Y(v) + 4} fontSize={10} fontWeight="600" fill={C.muted} textAnchor="end">
               {format(v)}
             </SvgText>
           </G>
@@ -250,7 +256,7 @@ function LinePlot({
         {target != null && (
           <G>
             <Line x1={padL} x2={w - padR} y1={tY} y2={tY} stroke={targetColor} strokeOpacity={0.85} strokeWidth={1.4} strokeDasharray="6 5" />
-            <SvgText x={padL - 8} y={tY + 4} fontSize={10} fontWeight="700" fill={targetColor} textAnchor="end">
+            <SvgText fontFamily={SVG_FONT} x={padL - 8} y={tY + 4} fontSize={10} fontWeight="700" fill={targetColor} textAnchor="end">
               {targetInside ? format(target) : `${target < yMin ? '↓' : '↑'}${format(target)}`}
             </SvgText>
           </G>
@@ -265,12 +271,12 @@ function LinePlot({
           <Circle cx={X(idx)} cy={Y(sp.value)} r={12} fill={color} fillOpacity={0.14} />
           <Circle cx={X(idx)} cy={Y(sp.value)} r={6.5} fill={color} stroke={C.white} strokeWidth={3} />
           <Rect x={tipX} y={tipY} width={tipW} height={26} rx={10} fill={C.navy} />
-          <SvgText x={tipX + tipW / 2} y={tipY + 17} fontSize={11} fontWeight="700" fill={C.white} textAnchor="middle">
+          <SvgText fontFamily={SVG_FONT} x={tipX + tipW / 2} y={tipY + 17} fontSize={11} fontWeight="700" fill={C.white} textAnchor="middle">
             {tipText}
           </SvgText>
         </AG>
         {xLabels.map((i) => (
-          <SvgText key={`x${i}`} x={X(i)} y={height - 6} fontSize={10} fontWeight="600" fill={C.muted} textAnchor={n === 1 ? 'middle' : i === 0 ? 'start' : i === n - 1 ? 'end' : 'middle'}>
+          <SvgText fontFamily={SVG_FONT} key={`x${i}`} x={X(i)} y={height - 6} fontSize={10} fontWeight="600" fill={C.muted} textAnchor={n === 1 ? 'middle' : i === 0 ? 'start' : i === n - 1 ? 'end' : 'middle'}>
             {data[i].label}
           </SvgText>
         ))}
@@ -286,7 +292,8 @@ const s = StyleSheet.create({
   legend: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   legendText: { fontSize: 12, fontWeight: '600', fontVariant: ['tabular-nums'] },
   hit: { position: 'absolute', top: 0 },
-  barValue: { position: 'absolute', top: -17, width: 60, textAlign: 'center', fontSize: 10, fontWeight: '700', color: C.muted, fontVariant: ['tabular-nums'] },
+  barValueWrap: { position: 'absolute', top: -18, width: 60, alignItems: 'center' },
+  barValue: { fontSize: 10, fontWeight: '700', color: C.muted, fontVariant: ['tabular-nums'], backgroundColor: C.card, paddingHorizontal: 3, borderRadius: 4, overflow: 'hidden' },
   xLabel: { position: 'absolute', bottom: 4, textAlign: 'center', fontSize: 11, fontWeight: '600', color: C.muted, letterSpacing: 0.2 },
   xLabelOn: { color: C.text, fontWeight: '800' },
 });

@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { cancelAnimation, Easing, FadeIn, useAnimatedStyle, useReducedMotion, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 
-import { Card, Dialog, Divider, IconTile, ListRow, PressableScale, ProgressBar, Sheet, T, tap, useToast } from '@/components/ui';
+import { Card, Dialog, Divider, IconTile, ListRow, nativeOnly, PressableScale, ProgressBar, Sheet, T, tap, useToast } from '@/components/ui';
 import { useStore } from '@/lib/store';
 import { BRAND, C, MOTION, R, shadowLg, shadowSm } from '@/theme';
 import { initials, shared, tint } from './shared';
@@ -115,12 +115,12 @@ export function BackupCard() {
               {backup.name}
             </Text>
             {syncing ? (
-              <Animated.View entering={FadeIn.duration(MOTION.fast)} style={st.statusRow}>
+              <Animated.View entering={nativeOnly(FadeIn.duration(MOTION.fast))} style={st.statusRow}>
                 <ProgressBar value={1} height={4} style={{ flex: 1, maxWidth: 120 }} />
                 <Text style={[T.tiny, { color: C.primaryDark }]}>Syncing…</Text>
               </Animated.View>
             ) : (
-              <Animated.View entering={FadeIn.duration(MOTION.fast)} style={st.statusRow}>
+              <Animated.View entering={nativeOnly(FadeIn.duration(MOTION.fast))} style={st.statusRow}>
                 <Ionicons name="cloud-done" size={14} color={C.primary} />
                 <Text style={T.small} numberOfLines={1}>
                   Last sync: {backup.lastSync}
@@ -193,7 +193,7 @@ export function BackupCard() {
         icon="🔐"
         title={`Allow Google to sign you in to ${BRAND}`}
         text={`Google will share your name, email address${pick ? ` (${pick.email})` : ''} and profile picture with ${BRAND}.`}
-        confirm="Agree and share"
+        confirm="Agree"
         cancel="Cancel"
         onCancel={() => setStep(null)}
         onConfirm={agree}

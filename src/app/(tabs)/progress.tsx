@@ -2,34 +2,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View, type ViewStyle } from 'react-native';
-import Animated, { FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 
 import { longestStreak, WeekStrip } from '@/components/charts/Calendar';
 import { BarChart, fmtNum, GoalLegend, LineChart } from '@/components/charts/Charts';
-import {
-  Button,
-  Card,
-  Chip,
-  CountUp,
-  Dialog,
-  EmptyState,
-  enter,
-  fadeEnter,
-  IconButton,
-  IconTile,
-  Pill,
-  PressableScale,
-  ProgressBar,
-  Screen,
-  ScreenTitle,
-  SectionTitle,
-  Segmented,
-  Sheet,
-  T,
-  tap,
-  useToast,
-  type IconName,
-} from '@/components/ui';
+import { Button, Card, Chip, CountUp, Dialog, EmptyState, enter, fadeEnter, IconButton, IconTile, layoutTransition, nativeOnly, Pill, PressableScale, ProgressBar, Screen, ScreenTitle, SectionTitle, Segmented, Sheet, T, tap, useToast, type IconName } from '@/components/ui';
 import { addDays, bmi, bmiLabel, dayShort, fmtDate, kmFromSteps, parseKey, relDay, round1, todayKey } from '@/lib/calc';
 import { burnedOn, dayTotals, useStore, weekProgress, workoutDays, workoutStreak, type WeightEntry } from '@/lib/store';
 import { C, glow, MOTION, R, shadow, shadowSm } from '@/theme';
@@ -210,7 +187,7 @@ export default function ReportsScreen() {
           ))}
         </ScrollView>
         {existing && (
-          <Animated.View entering={FadeIn.duration(MOTION.base)} exiting={FadeOut.duration(MOTION.fast)} style={st.replaceNote}>
+          <Animated.View entering={nativeOnly(FadeIn.duration(MOTION.base))} exiting={nativeOnly(FadeOut.duration(MOTION.fast))} style={st.replaceNote}>
             <Ionicons name="information-circle" size={16} color={C.warning} />
             <Text style={[T.small, { flex: 1 }]}>
               Replaces your {existing.kg.toFixed(1)} kg entry for {relDay(date)}.
@@ -367,7 +344,7 @@ function WeightSection({ onLog }: { onLog: () => void }) {
 
       {/* Weigh-in history */}
       {ws.length > 0 && (
-        <Animated.View layout={LinearTransition.duration(MOTION.base)} style={[st.cardLike, { marginTop: 12, paddingVertical: 10 }]}>
+        <Animated.View layout={layoutTransition} style={[st.cardLike, { marginTop: 12, paddingVertical: 10 }]}>
           <View style={[st.cardHead, { marginBottom: 2 }]}>
             <Text style={T.h3}>Weigh-ins</Text>
             {list.length > 4 && (
@@ -385,9 +362,9 @@ function WeightSection({ onLog }: { onLog: () => void }) {
             return (
               <Animated.View
                 key={w.id}
-                entering={FadeIn.duration(MOTION.base)}
-                exiting={FadeOut.duration(MOTION.fast)}
-                layout={LinearTransition.duration(MOTION.base)}
+                entering={nativeOnly(FadeIn.duration(MOTION.base))}
+                exiting={nativeOnly(FadeOut.duration(MOTION.fast))}
+                layout={layoutTransition}
                 style={[st.hRow, i > 0 && st.hRowBorder]}>
                 <IconTile icon="scale-outline" color={C.weight} bg={C.weightSoft} size={38} iconSize={18} />
                 <View style={{ flex: 1 }}>

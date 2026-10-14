@@ -49,9 +49,11 @@ import {
   Dialog,
   EASE_OUT,
   Enter,
+  fadeEnter,
   IconButton,
   IconTile,
   MacroBar,
+  nativeOnly,
   OptionCard,
   Pill,
   PressableScale,
@@ -59,7 +61,6 @@ import {
   Ring,
   Segmented,
   T,
-  fadeEnter,
   tap,
   useToast,
   type IconName,
@@ -164,9 +165,11 @@ const toggleIn = (list: string[], v: string, exclusive?: string) => {
 
 /** Step content entrance: a short slide in the direction of travel. Starts slightly visible so there is no blank frame. */
 const stepIn = (dir: number) =>
-  FadeInRight.duration(MOTION.base + 80)
-    .easing(EASE_OUT)
-    .withInitialValues({ opacity: 0.15, transform: [{ translateX: dir * 28 }] });
+  nativeOnly(
+    FadeInRight.duration(MOTION.base + 80)
+      .easing(EASE_OUT)
+      .withInitialValues({ opacity: 0.15, transform: [{ translateX: dir * 28 }] }),
+  );
 
 /* ---------------- Screen ---------------- */
 
@@ -286,7 +289,7 @@ export default function Onboarding() {
               left={<Ionicons name="person-outline" size={20} color={C.muted} />}
             />
             {p.name.trim().length >= 2 && (
-              <Animated.View entering={FadeInDown.duration(MOTION.base).easing(EASE_OUT)} exiting={FadeOut.duration(MOTION.fast)} style={st.greet}>
+              <Animated.View entering={nativeOnly(FadeInDown.duration(MOTION.base).easing(EASE_OUT))} exiting={nativeOnly(FadeOut.duration(MOTION.fast))} style={st.greet}>
                 <IconTile icon="happy-outline" size={34} />
                 <Text style={st.greetText}>Nice to meet you, {p.name.trim().split(' ')[0]}!</Text>
               </Animated.View>
@@ -667,7 +670,7 @@ function PermissionsStep({ p, set }: { p: Profile; set: (x: Partial<Profile>) =>
         <Text style={[T.small, { marginTop: 3 }]}>{sub}</Text>
       </View>
       {on ? (
-        <Animated.View entering={ZoomIn.duration(MOTION.base)} style={st.connected}>
+        <Animated.View entering={nativeOnly(ZoomIn.duration(MOTION.base))} style={st.connected}>
           <Ionicons name="checkmark" size={16} color={C.white} />
         </Animated.View>
       ) : (
@@ -915,7 +918,7 @@ function NotifyStep({ onBack, onDone }: { onBack: () => void; onDone: (allow: bo
               {now.getHours()}:{String(now.getMinutes()).padStart(2, '0')}
             </Text>
             <Text style={st.phoneDate}>{fmtGoalDate(now)}</Text>
-            <Animated.View entering={FadeInDown.delay(560).springify().damping(16).stiffness(180)} style={st.notifCard}>
+            <Animated.View entering={nativeOnly(FadeInDown.delay(560).springify().damping(16).stiffness(180))} style={st.notifCard}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <View style={st.notifLogo}>
                   <Ionicons name="leaf" size={10} color={C.white} />
@@ -1018,7 +1021,7 @@ function SignIn({ onBack, onDone }: { onBack: () => void; onDone: (phone: string
                   }
                   right={
                     phone.length === 10 ? (
-                      <Animated.View entering={ZoomIn.duration(MOTION.base)}>
+                      <Animated.View entering={nativeOnly(ZoomIn.duration(MOTION.base))}>
                         <Ionicons name="checkmark-circle" size={22} color={C.primary} />
                       </Animated.View>
                     ) : null
@@ -1067,7 +1070,7 @@ function SignIn({ onBack, onDone }: { onBack: () => void; onDone: (phone: string
                   return (
                     <View key={n} style={[st.otpBox, !!digit && st.otpFilled, active && st.otpActive]}>
                       {digit ? (
-                        <Animated.Text key={digit} entering={ZoomIn.duration(MOTION.fast)} style={st.otpText}>
+                        <Animated.Text key={digit} entering={nativeOnly(ZoomIn.duration(MOTION.fast))} style={st.otpText}>
                           {digit}
                         </Animated.Text>
                       ) : active ? (
@@ -1137,7 +1140,7 @@ function Generating({ name, onDone }: { name: string; onDone: () => void }) {
               <View key={g} style={[st.genRow, { opacity: n <= done ? 1 : 0.4 }]}>
                 <View style={st.genIcon}>
                   {isDone ? (
-                    <Animated.View entering={ZoomIn.duration(MOTION.base)}>
+                    <Animated.View entering={nativeOnly(ZoomIn.duration(MOTION.base))}>
                       <Ionicons name="checkmark-circle" size={22} color={C.primary} />
                     </Animated.View>
                   ) : n === done ? (

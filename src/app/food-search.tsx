@@ -6,7 +6,7 @@ import Animated, { interpolate, interpolateColor, useAnimatedStyle, useSharedVal
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { EmojiTile, fmtNum, goBack, isDateKey, isMeal, MealChips, VegDot } from '@/components/food/shared';
-import { Button, Chip, CountUp, EmptyState, enter, fadeEnter, Header, IconButton, PressableScale, T, tap, useToast, type IconName } from '@/components/ui';
+import { Button, Chip, CountUp, EmptyState, enter, fadeEnter, Header, IconButton, nativeOnly, PressableScale, T, tap, useToast, type IconName } from '@/components/ui';
 import { FOOD_CATEGORIES, FOODS, foodById, mealLabel, POPULAR_IDS, type Food, type MealKey } from '@/data/foods';
 import { currentMeal, relDay, todayKey } from '@/lib/calc';
 import { useStore } from '@/lib/store';
@@ -96,7 +96,7 @@ export default function FoodSearchScreen() {
           selectionColor={C.primary}
         />
         {!!query && (
-          <Animated.View entering={ZoomIn.duration(MOTION.fast)} exiting={ZoomOut.duration(MOTION.fast)}>
+          <Animated.View entering={nativeOnly(ZoomIn.duration(MOTION.fast))} exiting={nativeOnly(ZoomOut.duration(MOTION.fast))}>
             <Pressable hitSlop={10} onPress={() => setQuery('')} accessibilityRole="button" accessibilityLabel="Clear search">
               <Ionicons name="close-circle" size={20} color={C.muted} />
             </Pressable>

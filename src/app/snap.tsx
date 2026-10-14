@@ -20,7 +20,7 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CheckMark, EmojiTile, fmtNum, fmtQty, goBack, isDateKey, isMeal, MealChips, MiniMacro, RiaNote, ScoreRing } from '@/components/food/shared';
-import { Button, CountUp, enter, fadeEnter, IconButton, IconTile, Pill, PressableScale, ProgressBar, Sheet, T, tap, useToast, type IconName } from '@/components/ui';
+import { Button, CountUp, enter, fadeEnter, IconButton, IconTile, nativeOnly, Pill, PressableScale, ProgressBar, Sheet, T, tap, useToast, type IconName } from '@/components/ui';
 import { foodById, mealLabel, SNAP_SAMPLES, type MealKey } from '@/data/foods';
 import { currentMeal, relDay, round1, todayKey } from '@/lib/calc';
 import { useStore } from '@/lib/store';
@@ -187,7 +187,7 @@ export default function SnapScreen() {
                   </CountUp>
                 </View>
                 {sel.length > 0 && (
-                  <Animated.View entering={ZoomIn.duration(MOTION.base)} style={{ alignItems: 'center' }}>
+                  <Animated.View entering={nativeOnly(ZoomIn.duration(MOTION.base))} style={{ alignItems: 'center' }}>
                     <ScoreRing score={score} size={56} />
                     <Text style={[T.tiny, { marginTop: 4 }]}>Meal score</Text>
                   </Animated.View>
@@ -313,7 +313,7 @@ export default function SnapScreen() {
             )}
             {analyzing && (
               <>
-                <Animated.View entering={FadeIn.duration(MOTION.base)} pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(18,168,125,0.08)' }]} />
+                <Animated.View entering={nativeOnly(FadeIn.duration(MOTION.base))} pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(18,168,125,0.08)' }]} />
                 <Animated.View pointerEvents="none" style={[st.scanWrap, scanStyle]}>
                   <LinearGradient colors={['rgba(18,168,125,0)', 'rgba(18,168,125,0.28)']} style={st.scanTrail} />
                   <View style={st.scanLine} />
@@ -339,7 +339,7 @@ export default function SnapScreen() {
                 <View key={s} style={[st.stepRow, !done && !active && { opacity: 0.4 }]}>
                   <View style={st.stepIcon}>
                     {done ? (
-                      <Animated.View entering={ZoomIn.duration(MOTION.base)}>
+                      <Animated.View entering={nativeOnly(ZoomIn.duration(MOTION.base))}>
                         <Ionicons name="checkmark-circle" size={20} color={C.primary} />
                       </Animated.View>
                     ) : active ? (
@@ -442,7 +442,7 @@ function Plate({ size, items, detected }: { size: number; items: { foodId: strin
             ]}>
             <Text style={{ fontSize: emo }}>{f?.emoji}</Text>
             {detected && size > 120 && (
-              <Animated.View entering={ZoomIn.duration(MOTION.base).delay(i * 60)} style={st.conf}>
+              <Animated.View entering={nativeOnly(ZoomIn.duration(MOTION.base).delay(i * 60))} style={st.conf}>
                 <Text style={st.confText}>{confidence(it.foodId)}%</Text>
               </Animated.View>
             )}

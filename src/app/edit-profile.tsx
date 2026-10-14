@@ -3,11 +3,11 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View, type ViewStyle } from 'react-native';
-import Animated, { FadeInDown, FadeOutUp, interpolateColor, LinearTransition, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import Animated, { FadeInDown, FadeOutUp, interpolateColor, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ACTIVITY, ACTIVITY_ICON, Decor, fmtFull, fmtNum, fmtWeight, GOAL_ICON, goalSummary, GOALS, GroupLabel, useKeyboardShown } from '@/components/profile/shared';
-import { Button, Card, CountUp, enter, Header, IconTile, OptionCard, PressableScale, Screen, Segmented, Stepper, T, tap, useToast, type IconName } from '@/components/ui';
+import { Button, Card, CountUp, enter, Header, IconTile, layoutTransition, nativeOnly, OptionCard, PressableScale, Screen, Segmented, Stepper, T, tap, useToast, type IconName } from '@/components/ui';
 import { cmToFtIn, round1, targets as calcTargets } from '@/lib/calc';
 import { useStore, type Goal, type Profile } from '@/lib/store';
 import { C, G, MOTION, R } from '@/theme';
@@ -137,12 +137,13 @@ export default function EditProfile() {
       ))}
 
       {directional && (
-        <Animated.View entering={FadeInDown.duration(MOTION.base)} exiting={FadeOutUp.duration(MOTION.fast)}>
+        <Animated.View entering={nativeOnly(FadeInDown.duration(MOTION.base))} exiting={nativeOnly(FadeOutUp.duration(MOTION.fast))}>
           <Card style={{ marginTop: 4 }}>
             <View style={st.stepRow0}>
-              <IconTile icon="flag" color={C.weight} bg={C.weightSoft} size={36} />
               <View style={{ flex: 1 }}>
-                <Text style={st.stepLabel}>Target weight</Text>
+                <Text style={st.stepLabel} numberOfLines={1}>
+                  Target weight
+                </Text>
                 <Text style={T.small}>Now {fmtWeight(w, units)}</Text>
               </View>
               <Stepper
@@ -178,7 +179,7 @@ export default function EditProfile() {
         </Animated.View>
       )}
 
-      <Animated.View layout={LinearTransition.duration(MOTION.base)}>
+      <Animated.View layout={layoutTransition}>
         <GroupLabel title="Activity level" />
         {ACTIVITY.map((a) => (
           <OptionCard key={a.value} icon={ACTIVITY_ICON[a.value]} title={a.title} subtitle={a.sub} selected={d.activity === a.value} onPress={() => set({ activity: a.value })} />

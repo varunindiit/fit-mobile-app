@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Pressable, Text, type PressableProps, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
+import { Platform, Pressable, Text, type PressableProps, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 import Animated, {
   Easing,
   FadeIn,
   FadeInDown,
+  LinearTransition,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
@@ -16,6 +17,19 @@ import { C, MOTION, R } from '@/theme';
 
 /** Standard ease-out curve for entrances and value changes. */
 export const EASE_OUT = Easing.bezier(0.22, 1, 0.36, 1);
+
+/**
+ * Layout animations (`entering` / `exiting` / `layout`) run natively only.
+ * On web, Reanimated deletes custom keyframes on a timer (duration + delay); when a screen
+ * transition delays the CSS animation, the keyframe is gone before it starts and the node is
+ * stranded as `position: absolute`, stacking later content on top. Wrap every builder with this.
+ */
+export function nativeOnly<T>(animation: T): T | undefined {
+  return Platform.OS === 'web' ? undefined : animation;
+}
+
+/** Sibling re-flow animation for lists that add, remove or expand items. */
+export const layoutTransition = nativeOnly(LinearTransition.duration(MOTION.base).easing(EASE_OUT));
 
 const APressable = Animated.createAnimatedComponent(Pressable);
 
@@ -49,13 +63,15 @@ export function PressableScale({ scaleTo = 0.97, style, children, onPressIn, onP
 
 /** Entrance used for staggered content: short rise + fade. Index is capped so long lists don't wait. */
 export const enter = (index = 0) =>
-  FadeInDown.duration(MOTION.enter)
-    .delay(Math.min(index, 8) * MOTION.stagger)
-    .easing(EASE_OUT)
-    .withInitialValues({ transform: [{ translateY: 14 }] });
+  nativeOnly(
+    FadeInDown.duration(MOTION.enter)
+      .delay(Math.min(index, 8) * MOTION.stagger)
+      .easing(EASE_OUT)
+      .withInitialValues({ transform: [{ translateY: 14 }] }),
+  );
 
 /** Plain fade entrance (no movement) for overlays and swaps. */
-export const fadeEnter = (delay = 0) => FadeIn.duration(MOTION.base).delay(delay);
+export const fadeEnter = (delay = 0) => nativeOnly(FadeIn.duration(MOTION.base).delay(delay));
 
 /** Wraps children in a staggered entrance animation. */
 export function Enter({ index = 0, children, style }: { index?: number; children: React.ReactNode; style?: StyleProp<ViewStyle> }) {

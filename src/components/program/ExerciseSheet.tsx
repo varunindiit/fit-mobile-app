@@ -4,7 +4,7 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, Vi
 import Animated, { Easing, FadeIn, interpolate, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Button, EASE_OUT, IconButton, IconTile, PressableScale, Segmented, T, tap, usePresence, type IconName } from '@/components/ui';
+import { Button, EASE_OUT, IconButton, IconTile, nativeOnly, PressableScale, Segmented, T, tap, usePresence, type IconName } from '@/components/ui';
 import { exerciseById, type SessionItem } from '@/data/program';
 import { C, MOTION, R } from '@/theme';
 import { ExerciseArt } from './ExerciseArt';
@@ -75,7 +75,7 @@ export function ExerciseSheet({ visible, onClose, items, index }: { visible: boo
           </View>
 
           <ScrollView key={i} style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 24 }} showsVerticalScrollIndicator={false}>
-            <Animated.View key={tab} entering={FadeIn.duration(MOTION.base)}>
+            <Animated.View key={tab} entering={nativeOnly(FadeIn.duration(MOTION.base))}>
               {tab === 'animation' && <ExerciseArt key={ex.id} emoji={ex.emoji} width="100%" height={ART_H} animated radius={R.lg} />}
               {tab === 'muscle' && (
                 <View style={[s.box, { flexDirection: 'row', alignItems: 'center' }]}>

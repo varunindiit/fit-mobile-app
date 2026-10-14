@@ -2,19 +2,19 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import Animated, { FadeInDown, FadeOutUp, LinearTransition, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import Animated, { FadeInDown, FadeOutUp, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 
 import { fmtNum, fmtQty, foodBg, goBack, isDateKey, isMeal, MealChips, RiaNote, scaled, scoreColor, ScoreRing, scoreWord, TYPE_META, VegDot } from '@/components/food/shared';
-import { Button, Card, Chip, CountUp, Dialog, Divider, EASE_OUT, EmptyState, enter, Header, Pill, PressableScale, ProgressBar, Ring, Screen, Stepper, T, tap, useToast } from '@/components/ui';
+import { Button, Card, Chip, CountUp, Dialog, Divider, EASE_OUT, EmptyState, enter, Header, layoutTransition, nativeOnly, Pill, PressableScale, ProgressBar, Ring, Screen, Stepper, T, tap, useToast } from '@/components/ui';
 import { foodById, mealLabel, type Food, type MealKey } from '@/data/foods';
 import { currentMeal, relDay, round1, todayKey } from '@/lib/calc';
 import { burnedOn, dayTotals, useStore } from '@/lib/store';
 import { C, MOTION, R, shadowSm } from '@/theme';
 
 const QUICK = [0.5, 1, 1.5, 2, 3];
-const LIST = LinearTransition.duration(MOTION.base);
+const LIST = layoutTransition;
 
 /** Demo micro-nutrients, derived deterministically from macros so they stay stable. */
 function micros(f: Food, qty: number) {
@@ -228,7 +228,7 @@ export default function FoodDetailScreen() {
               <Chevron open={more} />
             </PressableScale>
             {more && (
-              <Animated.View entering={FadeInDown.duration(MOTION.base).withInitialValues({ transform: [{ translateY: -6 }] })} exiting={FadeOutUp.duration(MOTION.fast)} style={{ gap: 12, marginTop: 6 }}>
+              <Animated.View entering={nativeOnly(FadeInDown.duration(MOTION.base).withInitialValues({ transform: [{ translateY: -6 }] }))} exiting={nativeOnly(FadeOutUp.duration(MOTION.fast))} style={{ gap: 12, marginTop: 6 }}>
                 {micros(food, qty).map((m) => (
                   <View key={m.label}>
                     <View style={st.microRow}>

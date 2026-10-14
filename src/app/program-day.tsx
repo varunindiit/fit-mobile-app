@@ -9,7 +9,6 @@ import Animated, {
   FadeIn,
   FadeOut,
   interpolate,
-  LinearTransition,
   useAnimatedScrollHandler,
   useAnimatedStyle,
   useSharedValue,
@@ -28,7 +27,7 @@ import { ExerciseSheet } from '@/components/program/ExerciseSheet';
 import { GradientButton, PRIMARY_COLORS } from '@/components/program/GradientButton';
 import { editedPlans, findSession, itemLabel, planItems, programFlags, resumePoints, sessionMeta } from '@/components/program/session';
 import { WorkoutSettingsSheet } from '@/components/program/WorkoutSettingsSheet';
-import { Button, Card, EmptyState, enter, Header, IconTile, ListRow, PressableScale, Screen, SectionTitle, Sheet, T, tap, useToast, type IconName } from '@/components/ui';
+import { Button, Card, EmptyState, enter, Header, IconTile, layoutTransition, nativeOnly, ListRow, PressableScale, Screen, SectionTitle, Sheet, T, tap, useToast, type IconName } from '@/components/ui';
 import { exerciseById, sessionStats, type Session, type SessionItem } from '@/data/program';
 import { useStore } from '@/lib/store';
 import { C, MOTION, R, shadowLg, shadowSm } from '@/theme';
@@ -42,10 +41,10 @@ const REST_TIPS: { icon: IconName; color: string; bg: string; t: string }[] = [
   { icon: 'moon', color: C.weight, bg: C.weightSoft, t: 'Aim for 7–9 hours of sleep tonight.' },
 ];
 
-const rowLayout = LinearTransition.duration(MOTION.base);
-const rowOut = FadeOut.duration(MOTION.fast);
-const ctlIn = ZoomIn.duration(MOTION.base);
-const ctlOut = ZoomOut.duration(MOTION.fast);
+const rowLayout = layoutTransition;
+const rowOut = nativeOnly(FadeOut.duration(MOTION.fast));
+const ctlIn = nativeOnly(ZoomIn.duration(MOTION.base));
+const ctlOut = nativeOnly(ZoomOut.duration(MOTION.fast));
 
 export default function ProgramDayScreen() {
   const { key } = useLocalSearchParams<{ key?: string }>();
@@ -250,7 +249,7 @@ function DayPlan({ session }: { session: Session }) {
                 </View>
                 <View style={{ flex: 1 }} />
                 {editing && edited && (
-                  <Animated.View entering={FadeIn.duration(MOTION.base)} exiting={FadeOut.duration(MOTION.fast)}>
+                  <Animated.View entering={nativeOnly(FadeIn.duration(MOTION.base))} exiting={nativeOnly(FadeOut.duration(MOTION.fast))}>
                     <Pressable hitSlop={10} onPress={resetPlan} style={{ marginRight: 14 }}>
                       <Text style={s.resetText}>Reset</Text>
                     </Pressable>
@@ -260,7 +259,7 @@ function DayPlan({ session }: { session: Session }) {
                   <Ionicons name={editing ? 'checkmark' : 'pencil'} size={18} color={editing ? C.white : C.text} />
                 </PressableScale>
                 {tip && (
-                  <Animated.View exiting={FadeOut.duration(160)} style={[s.tip, tipStyle]}>
+                  <Animated.View exiting={nativeOnly(FadeOut.duration(160))} style={[s.tip, tipStyle]}>
                     <View style={s.tipArrow} />
                     <View style={{ flexDirection: 'row', gap: 12 }}>
                       <IconTile icon="create-outline" size={42} />
@@ -345,7 +344,7 @@ function DayPlan({ session }: { session: Session }) {
             <GradientButton title="Mark rest day as done" icon="moon" colors={PRIMARY_COLORS} onPress={markRest} />
           )
         ) : editing ? (
-          <Animated.View entering={FadeIn.duration(MOTION.base)} style={s.adjustPill}>
+          <Animated.View entering={nativeOnly(FadeIn.duration(MOTION.base))} style={s.adjustPill}>
             <View style={{ flex: 1 }}>
               <Text style={s.adjustTitle}>Adjust</Text>
               <Text style={s.adjustHint}>Remove or change reps & time</Text>
@@ -363,7 +362,7 @@ function DayPlan({ session }: { session: Session }) {
             </PressableScale>
           </Animated.View>
         ) : resumeAt > 0 ? (
-          <Animated.View entering={FadeIn.duration(MOTION.base)} style={{ flexDirection: 'row', gap: 10 }}>
+          <Animated.View entering={nativeOnly(FadeIn.duration(MOTION.base))} style={{ flexDirection: 'row', gap: 10 }}>
             <PressableScale
               scaleTo={0.96}
               accessibilityRole="button"

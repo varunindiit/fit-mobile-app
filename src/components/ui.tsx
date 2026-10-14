@@ -33,9 +33,9 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import Svg, { Circle, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
 
 import { C, glow, MOTION, R, shadow, shadowSm } from '@/theme';
-import { EASE_OUT, PressableScale, useHeldWhileVisible, usePresence } from './motion';
+import { EASE_OUT, nativeOnly, PressableScale, useHeldWhileVisible, usePresence } from './motion';
 
-export { CountUp, Enter, enter, EASE_OUT, fadeEnter, PressableScale, Skeleton, useHeldWhileVisible, usePresence } from './motion';
+export { CountUp, Enter, enter, EASE_OUT, fadeEnter, layoutTransition, nativeOnly, PressableScale, Skeleton, useHeldWhileVisible, usePresence } from './motion';
 
 export type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -679,8 +679,8 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
         <Animated.View
           key={msg.id}
           pointerEvents="none"
-          entering={FadeInUp.springify().damping(18).stiffness(220)}
-          exiting={FadeOutUp.duration(MOTION.base)}
+          entering={nativeOnly(FadeInUp.springify().damping(18).stiffness(220))}
+          exiting={nativeOnly(FadeOutUp.duration(MOTION.base))}
           style={[s.toast, { top: insets.top + 10 }]}>
           <View style={s.toastIcon}>
             <Ionicons name={msg.icon} size={16} color={C.white} />

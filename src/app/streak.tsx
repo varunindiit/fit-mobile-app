@@ -22,7 +22,7 @@ import Svg, { Circle } from 'react-native-svg';
 
 import { GradientButton, PRIMARY_COLORS } from '@/components/program/GradientButton';
 import { findSession, sessionMeta } from '@/components/program/session';
-import { Button, CountUp, EASE_OUT, enter, IconButton, IconTile, ProgressBar, Screen, Sheet, T, tap, type IconName } from '@/components/ui';
+import { Button, CountUp, EASE_OUT, enter, IconButton, IconTile, nativeOnly, ProgressBar, Screen, Sheet, T, tap, type IconName } from '@/components/ui';
 import { PROGRAM_DAYS } from '@/data/program';
 import { useStore, workoutDays, workoutStreak } from '@/lib/store';
 import { C, G, glow, MOTION, R, shadow } from '@/theme';
@@ -171,7 +171,7 @@ export default function StreakScreen() {
         </Animated.View>
       </ScrollView>
 
-      <Animated.View entering={FadeIn.duration(MOTION.enter).delay(420)} style={s.ctaBar}>
+      <Animated.View entering={nativeOnly(FadeIn.duration(MOTION.enter).delay(420))} style={s.ctaBar}>
         <GradientButton title="Cool!" colors={PRIMARY_COLORS} onPress={toTraining} />
       </Animated.View>
 
@@ -215,7 +215,7 @@ function Sparkle({ icon, size, color, style, delay, reduce }: { icon: IconName; 
     transform: [{ translateY: interpolate(t.get(), [0, 1], [0, -7]) }, { scale: interpolate(t.get(), [0, 1], [0.85, 1.12]) }],
   }));
   return (
-    <Animated.View pointerEvents="none" entering={ZoomIn.duration(MOTION.base).delay(260 + delay / 3)} style={[s.sparkle, style]}>
+    <Animated.View pointerEvents="none" entering={nativeOnly(ZoomIn.duration(MOTION.base).delay(260 + delay / 3))} style={[s.sparkle, style]}>
       <Animated.View style={float}>
         <Ionicons name={icon} size={size} color={color} />
       </Animated.View>
@@ -244,7 +244,7 @@ function RewardTrack({ cycle, badgeStyle }: { cycle: number; badgeStyle: ReturnT
           const d = i + 1;
           const on = d <= cycle;
           return (
-            <Animated.View key={d} entering={ZoomIn.duration(MOTION.base).delay(380 + i * MOTION.stagger)} style={s.nodeCol}>
+            <Animated.View key={d} entering={nativeOnly(ZoomIn.duration(MOTION.base).delay(380 + i * MOTION.stagger))} style={s.nodeCol}>
               {d === 7 ? (
                 <View style={[s.gift, on && s.giftOn]}>
                   <Ionicons name="gift" size={19} color={on ? C.white : C.gold} />

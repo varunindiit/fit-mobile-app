@@ -3,10 +3,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Keyboard, Platform, Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native';
-import Animated, { FadeInDown, FadeOut, LinearTransition, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import Animated, { FadeInDown, FadeOut, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import Svg, { Circle } from 'react-native-svg';
 
-import { Button, Card, Dialog, Divider, EASE_OUT, IconTile, ListRow, Pill, Segmented, Sheet, T, Toggle, tap, useToast, type IconName } from '@/components/ui';
+import { Button, Card, Dialog, Divider, EASE_OUT, IconTile, layoutTransition, ListRow, nativeOnly, Pill, Segmented, Sheet, T, tap, Toggle, useToast, type IconName } from '@/components/ui';
 import type { PlanTier } from '@/data/plans';
 import { parseKey, round1, targets as calcTargets } from '@/lib/calc';
 import { useStore, type Goal, type Profile, type Settings } from '@/lib/store';
@@ -196,7 +196,7 @@ export function Accordion({ q, a, last }: { q: string; a: string; last?: boolean
   const rot = useSharedValue(0);
   const chevron = useAnimatedStyle(() => ({ transform: [{ rotate: `${rot.get() * 180}deg` }] }));
   return (
-    <Animated.View layout={LinearTransition.duration(MOTION.base)} style={!last && st.accBorder}>
+    <Animated.View layout={layoutTransition} style={!last && st.accBorder}>
       <Pressable
         accessibilityRole="button"
         accessibilityState={{ expanded: open }}
@@ -212,7 +212,7 @@ export function Accordion({ q, a, last }: { q: string; a: string; last?: boolean
         </Animated.View>
       </Pressable>
       {open && (
-        <Animated.Text entering={FadeInDown.duration(MOTION.base).withInitialValues({ transform: [{ translateY: -6 }] })} exiting={FadeOut.duration(MOTION.fast)} style={st.accA}>
+        <Animated.Text entering={nativeOnly(FadeInDown.duration(MOTION.base).withInitialValues({ transform: [{ translateY: -6 }] }))} exiting={nativeOnly(FadeOut.duration(MOTION.fast))} style={st.accA}>
           {a}
         </Animated.Text>
       )}
@@ -283,7 +283,7 @@ export function ConnectedAppsCard() {
         right={<Toggle value={on} onChange={toggle} />}
       />
       {on && (
-        <Animated.View entering={FadeInDown.duration(MOTION.base)} exiting={FadeOut.duration(MOTION.fast)} style={st.syncRow}>
+        <Animated.View entering={nativeOnly(FadeInDown.duration(MOTION.base))} exiting={nativeOnly(FadeOut.duration(MOTION.fast))} style={st.syncRow}>
           <View style={st.syncDot} />
           <Text style={[T.tiny, { color: C.primaryDark }]}>Last synced just now</Text>
         </Animated.View>

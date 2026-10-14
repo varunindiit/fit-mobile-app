@@ -20,7 +20,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 
 import { Accordion, Decor, fmtFull, GOLD, planEnd, PREMIUM_BG } from '@/components/profile/shared';
-import { Button, Card, CountUp, Dialog, EASE_OUT, enter, IconButton, IconTile, PressableScale, Screen, SectionTitle, Sheet, T, tap, useToast, type IconName } from '@/components/ui';
+import { Button, Card, CountUp, Dialog, EASE_OUT, enter, IconButton, IconTile, nativeOnly, PressableScale, Screen, SectionTitle, Sheet, T, tap, useToast, type IconName } from '@/components/ui';
 import { COACHES, formatINR, PLAN_TIERS, TESTIMONIALS, type PlanTier } from '@/data/plans';
 import { fmtDate, todayKey } from '@/lib/calc';
 import { useStore } from '@/lib/store';
@@ -172,7 +172,7 @@ export default function PlansScreen() {
 
               {/* Features */}
               <Card style={{ marginTop: 12 }}>
-                <Animated.View key={tier} entering={FadeIn.duration(MOTION.base)}>
+                <Animated.View key={tier} entering={nativeOnly(FadeIn.duration(MOTION.base))}>
                   <View style={st.featHead}>
                     <IconTile icon={accent.icon} color={accent.iconColor} bg={accent.tile} size={40} />
                     <View style={{ flex: 1 }}>
@@ -227,7 +227,7 @@ export default function PlansScreen() {
 
             {/* Ria (Smart) */}
             {tier === 'smart' && (
-              <Animated.View entering={FadeIn.duration(MOTION.base)}>
+              <Animated.View entering={nativeOnly(FadeIn.duration(MOTION.base))}>
                 <Card style={st.ria} onPress={() => router.push('/coach')}>
                   <IconTile icon="sparkles" color={C.ai} bg={C.card} size={46} />
                   <View style={{ flex: 1 }}>
@@ -246,7 +246,7 @@ export default function PlansScreen() {
               <LinearGradient colors={G.deep} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.band}>
                 <Decor />
                 {tier === 'pro' && (
-                  <Animated.View entering={FadeIn.duration(MOTION.base)} style={{ marginBottom: 22 }}>
+                  <Animated.View entering={nativeOnly(FadeIn.duration(MOTION.base))} style={{ marginBottom: 22 }}>
                     <Text style={st.bandEyebrow}>CERTIFIED COACHES</Text>
                     <Text style={st.bandTitle}>Your expert team</Text>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={st.bandScroll}>
@@ -571,7 +571,7 @@ function Success({ tier, months }: { tier: PlanTier; months: number }) {
       <Decor />
       <ScrollView contentContainerStyle={[st.success, { paddingTop: insets.top + 32, paddingBottom: insets.bottom + 24 }]}>
         <View style={st.celebrate}>
-          <Animated.View entering={FadeIn.delay(180).duration(600)} style={StyleSheet.absoluteFill}>
+          <Animated.View entering={nativeOnly(FadeIn.delay(180).duration(600))} style={StyleSheet.absoluteFill}>
             <Svg width={222} height={222} viewBox="0 0 222 222">
               {CONFETTI.map((d, i) => (
                 <Circle key={i} cx={d.cx} cy={d.cy} r={d.r} fill={d.c} fillOpacity={0.8} />
@@ -612,7 +612,7 @@ function Success({ tier, months }: { tier: PlanTier; months: number }) {
         )}
         <Animated.View entering={enter(7)} style={{ alignSelf: 'stretch' }}>
           <Button title="Start exploring" variant="dark" style={st.sBtn} textStyle={{ color: C.navy }} onPress={() => router.replace('/(tabs)')} />
-          <Button title="Say hi to Ria" icon="sparkles" variant="ghost" textStyle={{ color: C.white }} style={{ marginTop: 6, alignSelf: 'stretch' }} onPress={() => router.replace('/coach')} />
+          <Button title="Say hi to Ria" variant="ghost" textStyle={{ color: C.white }} style={{ marginTop: 6, alignSelf: 'stretch' }} onPress={() => router.replace('/coach')} />
         </Animated.View>
       </ScrollView>
     </LinearGradient>

@@ -8,7 +8,7 @@ import Animated, { FadeIn, ZoomIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 
-import { Button, Card, Dialog, EmptyState, enter, Header, IconButton, IconTile, PressableScale, Ring, Screen, SectionTitle, T, tap, useToast, type IconName } from '@/components/ui';
+import { Button, Card, Dialog, EmptyState, enter, Header, nativeOnly, IconButton, IconTile, PressableScale, Ring, Screen, SectionTitle, T, tap, useToast, type IconName } from '@/components/ui';
 import { workoutById, type Workout } from '@/data/fitness';
 import { pad, todayKey } from '@/lib/calc';
 import { useStore } from '@/lib/store';
@@ -157,7 +157,7 @@ function WorkoutFlow({ w }: { w: Workout }) {
         <Stack.Screen options={{ gestureEnabled: true }} />
         <StatusBar style="dark" />
         <ScrollView contentContainerStyle={st.doneWrap}>
-          <Animated.View entering={ZoomIn.springify().damping(11).stiffness(160)} style={st.doneDisc}>
+          <Animated.View entering={nativeOnly(ZoomIn.springify().damping(11).stiffness(160))} style={st.doneDisc}>
             <Text style={st.doneEmoji}>{result.completed ? '🎉' : '👏'}</Text>
           </Animated.View>
           <Animated.View entering={enter(1)} style={{ alignItems: 'center' }}>
@@ -232,7 +232,7 @@ function WorkoutFlow({ w }: { w: Workout }) {
           {prepping ? (
             <>
               <Text style={st.kicker}>GET READY</Text>
-              <Animated.Text key={Math.ceil(run.prep)} entering={ZoomIn.duration(MOTION.base)} style={st.prepNum}>
+              <Animated.Text key={Math.ceil(run.prep)} entering={nativeOnly(ZoomIn.duration(MOTION.base))} style={st.prepNum}>
                 {Math.ceil(run.prep)}
               </Animated.Text>
               <Text style={st.pDetail}>
@@ -240,7 +240,7 @@ function WorkoutFlow({ w }: { w: Workout }) {
               </Text>
             </>
           ) : (
-            <Animated.View key={run.idx} entering={FadeIn.duration(MOTION.base)} style={{ alignItems: 'center' }}>
+            <Animated.View key={run.idx} entering={nativeOnly(FadeIn.duration(MOTION.base))} style={{ alignItems: 'center' }}>
               <Text style={st.pName} numberOfLines={2}>
                 {cur.name}
               </Text>
@@ -345,7 +345,7 @@ function WorkoutFlow({ w }: { w: Workout }) {
               <Text style={st.catText}>{w.category}</Text>
             </View>
           </View>
-          <Animated.View entering={ZoomIn.duration(MOTION.enter)} style={st.heroDisc}>
+          <Animated.View entering={nativeOnly(ZoomIn.duration(MOTION.enter))} style={st.heroDisc}>
             <Text style={st.heroEmoji}>{w.emoji}</Text>
           </Animated.View>
           <Text style={st.heroTitle}>{w.title}</Text>
@@ -386,19 +386,22 @@ function WorkoutFlow({ w }: { w: Workout }) {
             <SectionTitle title={`Exercises · ${n}`} />
             <Card style={{ paddingVertical: 4 }}>
               {w.exercises.map((e, i) => (
-                <View key={i} style={[st.exRow, i > 0 && st.exBorder]}>
-                  <View style={[st.exNum, { backgroundColor: w.color + '1A' }]}>
-                    <Text style={[st.exNumText, { color: w.color }]}>{i + 1}</Text>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={st.exName}>{e.name}</Text>
-                    <Text style={T.small}>{e.detail}</Text>
-                  </View>
-                  <View style={st.exTime}>
-                    <Ionicons name="timer-outline" size={12} color={C.textSoft} />
-                    <Text style={st.exTimeText}>{clock(e.seconds)}</Text>
-                  </View>
+                <View key={i}>
+                  {i > 0 && <View style={st.exBorder} />}
+                  <View style={st.exRow}>
+                    <View style={[st.exNum, { backgroundColor: w.color + '1A' }]}>
+                      <Text style={[st.exNumText, { color: w.color }]}>{i + 1}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={st.exName}>{e.name}</Text>
+                      <Text style={T.small}>{e.detail}</Text>
+                    </View>
+                    <View style={st.exTime}>
+                      <Ionicons name="timer-outline" size={12} color={C.textSoft} />
+                      <Text style={st.exTimeText}>{clock(e.seconds)}</Text>
+                    </View>
                 </View>
+                  </View>
               ))}
             </Card>
           </Animated.View>
@@ -469,11 +472,11 @@ const st = StyleSheet.create({
   heroCoach: { color: 'rgba(255,255,255,0.9)', fontSize: 14, fontWeight: '600', marginTop: 4 },
   statsCard: { flexDirection: 'row', paddingVertical: 14, paddingHorizontal: 8 },
   statCol: { flex: 1, alignItems: 'center', gap: 6, paddingHorizontal: 2 },
-  statVal: { fontSize: 13, fontWeight: '700', color: C.text, textAlign: 'center', letterSpacing: -0.1, fontVariant: ['tabular-nums'] },
+  statVal: { fontSize: 12, fontWeight: '700', color: C.text, textAlign: 'center', letterSpacing: -0.1, fontVariant: ['tabular-nums'] },
   doneBefore: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: C.primarySoft, borderRadius: R.sm, paddingHorizontal: 10, paddingVertical: 8, marginTop: 12 },
   doneBeforeText: { fontSize: 12, fontWeight: '700', color: C.primaryDark, flex: 1 },
   exRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
-  exBorder: { borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: C.borderSoft, marginLeft: 46 },
+  exBorder: { height: StyleSheet.hairlineWidth * 2, backgroundColor: C.borderSoft, marginLeft: 46 },
   exNum: { width: 34, height: 34, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
   exNumText: { fontSize: 14, fontWeight: '800', fontVariant: ['tabular-nums'] },
   exName: { fontSize: 15, fontWeight: '700', color: C.text, marginBottom: 2, letterSpacing: -0.1 },
