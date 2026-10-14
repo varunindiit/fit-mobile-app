@@ -1,5 +1,6 @@
 /** Onboarding imagery, generated to match the reference storyboard. Cut-outs (`gender-*`, `benefits*`, `activity`) have transparent backgrounds. */
 export const IMG = {
+  intro: require('@/assets/images/onboarding/intro.webp'),
   coach: require('@/assets/images/onboarding/coach.webp'),
   genderMale: require('@/assets/images/onboarding/gender-male.webp'),
   genderFemale: require('@/assets/images/onboarding/gender-female.webp'),

@@ -32,6 +32,55 @@ function useTimeout(fn: () => void, ms: number) {
 
 const rise = (delay: number) => nativeOnly(FadeInDown.duration(MOTION.enter + 80).delay(delay).easing(EASE_OUT).withInitialValues({ transform: [{ translateY: 18 }] }));
 
+/* ---------------- 0 · Intro ---------------- */
+
+const INTRO_STATS: { label: string; value: number; format: (n: number) => string }[] = [
+  { label: 'Total Workouts Completed', value: 300, format: (n) => `${Math.round(n)} Million+` },
+  { label: 'Total Calories Burned', value: 15, format: (n) => `${Math.round(n)} Billion+` },
+  { label: 'App Store Rating', value: 4.9, format: (n) => `${n.toFixed(1)} Stars` },
+];
+
+/** First screen: full-bleed group photo melting into the brand colour, headline, counting stats and the CTA. */
+export function Intro({ onStart, onLogin }: { onStart: () => void; onLogin: () => void }) {
+  const reduce = useReducedMotion();
+  const zoom = useSharedValue(reduce ? 1 : 1.1);
+  useEffect(() => {
+    if (!reduce) zoom.set(withTiming(1, { duration: 5000, easing: Easing.out(Easing.cubic) }));
+  }, [zoom, reduce]);
+  const photo = useAnimatedStyle(() => ({ transform: [{ scale: zoom.get() }] }));
+  return (
+    <View style={{ flex: 1, backgroundColor: C.primaryDark }}>
+      <StatusBar style="light" />
+      <Animated.View style={[st.introPhoto, photo]}>
+        <Image source={IMG.intro} style={StyleSheet.absoluteFill} contentFit="cover" contentPosition="top" transition={300} />
+      </Animated.View>
+      <LinearGradient colors={['rgba(21,94,80,0)', 'rgba(21,94,80,0.45)', C.primaryDark]} locations={[0.3, 0.47, 0.62]} style={StyleSheet.absoluteFill} />
+      <SafeAreaView style={{ flex: 1, paddingHorizontal: 24 }} edges={['top', 'bottom']}>
+        <View style={{ flex: 1 }} />
+        <Animated.Text entering={rise(200)} style={st.introTitle}>
+          EVERY WORKOUT{'\n'}REDEFINES WHO YOU ARE!
+        </Animated.Text>
+        <View style={{ gap: 14, marginTop: 26 }}>
+          {INTRO_STATS.map((s, i) => (
+            <Animated.View key={s.label} entering={rise(380 + i * 140)} style={{ alignItems: 'center' }}>
+              <Text style={st.introLabel}>{s.label}</Text>
+              <CountUp value={s.value} format={s.format} fromZero duration={1200} style={st.introValue} />
+            </Animated.View>
+          ))}
+        </View>
+        <Animated.View entering={nativeOnly(FadeInUp.duration(MOTION.enter).delay(900).easing(EASE_OUT))} style={{ marginTop: 32, paddingBottom: 4 }}>
+          <Button title="Get My Plan" onPress={onStart} style={{ backgroundColor: C.white, borderColor: C.white }} textStyle={{ color: C.primaryDark }} />
+          <Pressable accessibilityRole="button" onPress={() => { tap(); onLogin(); }} hitSlop={8} style={({ pressed }) => [st.textBtn, pressed && { opacity: 0.6 }]}>
+            <Text style={st.introLogin}>
+              Already our user? <Text style={st.introLoginLink}>Log in</Text>
+            </Text>
+          </Pressable>
+        </Animated.View>
+      </SafeAreaView>
+    </View>
+  );
+}
+
 /* ---------------- 1 · Welcome ---------------- */
 
 /** "Hello! I'm your personal coach." Coach pops in, greeting rises, then it moves on by itself (tap to skip). */
@@ -380,6 +429,12 @@ export function Paywall({ male, gaining, onSkip, onSubscribe }: { male: boolean;
 
 const st = StyleSheet.create({
   white: { flex: 1, backgroundColor: C.white },
+  introPhoto: { position: 'absolute', top: 0, left: 0, right: 0, height: '62%' },
+  introTitle: { fontSize: 23, lineHeight: 29, fontWeight: '900', fontStyle: 'italic', color: C.white, textAlign: 'center', letterSpacing: -0.3 },
+  introLabel: { fontSize: 15, fontWeight: '600', color: 'rgba(255,255,255,0.92)' },
+  introValue: { fontSize: 34, fontWeight: '900', color: C.gold, marginTop: 2, letterSpacing: -0.5, fontVariant: ['tabular-nums'] },
+  introLogin: { fontSize: 14, color: 'rgba(255,255,255,0.7)' },
+  introLoginLink: { color: C.white, fontWeight: '700', textDecorationLine: 'underline' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   halo: { position: 'absolute', width: 132, height: 132, borderRadius: 66, backgroundColor: C.primary },
   coach: { width: 132, height: 132, borderRadius: 66, overflow: 'hidden', backgroundColor: C.skeleton, borderWidth: 4, borderColor: C.white },

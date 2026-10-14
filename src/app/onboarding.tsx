@@ -10,12 +10,12 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { BodyShape, SHAPES, bodyFat } from '@/components/onboarding/BodyShape';
 import { IMG } from '@/components/onboarding/assets';
-import { Analysis, Motivation, Paywall, PlanResult, Welcome } from '@/components/onboarding/FullScreens';
+import { Analysis, Intro, Motivation, Paywall, PlanResult, Welcome } from '@/components/onboarding/FullScreens';
 import { GoalCurve } from '@/components/onboarding/GoalCurve';
 import { ChoiceRow, GUTTER, OnbHeader, Photo, QTitle, StepSlider, TipCard, UnitToggle, fromUnit, stepIn, toUnit, useOn, type WeightUnit } from '@/components/onboarding/kit';
 import { RulerPicker } from '@/components/onboarding/RulerPicker';
 import { YearWheel } from '@/components/onboarding/YearWheel';
-import { Button, EASE_OUT, nativeOnly, PressableScale, tap, useToast } from '@/components/ui';
+import { Button, Dialog, EASE_OUT, nativeOnly, PressableScale, tap, useToast } from '@/components/ui';
 import { bmi, bmiLabel, cmToFtIn, targets } from '@/lib/calc';
 import { DEFAULT_PROFILE, useStore, type Goal, type Profile } from '@/lib/store';
 import { BRAND, C, MOTION, R, shadowSm } from '@/theme';
@@ -23,11 +23,11 @@ import { BRAND, C, MOTION, R, shadowSm } from '@/theme';
 /* ---------------- Flow ---------------- */
 
 type StepId =
-  | 'welcome' | 'gender' | 'shape' | 'desired' | 'birth' | 'height' | 'weight' | 'target' | 'preview' | 'timeline' | 'benefits'
+  | 'intro' | 'welcome' | 'gender' | 'shape' | 'desired' | 'birth' | 'height' | 'weight' | 'target' | 'preview' | 'timeline' | 'benefits'
   | 'experience' | 'level' | 'activity' | 'rest' | 'diet' | 'dietinfo' | 'reward' | 'proof' | 'motivation' | 'analysis' | 'result' | 'paywall';
 
 const STEPS: StepId[] = [
-  'welcome', 'gender', 'shape', 'desired', 'birth', 'height', 'weight', 'target', 'preview', 'timeline', 'benefits',
+  'intro', 'welcome', 'gender', 'shape', 'desired', 'birth', 'height', 'weight', 'target', 'preview', 'timeline', 'benefits',
   'experience', 'level', 'activity', 'rest', 'diet', 'dietinfo', 'reward', 'proof', 'motivation', 'analysis', 'result', 'paywall',
 ];
 
@@ -119,7 +119,8 @@ export default function Onboarding() {
   const [p, setP] = useState<Profile>(() => resume?.p ?? { ...DEFAULT_PROFILE, ...state.profile });
   // Updater form reads the latest answers, so rapid taps on multi-selects never drop a choice.
   const set = (patch: Partial<Profile> | ((d: Profile) => Partial<Profile>)) => setP((d) => ({ ...d, ...(typeof patch === 'function' ? patch(d) : patch) }));
-  const [step, setStep] = useState<StepId>(() => (resume?.step === 'analysis' ? 'result' : resume?.step) ?? 'welcome');
+  const [step, setStep] = useState<StepId>(() => (resume?.step === 'analysis' ? 'result' : resume?.step) ?? 'intro');
+  const [login, setLogin] = useState(false);
   const [dir, setDir] = useState<1 | -1>(1);
   const units: WeightUnit = state.settings.units;
   const setUnits = (u: WeightUnit) => updateSettings({ units: u });
@@ -146,7 +147,7 @@ export default function Onboarding() {
 
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (step === 'welcome') return false;
+      if (step === 'intro') return false;
       back();
       return true;
     });
@@ -174,6 +175,28 @@ export default function Onboarding() {
 
   const final = useMemo(() => finalize(p), [p]);
 
+  if (step === 'intro')
+    return (
+      <>
+        <Intro onStart={next} onLogin={() => setLogin(true)} />
+        <Dialog
+          visible={login}
+          icon="👋"
+          title="Welcome back!"
+          text={`Log in to continue with your saved ${BRAND} plan. Demo mode: no account is needed.`}
+          cancel="Cancel"
+          confirm="Log in"
+          onCancel={() => setLogin(false)}
+          onConfirm={() => {
+            setLogin(false);
+            resume = null;
+            completeOnboarding(finalize(p));
+            router.replace('/(tabs)');
+            setTimeout(() => toast('Welcome back! 👋', 'person-circle'), 400);
+          }}
+        />
+      </>
+    );
   if (step === 'welcome') return <Welcome onNext={next} />;
   if (step === 'motivation') return <Motivation male={p.gender === 'male'} onNext={next} />;
   if (step === 'analysis') return <Analysis p={final} units={units} onDone={next} />;
