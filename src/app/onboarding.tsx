@@ -8,7 +8,7 @@ import { BackHandler, Pressable, ScrollView, StyleSheet, Text, View, type StyleP
 import Animated, { FadeInDown, ZoomIn, interpolateColor, useAnimatedStyle } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { BodyFigure, SHAPES, bodyFat } from '@/components/onboarding/BodyFigure';
+import { BodyShape, SHAPES, bodyFat } from '@/components/onboarding/BodyShape';
 import { IMG } from '@/components/onboarding/assets';
 import { Analysis, Motivation, Paywall, PlanResult, Welcome } from '@/components/onboarding/FullScreens';
 import { GoalCurve } from '@/components/onboarding/GoalCurve';
@@ -88,11 +88,7 @@ const PACES: { v: number; emoji: string; note: string }[] = [
   { v: 0.75, emoji: '⚡', note: 'Faster results. Needs consistent effort every week.' },
   { v: 1, emoji: '🔥', note: 'Aggressive pace. Best for experienced, disciplined people.' },
 ];
-const BENEFITS_LEFT: [React.ComponentProps<typeof Ionicons>['name'], string][] = [
-  ['body-outline', 'Personalized workout plan'],
-  ['restaurant-outline', 'Custom meal plan'],
-  ['ribbon-outline', 'Expert guidance'],
-];
+const BENEFITS_LEFT = ['Personalized workout plan', 'Custom meal plan', 'Expert guidance'];
 const BENEFITS_RIGHT = ['Start up faster', 'Get a toned body', 'Build healthy habits', 'Long-term results'];
 
 const toggleIn = (list: string[], v: string) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
@@ -260,10 +256,8 @@ export default function Onboarding() {
         return (
           <Body>
             <QTitle text={desired ? "What's your *desired* body shape?" : "What's your *current* body shape?"} />
-            <Rise i={1} style={{ alignItems: 'center', marginTop: 10 }}>
-              <View style={st.figureBox}>
-                <BodyFigure level={level} gender={p.gender} size={210} />
-              </View>
+            <Rise i={1} style={{ alignItems: 'center', marginTop: 18 }}>
+              <BodyShape level={level} gender={p.gender} style={st.shapePhoto} />
               <Text style={st.figureLabel}>{desired ? 'Desired' : 'Current'}</Text>
             </Rise>
             <Rise i={2} style={{ marginTop: 6 }}>
@@ -355,18 +349,14 @@ export default function Onboarding() {
             <QTitle text={`See incredible changes with your personal ${BRAND} plan!`} />
             <View style={st.previewRow}>
               <Rise i={1} style={st.previewCard}>
-                <View style={st.previewArt}>
-                  <BodyFigure level={p.bodyShape} gender={p.gender} size={140} />
-                </View>
+                <BodyShape level={p.bodyShape} gender={p.gender} style={st.previewArt} />
                 <Text style={st.previewLabel}>Before</Text>
               </Rise>
               <Animated.View entering={nativeOnly(ZoomIn.duration(MOTION.enter).delay(420))} style={st.previewArrow}>
                 <Ionicons name="arrow-forward" size={18} color={C.white} />
               </Animated.View>
               <Rise i={3} style={[st.previewCard, st.previewCardOn]}>
-                <View style={[st.previewArt, { backgroundColor: C.primarySoft }]}>
-                  <BodyFigure level={p.targetShape} gender={p.gender} size={140} />
-                </View>
+                <BodyShape level={p.targetShape} gender={p.gender} style={st.previewArt} />
                 <View style={st.previewTag}>
                   <Text style={[st.previewLabel, { color: C.white, marginTop: 0 }]}>After</Text>
                 </View>
@@ -418,22 +408,25 @@ export default function Onboarding() {
             <QTitle text={`Discover the benefits of ${BRAND}'s program`} />
             <View style={st.benefitRow}>
               <Rise i={1} style={st.benefitLeft}>
-                {BENEFITS_LEFT.map(([icon, label]) => (
-                  <View key={label} style={st.benefitItem}>
-                    <View style={st.benefitIcon}>
-                      <Ionicons name={icon} size={22} color={C.primaryDark} />
-                    </View>
-                    <Text style={st.benefitText}>{label}</Text>
+                <View style={st.benefitItem}>
+                  <Image source={IMG.benefitsStatue} style={st.statue} contentFit="contain" />
+                  <Text style={st.benefitText}>{BENEFITS_LEFT[0]}</Text>
+                </View>
+                {BENEFITS_LEFT.slice(1).map((label) => (
+                  <View key={label} style={[st.benefitItem, st.benefitItemRow]}>
+                    <Ionicons name="checkmark" size={15} color={C.muted} />
+                    <Text style={[st.benefitText, { flex: 1 }]}>{label}</Text>
                   </View>
                 ))}
               </Rise>
               <Rise i={2} style={st.benefitCard}>
-                <LinearGradient colors={[C.primary, C.primaryDark]} style={StyleSheet.absoluteFill} />
-                <Photo source={p.gender === 'male' ? IMG.benefitsMale : IMG.benefits} position="top" style={st.benefitPhoto} />
-                <View style={st.benefitBadge}>
-                  <Text style={st.benefitBadgeText}>Your {BRAND} plan</Text>
-                </View>
-                <View style={{ padding: 12, gap: 8 }}>
+                <LinearGradient colors={[C.primary, C.primaryDark]} style={[StyleSheet.absoluteFill, { top: 56, borderRadius: R.lg }]} />
+                <Image source={p.gender === 'male' ? IMG.benefitsMale : IMG.benefits} style={st.benefitPhoto} contentFit="contain" contentPosition="bottom" />
+                <LinearGradient colors={[C.accent, C.workout]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={st.benefitStrip}>
+                  <Text style={st.benefitStripTitle}>Your {BRAND} plan</Text>
+                  <Text style={st.benefitStripSub}>Built from your answers</Text>
+                </LinearGradient>
+                <View style={{ paddingHorizontal: 12, paddingTop: 12, paddingBottom: 14, gap: 9 }}>
                   {BENEFITS_RIGHT.map((b) => (
                     <View key={b} style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
                       <Ionicons name="checkmark-circle" size={16} color={C.white} />
@@ -620,8 +613,7 @@ function GenderCard({ label, img, on, onPress }: { label: string; img: number; o
   return (
     <PressableScale scaleTo={0.97} accessibilityRole="radio" accessibilityState={{ checked: on }} onPress={() => { tap(); onPress(); }} style={{ flex: 1 }}>
       <Animated.View style={[st.genderCard, box]}>
-        <Image source={img} style={StyleSheet.absoluteFill} contentFit="cover" contentPosition="top" transition={200} />
-        <LinearGradient colors={['rgba(0,0,0,0)', on ? 'rgba(18,168,125,0.92)' : 'rgba(255,255,255,0.94)']} locations={[0.55, 1]} style={StyleSheet.absoluteFill} />
+        <Image source={img} style={st.genderImg} contentFit="contain" contentPosition="bottom" transition={200} />
         <Animated.Text style={[st.genderLabel, text]}>{label}</Animated.Text>
         {on && (
           <Animated.View entering={nativeOnly(ZoomIn.duration(MOTION.base))} style={st.genderCheck}>
@@ -740,14 +732,15 @@ const st = StyleSheet.create({
   tipText: { fontSize: 13, color: C.textSoft, lineHeight: 18 },
 
   genderRow: { flexDirection: 'row', gap: 12, paddingHorizontal: GUTTER, marginTop: 18 },
-  genderCard: { height: 250, borderRadius: R.lg, borderWidth: 2, overflow: 'hidden', justifyContent: 'flex-end', alignItems: 'center' },
-  genderLabel: { fontSize: 16, fontWeight: '800', marginBottom: 14 },
+  genderCard: { height: 260, borderRadius: R.lg, borderWidth: 2, overflow: 'hidden', alignItems: 'center', paddingTop: 12 },
+  genderImg: { alignSelf: 'stretch', flex: 1 },
+  genderLabel: { fontSize: 16, fontWeight: '800', marginVertical: 12 },
   genderCheck: { position: 'absolute', top: 10, right: 10, width: 24, height: 24, borderRadius: 12, backgroundColor: C.white, alignItems: 'center', justifyContent: 'center' },
   otherBtn: { paddingHorizontal: 18, paddingVertical: 11, borderRadius: R.pill, borderWidth: 1, borderColor: C.border, backgroundColor: C.card },
   otherBtnOn: { borderColor: C.primary, backgroundColor: C.primarySoft },
   otherText: { fontSize: 13, fontWeight: '600', color: C.textSoft },
 
-  figureBox: { width: 230, height: 230, borderRadius: R.xl, backgroundColor: '#ECEAE8', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  shapePhoto: { alignSelf: 'stretch', marginHorizontal: GUTTER + 8, aspectRatio: 4 / 3, borderRadius: R.lg },
   figureLabel: { fontSize: 13, fontWeight: '700', color: C.textSoft, marginTop: 10 },
   fatCard: { backgroundColor: C.card, borderRadius: R.md, padding: 16, borderWidth: 1, borderColor: C.borderSoft },
   fatTitle: { fontSize: 13, fontWeight: '700', color: C.text },
@@ -767,7 +760,7 @@ const st = StyleSheet.create({
   previewRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: GUTTER, marginTop: 24 },
   previewCard: { flex: 1, borderRadius: R.lg, backgroundColor: C.card, borderWidth: 2, borderColor: C.border, overflow: 'hidden', alignItems: 'center', paddingBottom: 12 },
   previewCardOn: { borderColor: C.primary },
-  previewArt: { alignSelf: 'stretch', height: 190, backgroundColor: '#ECEAE8', alignItems: 'center', justifyContent: 'center' },
+  previewArt: { alignSelf: 'stretch', height: 200 },
   previewLabel: { fontSize: 14, fontWeight: '800', color: C.text, marginTop: 10 },
   previewTag: { marginTop: 10, backgroundColor: C.primary, borderRadius: R.pill, paddingHorizontal: 16, paddingVertical: 4 },
   previewArrow: { width: 34, height: 34, borderRadius: 17, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center', marginHorizontal: -10, zIndex: 2, borderWidth: 3, borderColor: C.bg },
@@ -775,15 +768,17 @@ const st = StyleSheet.create({
   weeks: { fontSize: 30, fontWeight: '900', color: C.text, letterSpacing: -0.5 },
   paceKg: { fontSize: 13, fontWeight: '600', color: C.muted, marginTop: 2 },
 
-  benefitRow: { flexDirection: 'row', gap: 12, paddingHorizontal: GUTTER, marginTop: 22 },
-  benefitLeft: { flex: 0.9, gap: 10 },
-  benefitItem: { backgroundColor: C.card, borderRadius: R.md, padding: 12, borderWidth: 1, borderColor: C.borderSoft, gap: 8 },
-  benefitIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: C.primarySoft, alignItems: 'center', justifyContent: 'center' },
-  benefitText: { fontSize: 13, fontWeight: '700', color: C.text, lineHeight: 17 },
-  benefitCard: { flex: 1.1, borderRadius: R.lg, overflow: 'hidden', paddingBottom: 6 },
-  benefitPhoto: { height: 190 },
-  benefitBadge: { position: 'absolute', top: 10, left: 10, backgroundColor: C.accent, borderRadius: R.pill, paddingHorizontal: 9, paddingVertical: 4 },
-  benefitBadgeText: { color: C.white, fontSize: 10.5, fontWeight: '800' },
+  benefitRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingHorizontal: GUTTER, marginTop: 22 },
+  benefitLeft: { flex: 0.85, gap: 8, marginTop: 56 },
+  benefitItem: { backgroundColor: C.surfaceAlt, borderRadius: R.md, padding: 12, borderWidth: 1, borderColor: C.borderSoft, gap: 6 },
+  benefitItemRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  statue: { height: 92, alignSelf: 'stretch' },
+  benefitText: { fontSize: 12.5, fontWeight: '600', color: C.textSoft, lineHeight: 17 },
+  benefitCard: { flex: 1.15 },
+  benefitPhoto: { height: 190, marginBottom: -6 },
+  benefitStrip: { marginHorizontal: -6, borderRadius: R.sm, paddingHorizontal: 12, paddingVertical: 8 },
+  benefitStripTitle: { color: C.white, fontSize: 13, fontWeight: '800' },
+  benefitStripSub: { color: 'rgba(255,255,255,0.85)', fontSize: 10.5, fontWeight: '600', marginTop: 1 },
   benefitCardText: { color: C.white, fontSize: 12.5, fontWeight: '700', flex: 1 },
 
   activityArt: { width: 170, height: 170, borderRadius: R.xl },
