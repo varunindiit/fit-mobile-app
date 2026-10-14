@@ -1,10 +1,10 @@
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { Ionicons } from '@expo/vector-icons';
-import { useEffect } from 'react';
-import { ActivityIndicator, Platform, View } from 'react-native';
+import { useState } from 'react';
+import { Platform, View } from 'react-native';
 
+import { AnimatedSplash } from '@/components/AnimatedSplash';
 import { ToastProvider } from '@/components/ui';
 import { StoreProvider, useStore } from '@/lib/store';
 import { C } from '@/theme';
@@ -20,21 +20,19 @@ if (Platform.OS === 'web' && typeof document !== 'undefined') {
 
 function RootStack() {
   const { hydrated } = useStore();
+  // The animated splash picks up from the native one and stays until the store has hydrated.
+  const [splash, setSplash] = useState(true);
+  const [revealed, setRevealed] = useState(false);
 
-  useEffect(() => {
-    if (hydrated) SplashScreen.hideAsync().catch(() => {});
-  }, [hydrated]);
+  return (
+    <View style={{ flex: 1, backgroundColor: C.bg }}>
+      {hydrated && revealed && <Routes />}
+      {splash && <AnimatedSplash ready={hydrated} onReveal={() => setRevealed(true)} onDone={() => setSplash(false)} />}
+    </View>
+  );
+}
 
-  if (!hydrated)
-    return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: C.bg, gap: 22 }}>
-        <View style={{ width: 72, height: 72, borderRadius: 24, backgroundColor: C.primaryDark, alignItems: 'center', justifyContent: 'center' }}>
-          <Ionicons name="leaf" size={34} color={C.white} />
-        </View>
-        <ActivityIndicator color={C.primary} />
-      </View>
-    );
-
+function Routes() {
   return (
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: C.bg }, animation: 'ios_from_right' }}>
       <Stack.Screen name="index" options={{ animation: 'none' }} />
