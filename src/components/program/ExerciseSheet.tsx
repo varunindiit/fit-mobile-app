@@ -1,11 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import Animated, { Easing, FadeIn, interpolate, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { IconButton, Segmented, tap } from '@/components/ui';
+import { Button, EASE_OUT, IconButton, IconTile, PressableScale, Segmented, T, tap, usePresence, type IconName } from '@/components/ui';
 import { exerciseById, type SessionItem } from '@/data/program';
-import { C, R } from '@/theme';
+import { C, MOTION, R } from '@/theme';
 import { ExerciseArt } from './ExerciseArt';
 import { fmtClock, focusColor } from './session';
 
@@ -20,9 +21,12 @@ const ART_H = 230;
 /** Full-height exercise detail sheet with paging through the session's exercises. */
 export function ExerciseSheet({ visible, onClose, items, index }: { visible: boolean; onClose: () => void; items: SessionItem[]; index: number }) {
   const insets = useSafeAreaInsets();
+  const { height: winH } = useWindowDimensions();
   const [i, setI] = useState(index);
   const [tab, setTab] = useState<Tab>('animation');
   const [wasOpen, setWasOpen] = useState(false);
+  const mounted = usePresence(visible, MOTION.sheetOut);
+  const p = useSharedValue(0);
 
   // Reset paging/tab each time the sheet opens (derived during render — no stale frame).
   if (visible !== wasOpen) {
@@ -33,9 +37,15 @@ export function ExerciseSheet({ visible, onClose, items, index }: { visible: boo
     }
   }
 
+  useEffect(() => {
+    p.set(visible ? withTiming(1, { duration: MOTION.sheetIn, easing: EASE_OUT }) : withTiming(0, { duration: MOTION.sheetOut, easing: Easing.in(Easing.quad) }));
+  }, [visible, p]);
+  const backdrop = useAnimatedStyle(() => ({ opacity: p.get() }));
+  const panel = useAnimatedStyle(() => ({ transform: [{ translateY: interpolate(p.get(), [0, 1], [winH, 0]) }] }));
+
   const n = items.length;
   const it = items[Math.min(i, n - 1)];
-  if (!it) return null;
+  if (!it || !mounted) return null;
   const ex = exerciseById(it.exerciseId);
   const go = (d: number) => {
     const next = i + d;
@@ -45,68 +55,78 @@ export function ExerciseSheet({ visible, onClose, items, index }: { visible: boo
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose} statusBarTranslucent>
+    <Modal visible transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
       <View style={{ flex: 1, justifyContent: 'flex-end' }}>
-        <Pressable style={[StyleSheet.absoluteFill, { backgroundColor: C.overlay }]} onPress={onClose} />
-        <View style={[s.panel, { paddingBottom: Math.max(insets.bottom, 14), marginTop: insets.top + 24 }]}>
+        <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: C.overlay }, backdrop]}>
+          <Pressable style={{ flex: 1 }} onPress={onClose} accessibilityLabel="Close" />
+        </Animated.View>
+        <Animated.View style={[s.panel, { paddingBottom: Math.max(insets.bottom, 14), marginTop: insets.top + 24 }, panel]}>
           <View style={s.grabber} />
           <View style={s.head}>
-            <Text style={s.title} numberOfLines={2}>
-              {ex.name.toUpperCase()}
-            </Text>
-            <IconButton icon="close" bg={C.borderSoft} size={18} onPress={onClose} />
+            <View style={{ flex: 1 }}>
+              <Text style={T.label}>
+                Exercise {Math.min(i, n - 1) + 1} of {n}
+              </Text>
+              <Text style={s.title} numberOfLines={2}>
+                {ex.name}
+              </Text>
+            </View>
+            <IconButton icon="close" bg={C.borderSoft} size={18} style={{ width: 34, height: 34 }} onPress={onClose} />
           </View>
 
-          <ScrollView key={i} style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 20 }} showsVerticalScrollIndicator={false}>
-            {tab === 'animation' && <ExerciseArt key={ex.id} emoji={ex.emoji} width="100%" height={ART_H} animated radius={R.lg} />}
-            {tab === 'muscle' && (
-              <View style={[s.box, { flexDirection: 'row', alignItems: 'center' }]}>
-                <View style={s.body}>
-                  {ex.focus.map((f, k) => (
-                    <View key={f} style={[s.glow, { backgroundColor: focusColor(f) + '33', top: 40 + k * 34, left: 18 + (k % 2) * 26 }]} />
-                  ))}
-                  <Text style={{ fontSize: 120, lineHeight: 140 }}>🧍</Text>
-                </View>
-                <View style={{ flex: 1, gap: 8 }}>
-                  <Text style={s.small}>Target muscles</Text>
-                  <Text style={s.muscles}>{ex.muscles}</Text>
-                  {ex.focus.map((f) => (
-                    <View key={f} style={s.focusRow}>
-                      <View style={[s.dot, { backgroundColor: focusColor(f) }]} />
-                      <Text style={s.focusText}>{f}</Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-            )}
-            {tab === 'how' && (
-              <View style={[s.box, { padding: 16, gap: 12, justifyContent: 'center' }]}>
-                {ex.instructions.map((step, k) => (
-                  <View key={k} style={{ flexDirection: 'row', gap: 12, alignItems: 'flex-start' }}>
-                    <View style={s.stepNum}>
-                      <Text style={s.stepNumText}>{k + 1}</Text>
-                    </View>
-                    <Text style={[s.para, { flex: 1 }]}>{step}</Text>
+          <ScrollView key={i} style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 24 }} showsVerticalScrollIndicator={false}>
+            <Animated.View key={tab} entering={FadeIn.duration(MOTION.base)}>
+              {tab === 'animation' && <ExerciseArt key={ex.id} emoji={ex.emoji} width="100%" height={ART_H} animated radius={R.lg} />}
+              {tab === 'muscle' && (
+                <View style={[s.box, { flexDirection: 'row', alignItems: 'center' }]}>
+                  <View style={s.body}>
+                    {ex.focus.map((f, k) => (
+                      <View key={f} style={[s.glow, { backgroundColor: focusColor(f) + '33', top: 40 + k * 34, left: 18 + (k % 2) * 26 }]} />
+                    ))}
+                    <Text style={{ fontSize: 120, lineHeight: 140 }}>🧍</Text>
                   </View>
-                ))}
-              </View>
-            )}
+                  <View style={{ flex: 1, gap: 8, paddingRight: 12 }}>
+                    <Text style={T.label}>Target muscles</Text>
+                    <Text style={s.muscles}>{ex.muscles}</Text>
+                    {ex.focus.map((f) => (
+                      <View key={f} style={s.focusRow}>
+                        <View style={[s.dot, { backgroundColor: focusColor(f) }]} />
+                        <Text style={s.focusText}>{f}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              )}
+              {tab === 'how' && (
+                <View style={[s.box, { padding: 16, gap: 14, justifyContent: 'center' }]}>
+                  {ex.instructions.map((step, k) => (
+                    <View key={k} style={{ flexDirection: 'row', gap: 12, alignItems: 'flex-start' }}>
+                      <View style={s.stepNum}>
+                        <Text style={s.stepNumText}>{k + 1}</Text>
+                      </View>
+                      <Text style={[s.para, { flex: 1 }]}>{step}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </Animated.View>
 
             <Segmented options={TABS} value={tab} onChange={setTab} style={{ marginTop: 14 }} />
 
             <View style={s.repeats}>
-              <Text style={s.sec}>{it.seconds ? 'DURATION' : 'REPEATS'}</Text>
+              <IconTile icon={it.seconds ? 'timer-outline' : 'repeat'} size={40} />
+              <Text style={[s.repeatLabel, { flex: 1 }]}>{it.seconds ? 'Duration' : 'Repeats'}</Text>
               <Text style={s.repeatVal}>{it.seconds ? fmtClock(it.seconds) : `x ${it.reps ?? 10}`}</Text>
             </View>
 
-            <Text style={s.sec}>INSTRUCTIONS</Text>
+            <Text style={[T.label, s.sec]}>Instructions</Text>
             {ex.instructions.map((step, k) => (
               <Text key={k} style={[s.para, { marginBottom: 6 }]}>
                 {step}
               </Text>
             ))}
 
-            <Text style={s.sec}>FOCUS AREA</Text>
+            <Text style={[T.label, s.sec]}>Focus area</Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
               {ex.focus.map((f) => (
                 <View key={f} style={s.chip}>
@@ -116,20 +136,23 @@ export function ExerciseSheet({ visible, onClose, items, index }: { visible: boo
               ))}
             </View>
 
-            <Text style={s.sec}>COMMON MISTAKES</Text>
-            {ex.mistakes.map((m, k) => (
-              <View key={k} style={{ marginBottom: 12 }}>
-                <Text style={s.mistakeTitle}>
-                  {k + 1}. {m.title}
-                </Text>
-                <Text style={s.para}>{m.text}</Text>
-              </View>
-            ))}
+            <Text style={[T.label, s.sec]}>Common mistakes</Text>
+            <View style={s.group}>
+              {ex.mistakes.map((m, k) => (
+                <View key={k} style={[s.mistake, k > 0 && s.mistakeBorder]}>
+                  <IconTile icon="alert" color={C.danger} bg={C.dangerSoft} size={28} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.mistakeTitle}>{m.title}</Text>
+                    <Text style={s.para}>{m.text}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
 
-            <Text style={s.sec}>BREATHING TIPS</Text>
+            <Text style={[T.label, s.sec]}>Breathing tips</Text>
             {ex.breathing.map((b, k) => (
-              <View key={k} style={{ flexDirection: 'row', gap: 10, marginBottom: 6 }}>
-                <Text style={[s.para, { color: C.primary, fontWeight: '900' }]}>•</Text>
+              <View key={k} style={{ flexDirection: 'row', gap: 10, marginBottom: 8, alignItems: 'flex-start' }}>
+                <Ionicons name="leaf-outline" size={16} color={C.primary} style={{ marginTop: 3 }} />
                 <Text style={[s.para, { flex: 1 }]}>{b}</Text>
               </View>
             ))}
@@ -137,57 +160,56 @@ export function ExerciseSheet({ visible, onClose, items, index }: { visible: boo
 
           <View style={s.footer}>
             <View style={s.pager}>
-              <Pressable hitSlop={8} onPress={() => go(-1)} style={[s.pagerBtn, i === 0 && { opacity: 0.3 }]} disabled={i === 0}>
-                <Ionicons name="play-skip-back" size={20} color={C.text} />
-              </Pressable>
+              <PagerBtn icon="chevron-back" disabled={i === 0} onPress={() => go(-1)} />
               <Text style={s.pagerText}>
                 {i + 1}/{n}
               </Text>
-              <Pressable hitSlop={8} onPress={() => go(1)} style={[s.pagerBtn, i >= n - 1 && { opacity: 0.3 }]} disabled={i >= n - 1}>
-                <Ionicons name="play-skip-forward" size={20} color={C.text} />
-              </Pressable>
+              <PagerBtn icon="chevron-forward" disabled={i >= n - 1} onPress={() => go(1)} />
             </View>
-            <Pressable
-              onPress={() => {
-                tap();
-                onClose();
-              }}
-              style={({ pressed }) => [s.close, pressed && { opacity: 0.85 }]}>
-              <Text style={s.closeText}>CLOSE</Text>
-            </Pressable>
+            <Button title="Close" onPress={onClose} style={{ flex: 1 }} />
           </View>
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   );
 }
 
+function PagerBtn({ icon, disabled, onPress }: { icon: IconName; disabled: boolean; onPress: () => void }) {
+  return (
+    <PressableScale hitSlop={8} scaleTo={0.9} disabled={disabled} accessibilityRole="button" accessibilityState={{ disabled }} onPress={onPress} style={[s.pagerBtn, disabled && s.pagerOff]}>
+      <Ionicons name={icon} size={20} color={C.text} />
+    </PressableScale>
+  );
+}
+
 const s = StyleSheet.create({
-  panel: { flex: 1, backgroundColor: C.card, borderTopLeftRadius: 26, borderTopRightRadius: 26, paddingHorizontal: 20, paddingTop: 10 },
-  grabber: { width: 40, height: 5, borderRadius: 3, backgroundColor: C.border, alignSelf: 'center', marginBottom: 10 },
+  panel: { flex: 1, backgroundColor: C.card, borderTopLeftRadius: R.xl, borderTopRightRadius: R.xl, paddingHorizontal: 20, paddingTop: 10 },
+  grabber: { width: 38, height: 5, borderRadius: 3, backgroundColor: C.border, alignSelf: 'center', marginBottom: 12 },
   head: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 14 },
-  title: { flex: 1, fontSize: 21, fontWeight: '900', color: C.text, letterSpacing: 0.3 },
-  box: { minHeight: ART_H, borderRadius: R.lg, backgroundColor: '#F4F7FE', overflow: 'hidden' },
+  title: { fontSize: 22, fontWeight: '700', color: C.text, letterSpacing: -0.4, marginTop: 2 },
+  box: { minHeight: ART_H, borderRadius: R.lg, backgroundColor: C.surfaceAlt, borderWidth: StyleSheet.hairlineWidth * 2, borderColor: C.borderSoft, overflow: 'hidden' },
   body: { width: 130, height: ART_H, alignItems: 'center', justifyContent: 'center' },
   glow: { position: 'absolute', width: 56, height: 56, borderRadius: 28 },
-  small: { fontSize: 12, color: C.muted, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.6 },
-  muscles: { fontSize: 16, fontWeight: '800', color: C.text, marginBottom: 4, paddingRight: 12 },
+  muscles: { fontSize: 16, fontWeight: '700', color: C.text, marginBottom: 4, letterSpacing: -0.2 },
   focusRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   focusText: { fontSize: 14, fontWeight: '600', color: C.textSoft },
-  dot: { width: 10, height: 10, borderRadius: 5 },
-  stepNum: { width: 26, height: 26, borderRadius: 13, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center' },
-  stepNumText: { color: C.white, fontWeight: '800', fontSize: 13 },
-  repeats: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
-  repeatVal: { fontSize: 18, fontWeight: '900', color: C.text },
-  sec: { color: C.primary, fontSize: 13, fontWeight: '800', letterSpacing: 0.9, marginTop: 22, marginBottom: 10 },
+  dot: { width: 8, height: 8, borderRadius: 4 },
+  stepNum: { width: 26, height: 26, borderRadius: 9, backgroundColor: C.primarySoft, alignItems: 'center', justifyContent: 'center' },
+  stepNumText: { color: C.primaryDark, fontWeight: '800', fontSize: 13 },
+  repeats: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 16, padding: 12, borderRadius: R.md, backgroundColor: C.surfaceAlt },
+  repeatLabel: { fontSize: 15, fontWeight: '600', color: C.textSoft },
+  repeatVal: { fontSize: 20, fontWeight: '800', color: C.text, fontVariant: ['tabular-nums'], letterSpacing: -0.3 },
+  sec: { marginTop: 24, marginBottom: 10 },
   para: { fontSize: 15, color: C.textSoft, lineHeight: 22 },
-  chip: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, height: 34, borderRadius: R.pill, backgroundColor: C.bg },
-  chipText: { fontSize: 13, fontWeight: '700', color: C.text },
-  mistakeTitle: { fontSize: 15, fontWeight: '800', color: C.text, marginBottom: 3 },
-  footer: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingTop: 12, borderTopWidth: 1, borderTopColor: C.borderSoft },
-  pager: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  pagerBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
-  pagerText: { fontSize: 15, fontWeight: '800', color: C.text, minWidth: 44, textAlign: 'center' },
-  close: { flex: 1, height: 52, borderRadius: R.pill, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center' },
-  closeText: { color: C.white, fontSize: 16, fontWeight: '800', letterSpacing: 1 },
+  chip: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, height: 34, borderRadius: R.pill, backgroundColor: C.card, borderWidth: 1, borderColor: C.border },
+  chipText: { fontSize: 13, fontWeight: '600', color: C.text },
+  group: { borderRadius: R.md, borderWidth: StyleSheet.hairlineWidth * 2, borderColor: C.borderSoft, paddingHorizontal: 12 },
+  mistake: { flexDirection: 'row', gap: 12, paddingVertical: 12, alignItems: 'flex-start' },
+  mistakeBorder: { borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: C.borderSoft },
+  mistakeTitle: { fontSize: 15, fontWeight: '700', color: C.text, marginBottom: 2 },
+  footer: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: C.borderSoft },
+  pager: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  pagerBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: C.card, borderWidth: StyleSheet.hairlineWidth * 2, borderColor: C.border, alignItems: 'center', justifyContent: 'center' },
+  pagerOff: { opacity: 0.35 },
+  pagerText: { fontSize: 15, fontWeight: '700', color: C.text, minWidth: 44, textAlign: 'center', fontVariant: ['tabular-nums'] },
 });

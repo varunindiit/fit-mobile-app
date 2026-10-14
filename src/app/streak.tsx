@@ -1,26 +1,52 @@
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useRef, useState } from 'react';
-import { Animated, Easing, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View, type ViewStyle } from 'react-native';
+import Animated, {
+  Easing,
+  Extrapolation,
+  FadeIn,
+  interpolate,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withDelay,
+  withRepeat,
+  withSpring,
+  withTiming,
+  ZoomIn,
+} from 'react-native-reanimated';
+import Svg, { Circle } from 'react-native-svg';
 
 import { GradientButton, PRIMARY_COLORS } from '@/components/program/GradientButton';
 import { findSession, sessionMeta } from '@/components/program/session';
-import { Button, IconButton, ProgressBar, Screen, Sheet, T, tap, type IconName } from '@/components/ui';
+import { Button, CountUp, EASE_OUT, enter, IconButton, IconTile, ProgressBar, Screen, Sheet, T, tap, type IconName } from '@/components/ui';
 import { PROGRAM_DAYS } from '@/data/program';
 import { useStore, workoutDays, workoutStreak } from '@/lib/store';
-import { C, R, shadow } from '@/theme';
+import { C, G, glow, MOTION, R, shadow } from '@/theme';
 
-const ND = Platform.OS !== 'web';
 const toTraining = () => router.dismissTo('/fitness');
+const fmtPlain = (n: number) => String(Math.round(n));
+const MEDAL = 116;
+const STAGE = 232;
+
+const SPARKLES: { icon: IconName; size: number; color: string; style: ViewStyle; delay: number }[] = [
+  { icon: 'sparkles', size: 22, color: C.gold, style: { top: 18, left: 18 }, delay: 0 },
+  { icon: 'star', size: 14, color: C.accent, style: { top: 6, right: 34 }, delay: 380 },
+  { icon: 'sparkles', size: 18, color: C.primary, style: { bottom: 26, right: 12 }, delay: 720 },
+  { icon: 'star', size: 11, color: C.gold, style: { bottom: 40, left: 26 }, delay: 1050 },
+];
 
 export default function StreakScreen() {
   const p = useLocalSearchParams<{ key?: string; kcal?: string; minutes?: string; exercises?: string; advanced?: string }>();
   const { state } = useStore();
   const [details, setDetails] = useState(false);
-  const pop = useRef(new Animated.Value(0)).current;
-  const pulse = useRef(new Animated.Value(0)).current;
-  const bob = useRef(new Animated.Value(0)).current;
+  const reduce = useReducedMotion();
+  const pop = useSharedValue(0);
+  const pulse = useSharedValue(0);
+  const bob = useSharedValue(0);
 
   const days = workoutDays(state).size;
   const streak = workoutStreak(state);
@@ -31,122 +57,131 @@ export default function StreakScreen() {
   const advanced = p.advanced === '1' && meta?.day !== undefined;
 
   useEffect(() => {
-    Animated.spring(pop, { toValue: 1, friction: 4, tension: 60, useNativeDriver: ND }).start();
-    const ease = Easing.inOut(Easing.quad);
-    const loop = (v: Animated.Value, d: number) =>
-      Animated.loop(Animated.sequence([Animated.timing(v, { toValue: 1, duration: d, easing: ease, useNativeDriver: ND }), Animated.timing(v, { toValue: 0, duration: d, easing: ease, useNativeDriver: ND })]));
-    const a = loop(pulse, 1100);
-    const b = loop(bob, 700);
-    a.start();
-    b.start();
-    return () => {
-      a.stop();
-      b.stop();
-    };
-  }, [pop, pulse, bob]);
+    pop.set(withSpring(1, { damping: 12, stiffness: 150, mass: 0.8 }));
+    if (reduce) return;
+    pulse.set(withRepeat(withTiming(1, { duration: 1800, easing: Easing.out(Easing.quad) }), -1, false));
+    bob.set(withRepeat(withTiming(1, { duration: 700, easing: Easing.inOut(Easing.quad) }), -1, true));
+  }, [pop, pulse, bob, reduce]);
 
-  const stats: { icon: IconName; color: string; value: string; label: string }[] = [
-    { icon: 'flame', color: C.accent, value: p.kcal ?? '0', label: 'kcal' },
-    { icon: 'time', color: C.protein, value: p.minutes ?? '0', label: 'minutes' },
-    { icon: 'barbell', color: C.workout, value: p.exercises ?? '0', label: 'exercises' },
+  const medalStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(pop.get(), [0, 0.35], [0, 1], Extrapolation.CLAMP),
+    transform: [{ scale: interpolate(pop.get(), [0, 1], [0.4, 1]) }],
+  }));
+  const haloStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(pulse.get(), [0, 1], [0.32, 0]),
+    transform: [{ scale: interpolate(pulse.get(), [0, 1], [1, 1.55]) }],
+  }));
+  const flameStyle = useAnimatedStyle(() => ({ transform: [{ scale: interpolate(pulse.get(), [0, 0.5, 1], [1, 1.07, 1]) }] }));
+  const badgeStyle = useAnimatedStyle(() => ({ transform: [{ translateY: interpolate(bob.get(), [0, 1], [0, -4]) }] }));
+
+  const stats: { icon: IconName; color: string; bg: string; value: string; label: string }[] = [
+    { icon: 'flame', color: C.accent, bg: C.accentSoft, value: p.kcal ?? '0', label: 'kcal' },
+    { icon: 'time', color: C.water, bg: C.waterSoft, value: p.minutes ?? '0', label: 'minutes' },
+    { icon: 'barbell', color: C.workout, bg: C.workoutSoft, value: p.exercises ?? '0', label: 'exercises' },
   ];
 
   return (
     <Screen bg={C.card} edges={['top', 'bottom']}>
       <StatusBar style="dark" />
+      <LinearGradient colors={G.glow} style={s.glow} pointerEvents="none" />
       <View style={s.top}>
         <View style={{ width: 40 }} />
         <Text style={s.topTitle}>Workout complete</Text>
-        <IconButton icon="close" bg={C.bg} onPress={toTraining} />
+        <IconButton icon="close" bordered onPress={toTraining} />
       </View>
 
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20 }} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 24 }} showsVerticalScrollIndicator={false}>
         <View style={s.hero}>
-          {['✨', '⭐', '✨'].map((e, i) => (
-            <Animated.Text key={i} style={[s.sparkle, [{ top: 10, left: 40 }, { top: 0, right: 50 }, { bottom: 30, right: 30 }][i], { opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: i === 1 ? [1, 0.3] : [0.3, 1] }) }]}>
-              {e}
-            </Animated.Text>
-          ))}
-          <Animated.View style={[s.flameRow, { opacity: pop, transform: [{ scale: pop.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1] }) }] }]}>
-            <Animated.Text style={[s.flame, { transform: [{ scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.08] }) }] }]}>🔥</Animated.Text>
-            <Text style={s.count}>{days}</Text>
+          <View style={s.stage}>
+            <Svg width={STAGE} height={STAGE} style={StyleSheet.absoluteFill} pointerEvents="none">
+              <Circle cx={STAGE / 2} cy={STAGE / 2} r={STAGE / 2 - 2} stroke={C.primaryTint} strokeOpacity={0.55} strokeWidth={1} fill="none" />
+              <Circle cx={STAGE / 2} cy={STAGE / 2} r={STAGE / 2 - 30} stroke={C.primaryTint} strokeWidth={1} strokeDasharray="3 6" fill="none" />
+            </Svg>
+            <Animated.View pointerEvents="none" style={[s.halo, haloStyle]} />
+            <Animated.View style={[s.medal, medalStyle]}>
+              <LinearGradient colors={G.warm} start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }} style={s.medalFill}>
+                <Animated.View style={flameStyle}>
+                  <Ionicons name="flame" size={60} color={C.white} />
+                </Animated.View>
+              </LinearGradient>
+            </Animated.View>
+            {SPARKLES.map((sp) => (
+              <Sparkle key={`${sp.icon}${sp.delay}`} {...sp} reduce={reduce} />
+            ))}
+          </View>
+
+          <Animated.View entering={enter(2)} style={{ alignItems: 'center' }}>
+            <CountUp value={days} format={fmtPlain} fromZero duration={900} style={s.count} />
+            <Text style={s.title}>Exercise Days</Text>
+            {streak > 1 ? (
+              <View style={s.streakLine}>
+                <Ionicons name="flame" size={15} color={C.accent} />
+                <Text style={T.small}>{`${streak}-day streak — keep it burning!`}</Text>
+              </View>
+            ) : (
+              <Text style={[T.small, { marginTop: 6 }]}>Every workout counts. See you tomorrow!</Text>
+            )}
+            {advanced && meta?.day !== undefined && (
+              <View style={s.dayPill}>
+                <Ionicons name={meta.day >= PROGRAM_DAYS ? 'trophy' : 'checkmark-circle'} size={16} color={C.primaryDark} />
+                <Text style={s.dayPillText}>{meta.day >= PROGRAM_DAYS ? `Day ${meta.day} complete · Program finished!` : `Day ${meta.day} complete · Next: Day ${meta.day + 1}`}</Text>
+              </View>
+            )}
           </Animated.View>
-          <Text style={s.title}>Exercise Days</Text>
-          <Text style={[T.small, { marginTop: 4 }]}>{streak > 1 ? `🔥 ${streak}-day streak — keep it burning!` : 'Every workout counts. See you tomorrow!'}</Text>
-          {advanced && meta?.day !== undefined && (
-            <View style={s.dayPill}>
-              <Ionicons name="checkmark-circle" size={16} color={C.primaryDark} />
-              <Text style={s.dayPillText}>{meta.day >= PROGRAM_DAYS ? `Day ${meta.day} complete · Program finished! 🏆` : `Day ${meta.day} complete ✓ · Next: Day ${meta.day + 1}`}</Text>
-            </View>
-          )}
         </View>
 
-        <View style={s.summary}>
-          {stats.map((st, i) => (
-            <View key={st.label} style={[s.stat, i > 0 && { borderLeftWidth: 1, borderLeftColor: C.borderSoft }]}>
-              <Ionicons name={st.icon} size={20} color={st.color} />
-              <Text style={s.statVal}>{st.value}</Text>
-              <Text style={s.statLabel}>{st.label}</Text>
-            </View>
-          ))}
-        </View>
+        <Animated.View entering={enter(4)} style={s.summary}>
+          {stats.map((st, i) => {
+            const num = Number(st.value);
+            return (
+              <View key={st.label} style={[s.stat, i > 0 && s.statBorder]}>
+                <IconTile icon={st.icon} color={st.color} bg={st.bg} size={36} iconSize={18} />
+                {Number.isInteger(num) ? <CountUp value={num} format={fmtPlain} fromZero style={s.statVal} /> : <Text style={s.statVal}>{st.value}</Text>}
+                <Text style={s.statLabel}>{st.label}</Text>
+              </View>
+            );
+          })}
+        </Animated.View>
 
-        <View style={s.reward}>
+        <Animated.View entering={enter(5)} style={s.reward}>
           <Text style={s.rewardText}>
             {away === 0 ? (
               <>
-                <Text style={{ fontWeight: '900', color: C.text }}>Amazing! </Text>You've unlocked this week's reward 🎉
+                <Text style={s.rewardStrong}>Amazing! </Text>
+                {"You've unlocked this week's reward 🎉"}
               </>
             ) : (
               <>
-                <Text style={{ fontWeight: '900', color: C.text }}>Well done! </Text>You're <Text style={{ fontWeight: '900', color: C.primary }}>{away} day{away === 1 ? '' : 's'}</Text> away from your next exciting reward!
+                <Text style={s.rewardStrong}>Well done! </Text>
+                {"You're "}
+                <Text style={[s.rewardStrong, { color: C.primary }]}>
+                  {away} day{away === 1 ? '' : 's'}
+                </Text>{' '}
+                away from your next exciting reward!
               </>
             )}
           </Text>
 
-          <View style={s.trackWrap}>
-            <View style={s.trackBg} />
-            <View style={s.nodes}>
-              {Array.from({ length: 7 }, (_, i) => {
-                const d = i + 1;
-                const on = d <= cycle;
-                return (
-                  <View key={d} style={s.nodeCol}>
-                    {d === 7 ? (
-                      <View style={[s.gift, on && { backgroundColor: C.gold }]}>
-                        <Text style={{ fontSize: 20 }}>🎁</Text>
-                      </View>
-                    ) : (
-                      <View style={[s.node, on && { backgroundColor: C.primary, borderColor: C.primary }]}>
-                        <Ionicons name="checkmark" size={16} color={on ? C.white : C.border} />
-                      </View>
-                    )}
-                    <Text style={[s.nodeLabel, on && { color: C.primaryDark }]}>Day {d}</Text>
-                  </View>
-                );
-              })}
-            </View>
-            <Animated.View style={[s.badge, { transform: [{ translateY: bob.interpolate({ inputRange: [0, 1], outputRange: [0, -4] }) }] }]}>
-              <Text style={s.badgeText}>🏷️ 50% Off</Text>
-              <View style={s.badgeTail} />
-            </Animated.View>
-          </View>
+          <RewardTrack cycle={cycle} badgeStyle={badgeStyle} />
 
-          <Pressable hitSlop={10} onPress={() => (tap(), setDetails(true))} style={s.details}>
+          <Pressable hitSlop={10} onPress={() => (tap(), setDetails(true))} style={({ pressed }) => [s.details, pressed && { opacity: 0.6 }]}>
             <Text style={s.detailsText}>Details</Text>
             <Ionicons name="chevron-forward" size={14} color={C.primary} />
           </Pressable>
-        </View>
+        </Animated.View>
       </ScrollView>
 
-      <View style={{ paddingHorizontal: 20, paddingBottom: 8 }}>
+      <Animated.View entering={FadeIn.duration(MOTION.enter).delay(420)} style={s.ctaBar}>
         <GradientButton title="Cool!" colors={PRIMARY_COLORS} onPress={toTraining} />
-      </View>
+      </Animated.View>
 
-      <Sheet visible={details} onClose={() => setDetails(false)} title="Weekly reward 🎁">
-        <Text style={T.body}>
-          Work out for <Text style={{ fontWeight: '800', color: C.text }}>7 days</Text> to unlock <Text style={{ fontWeight: '800', color: C.accent }}>50% off Fitora Premium</Text> — personal coach, custom meal plans and every training program.
-        </Text>
+      <Sheet visible={details} onClose={() => setDetails(false)} title="Weekly reward">
+        <View style={s.sheetHero}>
+          <IconTile icon="gift" color={C.white} bg={C.accent} size={44} />
+          <Text style={[T.body, { flex: 1 }]}>
+            Work out for <Text style={{ fontWeight: '700', color: C.text }}>7 days</Text> to unlock <Text style={{ fontWeight: '700', color: C.accent }}>50% off Fitora Premium</Text> — personal coach, custom meal plans and every training program.
+          </Text>
+        </View>
         <View style={{ marginTop: 16, gap: 10 }}>
           {['Any workout counts — program days, quick sessions or logged activities.', 'Days don’t need to be consecutive.', 'Your reward is applied automatically at checkout.'].map((t) => (
             <View key={t} style={{ flexDirection: 'row', gap: 10 }}>
@@ -155,10 +190,10 @@ export default function StreakScreen() {
             </View>
           ))}
         </View>
-        <View style={{ marginTop: 18 }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
+        <View style={s.cycleBox}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
             <Text style={T.label}>This cycle</Text>
-            <Text style={{ fontWeight: '800', color: C.text }}>{cycle}/7 days</Text>
+            <Text style={s.cycleVal}>{cycle}/7 days</Text>
           </View>
           <ProgressBar value={cycle / 7} height={10} />
         </View>
@@ -168,33 +203,111 @@ export default function StreakScreen() {
   );
 }
 
+/** Floating sparkle around the medal: pops in, then drifts + twinkles (static when reduced motion is on). */
+function Sparkle({ icon, size, color, style, delay, reduce }: { icon: IconName; size: number; color: string; style: ViewStyle; delay: number; reduce: boolean }) {
+  const t = useSharedValue(0);
+  useEffect(() => {
+    if (reduce) return;
+    t.set(withDelay(delay, withRepeat(withTiming(1, { duration: 1300, easing: Easing.inOut(Easing.quad) }), -1, true)));
+  }, [t, delay, reduce]);
+  const float = useAnimatedStyle(() => ({
+    opacity: reduce ? 0.9 : interpolate(t.get(), [0, 1], [0.35, 1]),
+    transform: [{ translateY: interpolate(t.get(), [0, 1], [0, -7]) }, { scale: interpolate(t.get(), [0, 1], [0.85, 1.12]) }],
+  }));
+  return (
+    <Animated.View pointerEvents="none" entering={ZoomIn.duration(MOTION.base).delay(260 + delay / 3)} style={[s.sparkle, style]}>
+      <Animated.View style={float}>
+        <Ionicons name={icon} size={size} color={color} />
+      </Animated.View>
+    </Animated.View>
+  );
+}
+
+/** 7-day reward track: mint rail with an animated progress fill, staggered day nodes and a bobbing offer badge. */
+function RewardTrack({ cycle, badgeStyle }: { cycle: number; badgeStyle: ReturnType<typeof useAnimatedStyle> }) {
+  const [w, setW] = useState(0);
+  const fill = useSharedValue(0);
+  // Fill reaches the centre of the current day's node (nodes: 40 wide, 4px rail padding, space-between).
+  const target = w > 0 && cycle > 0 ? Math.min(w, 4 + 20 + ((cycle - 1) * (w - 48)) / 6 + 23) : 0;
+  useEffect(() => {
+    fill.set(withDelay(450, withTiming(target, { duration: MOTION.progress, easing: EASE_OUT })));
+  }, [target, fill]);
+  const fillStyle = useAnimatedStyle(() => ({ width: fill.get() }));
+
+  return (
+    <View style={s.trackWrap} onLayout={(e) => setW(Math.floor(e.nativeEvent.layout.width))}>
+      <View style={s.trackBg}>
+        <Animated.View style={[s.trackFill, fillStyle]} />
+      </View>
+      <View style={s.nodes}>
+        {Array.from({ length: 7 }, (_, i) => {
+          const d = i + 1;
+          const on = d <= cycle;
+          return (
+            <Animated.View key={d} entering={ZoomIn.duration(MOTION.base).delay(380 + i * MOTION.stagger)} style={s.nodeCol}>
+              {d === 7 ? (
+                <View style={[s.gift, on && s.giftOn]}>
+                  <Ionicons name="gift" size={19} color={on ? C.white : C.gold} />
+                </View>
+              ) : (
+                <View style={[s.node, on && s.nodeOn]}>
+                  <Ionicons name="checkmark" size={16} color={on ? C.white : C.border} />
+                </View>
+              )}
+              <Text style={[s.nodeLabel, on && { color: C.primaryDark }]}>Day {d}</Text>
+            </Animated.View>
+          );
+        })}
+      </View>
+      <Animated.View style={[s.badge, badgeStyle]}>
+        <Ionicons name="pricetag" size={11} color={C.white} />
+        <Text style={s.badgeText}>50% Off</Text>
+        <View style={s.badgeTail} />
+      </Animated.View>
+    </View>
+  );
+}
+
 const s = StyleSheet.create({
+  glow: { position: 'absolute', top: 0, left: 0, right: 0, height: 420 },
   top: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 6 },
-  topTitle: { flex: 1, textAlign: 'center', fontSize: 15, fontWeight: '700', color: C.muted },
-  hero: { alignItems: 'center', paddingTop: 16, paddingBottom: 8 },
-  sparkle: { position: 'absolute', fontSize: 22 },
-  flameRow: { flexDirection: 'row', alignItems: 'center' },
-  flame: { fontSize: 112, lineHeight: 132 },
-  count: { fontSize: 88, fontWeight: '900', color: C.text, marginLeft: 6, letterSpacing: -2 },
-  title: { fontSize: 28, fontWeight: '900', color: C.text, marginTop: 2 },
+  topTitle: { flex: 1, textAlign: 'center', fontSize: 15, fontWeight: '600', color: C.textSoft },
+  hero: { alignItems: 'center', paddingTop: 4, paddingBottom: 8 },
+  stage: { width: STAGE, height: STAGE, alignItems: 'center', justifyContent: 'center' },
+  halo: { position: 'absolute', width: MEDAL, height: MEDAL, borderRadius: MEDAL / 2, backgroundColor: C.accent },
+  medal: { width: MEDAL, height: MEDAL, borderRadius: MEDAL / 2, backgroundColor: C.accent, ...glow(C.accent) },
+  medalFill: { flex: 1, borderRadius: MEDAL / 2, alignItems: 'center', justifyContent: 'center', borderWidth: 4, borderColor: 'rgba(255,255,255,0.55)' },
+  sparkle: { position: 'absolute' },
+  count: { fontSize: 64, fontWeight: '800', color: C.text, letterSpacing: -2, fontVariant: ['tabular-nums'], marginTop: -6, lineHeight: 72 },
+  title: { fontSize: 24, fontWeight: '800', color: C.text, letterSpacing: -0.6 },
+  streakLine: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 },
   dayPill: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 14, backgroundColor: C.primarySoft, paddingHorizontal: 14, paddingVertical: 8, borderRadius: R.pill },
-  dayPillText: { color: C.primaryDark, fontWeight: '800', fontSize: 13 },
-  summary: { flexDirection: 'row', backgroundColor: C.bg, borderRadius: R.lg, paddingVertical: 14, marginTop: 20 },
+  dayPillText: { color: C.primaryDark, fontWeight: '700', fontSize: 13 },
+  summary: { flexDirection: 'row', backgroundColor: C.surfaceAlt, borderRadius: R.lg, paddingVertical: 16, marginTop: 20, borderWidth: StyleSheet.hairlineWidth, borderColor: C.borderSoft },
   stat: { flex: 1, alignItems: 'center', gap: 2 },
-  statVal: { fontSize: 22, fontWeight: '900', color: C.text, marginTop: 4 },
+  statBorder: { borderLeftWidth: StyleSheet.hairlineWidth * 2, borderLeftColor: C.border },
+  statVal: { fontSize: 22, fontWeight: '800', color: C.text, marginTop: 8, letterSpacing: -0.5, fontVariant: ['tabular-nums'] },
   statLabel: { fontSize: 12, color: C.muted, fontWeight: '600' },
-  reward: { marginTop: 18, backgroundColor: C.card, borderRadius: R.lg, padding: 16, borderWidth: 1, borderColor: C.borderSoft, ...shadow },
+  reward: { marginTop: 16, backgroundColor: C.card, borderRadius: R.lg, padding: 16, borderWidth: StyleSheet.hairlineWidth, borderColor: C.borderSoft, ...shadow },
   rewardText: { fontSize: 15, color: C.textSoft, lineHeight: 22, textAlign: 'center' },
+  rewardStrong: { fontWeight: '800', color: C.text },
   trackWrap: { marginTop: 44 },
-  trackBg: { position: 'absolute', left: 0, right: 0, top: 0, height: 46, borderRadius: R.pill, backgroundColor: C.primarySoft },
+  trackBg: { position: 'absolute', left: 0, right: 0, top: 0, height: 46, borderRadius: R.pill, backgroundColor: C.primarySoft, overflow: 'hidden' },
+  trackFill: { height: '100%', borderRadius: R.pill, backgroundColor: C.primaryTint },
   nodes: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 4 },
   nodeCol: { alignItems: 'center', width: 40 },
   node: { width: 34, height: 34, borderRadius: 17, marginVertical: 6, backgroundColor: C.white, borderWidth: 2, borderColor: C.borderSoft, alignItems: 'center', justifyContent: 'center' },
+  nodeOn: { backgroundColor: C.primary, borderColor: C.primary },
   gift: { width: 40, height: 40, borderRadius: 20, marginVertical: 3, backgroundColor: C.white, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: C.gold },
+  giftOn: { backgroundColor: C.gold },
   nodeLabel: { fontSize: 10, fontWeight: '700', color: C.muted, marginTop: 4 },
-  badge: { position: 'absolute', top: -36, right: -6, backgroundColor: C.accent, borderRadius: 10, paddingHorizontal: 9, paddingVertical: 5 },
-  badgeText: { color: C.white, fontSize: 12, fontWeight: '900' },
+  badge: { position: 'absolute', top: -36, right: -6, flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: C.accent, borderRadius: 10, paddingHorizontal: 9, paddingVertical: 5 },
+  badgeText: { color: C.white, fontSize: 12, fontWeight: '800' },
   badgeTail: { position: 'absolute', bottom: -5, right: 22, width: 10, height: 10, backgroundColor: C.accent, transform: [{ rotate: '45deg' }] },
   details: { flexDirection: 'row', alignItems: 'center', alignSelf: 'center', gap: 2, marginTop: 14 },
-  detailsText: { color: C.primary, fontWeight: '800', fontSize: 14 },
+  detailsText: { color: C.primary, fontWeight: '700', fontSize: 14 },
+  ctaBar: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 8, backgroundColor: C.card, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: C.border },
+  sheetHero: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  cycleBox: { marginTop: 18, backgroundColor: C.surfaceAlt, borderRadius: R.md, padding: 14 },
+  cycleVal: { fontWeight: '700', color: C.text, fontVariant: ['tabular-nums'] },
 });

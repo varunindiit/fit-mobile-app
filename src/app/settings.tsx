@@ -1,10 +1,12 @@
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, StyleSheet, Text } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 
-import { AboutSheet, ConnectedAppsCard, HelpSheet, RemindersCard, shared, UnitsRow } from '@/components/profile/shared';
+import { AboutSheet, ConnectedAppsCard, GroupLabel, HelpSheet, RemindersCard, shared, tint, UnitsRow } from '@/components/profile/shared';
 import { LanguageSheet, WorkoutSettingsSheet } from '@/components/profile/sheets';
-import { Card, Divider, Header, ListRow, Screen, SectionTitle, Toggle, useToast } from '@/components/ui';
+import { Card, Divider, enter, Header, ListRow, Pill, Screen, Toggle, useToast } from '@/components/ui';
 import { NOTIFICATIONS } from '@/data/notifications';
 import { useStore } from '@/lib/store';
 import { C } from '@/theme';
@@ -25,73 +27,90 @@ export default function SettingsScreen() {
     <Screen>
       <Header title="Settings" />
       <ScrollView contentContainerStyle={st.content} showsVerticalScrollIndicator={false}>
-        <SectionTitle title="Reminders" style={{ marginTop: 6 }} />
-        <RemindersCard />
+        <Animated.View entering={enter(0)}>
+          <GroupLabel title="Reminders" style={{ marginTop: 8 }} />
+          <RemindersCard />
+        </Animated.View>
 
-        <SectionTitle title="Preferences" />
-        <Card style={shared.listCard}>
-          <UnitsRow />
-          <Divider style={shared.inset} />
-          <ListRow icon="language" iconColor={C.steps} iconBg={C.stepsSoft} title="Language" subtitle={state.settings.language} onPress={() => setSheet('language')} />
-          <Divider style={shared.inset} />
-          <ListRow
-            icon="barbell-outline"
-            iconColor={C.protein}
-            iconBg="#E8F0FE"
-            title="Workout settings"
-            subtitle={`${state.settings.restSeconds}s rest · ${state.settings.countdown}s countdown · voice ${state.settings.coachVoice ? 'on' : 'off'}`}
-            onPress={() => setSheet('workout')}
-          />
-          <Divider style={shared.inset} />
-          <ListRow
-            icon="notifications-outline"
-            iconColor={C.accent}
-            iconBg={C.accentSoft}
-            title="Push notifications"
-            subtitle={push ? 'Allowed on this device' : 'Off — reminders will not alert you'}
-            chevron={false}
-            onPress={() => setPush(!push)}
-            right={<Toggle value={push} onChange={setPush} />}
-          />
-        </Card>
+        <Animated.View entering={enter(1)}>
+          <GroupLabel title="Preferences" />
+          <Card style={shared.listCard}>
+            <UnitsRow />
+            <Divider style={shared.inset} />
+            <ListRow icon="language" iconColor={C.steps} iconBg={C.stepsSoft} title="Language" subtitle={state.settings.language} onPress={() => setSheet('language')} />
+            <Divider style={shared.inset} />
+            <ListRow
+              icon="barbell-outline"
+              iconColor={C.workout}
+              iconBg={C.workoutSoft}
+              title="Workout settings"
+              subtitle={`${state.settings.restSeconds}s rest · ${state.settings.countdown}s countdown · voice ${state.settings.coachVoice ? 'on' : 'off'}`}
+              onPress={() => setSheet('workout')}
+            />
+            <Divider style={shared.inset} />
+            <ListRow
+              icon="notifications-outline"
+              iconColor={C.accent}
+              iconBg={C.accentSoft}
+              title="Push notifications"
+              subtitle={push ? 'Allowed on this device' : 'Off — reminders will not alert you'}
+              chevron={false}
+              onPress={() => setPush(!push)}
+              right={<Toggle value={push} onChange={setPush} />}
+            />
+          </Card>
+        </Animated.View>
 
-        <SectionTitle title="Connected apps" />
-        <ConnectedAppsCard />
+        <Animated.View entering={enter(2)}>
+          <GroupLabel title="Connected apps" />
+          <ConnectedAppsCard />
+        </Animated.View>
 
-        <SectionTitle title="Account" />
-        <Card style={shared.listCard}>
-          <ListRow icon="person-outline" title="Edit profile" subtitle="Name, age, height" onPress={() => router.push('/edit-profile')} />
-          <Divider style={shared.inset} />
-          <ListRow icon="flag-outline" title="Goals & activity" subtitle="Calorie budget, target weight" onPress={() => router.push('/edit-profile?section=goals')} />
-          <Divider style={shared.inset} />
-          <ListRow
-            icon="diamond-outline"
-            iconColor={C.workout}
-            iconBg={C.workoutSoft}
-            title="Subscription"
-            subtitle={premium ? `Fitora ${premium.tier === 'pro' ? 'Pro' : 'Smart'} · active` : 'Free plan'}
-            onPress={() => router.push('/plans')}
-          />
-          <Divider style={shared.inset} />
-          <ListRow
-            icon="mail-unread-outline"
-            iconColor={C.accent}
-            iconBg={C.accentSoft}
-            title="Notifications inbox"
-            subtitle={unread ? `${unread} unread` : 'All caught up'}
-            onPress={() => router.push('/notifications')}
-          />
-        </Card>
+        <Animated.View entering={enter(3)}>
+          <GroupLabel title="Account" />
+          <Card style={shared.listCard}>
+            <ListRow icon="person-outline" title="Edit profile" subtitle="Name, age, height" onPress={() => router.push('/edit-profile')} />
+            <Divider style={shared.inset} />
+            <ListRow icon="flag-outline" iconColor={C.weight} iconBg={C.weightSoft} title="Goals & activity" subtitle="Calorie budget, target weight" onPress={() => router.push('/edit-profile?section=goals')} />
+            <Divider style={shared.inset} />
+            <ListRow
+              icon="diamond-outline"
+              iconColor={C.warning}
+              iconBg={C.warningSoft}
+              title="Subscription"
+              subtitle={premium ? `Fitora ${premium.tier === 'pro' ? 'Pro' : 'Smart'} · active` : 'Free plan'}
+              right={premium ? <Pill text="ACTIVE" icon="checkmark" color={C.primaryDark} bg={C.primarySoft} /> : undefined}
+              onPress={() => router.push('/plans')}
+            />
+            <Divider style={shared.inset} />
+            <ListRow
+              icon="mail-unread-outline"
+              iconColor={C.accent}
+              iconBg={C.accentSoft}
+              title="Notifications inbox"
+              subtitle={unread ? `${unread} unread` : 'All caught up'}
+              right={unread ? <Pill text={`${unread} NEW`} color={C.white} bg={C.accent} /> : undefined}
+              onPress={() => router.push('/notifications')}
+            />
+          </Card>
+        </Animated.View>
 
-        <SectionTitle title="Support" />
-        <Card style={shared.listCard}>
-          <ListRow icon="sparkles" iconColor="#B45309" iconBg="#FEF3C7" title="Ask Ria" subtitle="Instant answers, 24×7" onPress={() => router.push('/coach')} />
-          <Divider style={shared.inset} />
-          <ListRow icon="help-circle-outline" iconColor={C.protein} iconBg="#E8F0FE" title="Help & FAQ" onPress={() => setSheet('help')} />
-          <Divider style={shared.inset} />
-          <ListRow icon="shield-checkmark-outline" iconColor={C.textSoft} iconBg={C.borderSoft} title="About & Privacy" subtitle="Version 1.0.0" onPress={() => setSheet('about')} />
-        </Card>
-        <Text style={st.footer}>Fitora v1.0.0 · Demo build</Text>
+        <Animated.View entering={enter(4)}>
+          <GroupLabel title="Support" />
+          <Card style={shared.listCard}>
+            <ListRow icon="sparkles" iconColor={C.ai} iconBg={C.aiSoft} title="Ask Ria" subtitle="Instant answers, 24×7" onPress={() => router.push('/coach')} />
+            <Divider style={shared.inset} />
+            <ListRow icon="help-circle-outline" iconColor={C.fiber} iconBg={tint(C.fiber)} title="Help & FAQ" onPress={() => setSheet('help')} />
+            <Divider style={shared.inset} />
+            <ListRow icon="shield-checkmark-outline" iconColor={C.textSoft} iconBg="#EEEDEB" title="About & Privacy" subtitle="Version 1.0.0" onPress={() => setSheet('about')} />
+          </Card>
+          <View style={st.footer}>
+            <View style={st.footerLogo}>
+              <Ionicons name="leaf" size={13} color={C.white} />
+            </View>
+            <Text style={st.footerText}>Fitora v1.0.0 · Demo build</Text>
+          </View>
+        </Animated.View>
       </ScrollView>
       <HelpSheet visible={sheet === 'help'} onClose={() => setSheet(null)} />
       <AboutSheet visible={sheet === 'about'} onClose={() => setSheet(null)} />
@@ -103,5 +122,7 @@ export default function SettingsScreen() {
 
 const st = StyleSheet.create({
   content: { paddingHorizontal: 16, paddingBottom: 40 },
-  footer: { textAlign: 'center', color: C.muted, fontSize: 12, marginTop: 20 },
+  footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 24 },
+  footerLogo: { width: 20, height: 20, borderRadius: 6, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center' },
+  footerText: { color: C.muted, fontSize: 12 },
 });

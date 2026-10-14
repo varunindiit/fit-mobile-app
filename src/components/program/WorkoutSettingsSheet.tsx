@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import { Button, Chip, Divider, Sheet, Stepper, T, Toggle } from '@/components/ui';
+import { Button, Chip, Divider, IconTile, Sheet, Stepper, Toggle } from '@/components/ui';
 import { useStore } from '@/lib/store';
 import { C } from '@/theme';
 
@@ -9,47 +9,58 @@ export function WorkoutSettingsSheet({ visible, onClose }: { visible: boolean; o
   const { state, updateSettings } = useStore();
   const st = state.settings;
   return (
-    <Sheet visible={visible} onClose={onClose} title="Workout Settings">
-      <View style={s.row}>
+    <Sheet visible={visible} onClose={onClose} title="Workout settings">
+      <View style={[s.row, { alignItems: 'flex-start' }]}>
+        <IconTile icon="hourglass-outline" color={C.accent} bg={C.accentSoft} size={40} />
         <View style={{ flex: 1 }}>
-          <Text style={T.h3}>Rest duration</Text>
-          <Text style={T.small}>Between exercises</Text>
-        </View>
-        <Stepper value={st.restSeconds} min={10} max={60} step={5} format={(v) => `${v}s`} onChange={(v) => updateSettings({ restSeconds: v })} />
-      </View>
-      <Divider />
-      <View style={[s.row, { flexDirection: 'column', alignItems: 'stretch' }]}>
-        <Text style={T.h3}>Countdown</Text>
-        <Text style={T.small}>"Get ready" time before the first exercise</Text>
-        <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
-          {[5, 10, 15].map((n) => (
-            <Chip key={n} label={`${n} sec`} selected={st.countdown === n} onPress={() => updateSettings({ countdown: n })} />
-          ))}
+          <Copy title="Rest duration" sub="Between exercises" />
+          <View style={{ marginTop: 10, alignSelf: 'flex-start' }}>
+            <Stepper value={st.restSeconds} min={10} max={60} step={5} format={(v) => `${v}s`} onChange={(v) => updateSettings({ restSeconds: v })} />
+          </View>
         </View>
       </View>
-      <Divider />
-      <View style={s.row}>
-        <Text style={s.emoji}>🧔</Text>
+      <Divider style={s.inset} />
+      <View style={[s.row, { alignItems: 'flex-start' }]}>
+        <IconTile icon="timer-outline" color={C.water} bg={C.waterSoft} size={40} />
         <View style={{ flex: 1 }}>
-          <Text style={T.h3}>Coach voice</Text>
-          <Text style={T.small}>Spoken cues & countdowns</Text>
+          <Copy title="Countdown" sub={'“Get ready” time before the first exercise'} />
+          <View style={s.chips}>
+            {[5, 10, 15].map((n) => (
+              <Chip key={n} label={`${n} sec`} selected={st.countdown === n} onPress={() => updateSettings({ countdown: n })} />
+            ))}
+          </View>
         </View>
+      </View>
+      <Divider style={s.inset} />
+      <View style={s.row}>
+        <IconTile icon="mic-outline" color={C.steps} bg={C.stepsSoft} size={40} />
+        <Copy title="Coach voice" sub="Spoken cues & countdowns" />
         <Toggle value={st.coachVoice} onChange={(v) => updateSettings({ coachVoice: v })} />
       </View>
+      <Divider style={s.inset} />
       <View style={s.row}>
-        <Text style={s.emoji}>🎵</Text>
-        <View style={{ flex: 1 }}>
-          <Text style={T.h3}>Music</Text>
-          <Text style={T.small}>Upbeat workout playlist</Text>
-        </View>
+        <IconTile icon="musical-notes-outline" color={C.workout} bg={C.workoutSoft} size={40} />
+        <Copy title="Music" sub="Upbeat workout playlist" />
         <Toggle value={st.music} onChange={(v) => updateSettings({ music: v })} />
       </View>
-      <Button title="Done" onPress={onClose} style={{ marginTop: 12, borderRadius: 999 }} />
+      <Button title="Done" onPress={onClose} style={{ marginTop: 14 }} />
     </Sheet>
+  );
+}
+
+function Copy({ title, sub }: { title: string; sub: string }) {
+  return (
+    <View style={{ flex: 1 }}>
+      <Text style={s.title}>{title}</Text>
+      <Text style={s.sub}>{sub}</Text>
+    </View>
   );
 }
 
 const s = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14 },
-  emoji: { fontSize: 22, width: 36, height: 36, borderRadius: 18, backgroundColor: C.bg, textAlign: 'center', lineHeight: 36, overflow: 'hidden' },
+  inset: { marginLeft: 52 },
+  title: { fontSize: 16, fontWeight: '700', color: C.text, letterSpacing: -0.2 },
+  sub: { fontSize: 13, color: C.textSoft, lineHeight: 18, marginTop: 2 },
+  chips: { flexDirection: 'row', gap: 8, marginTop: 12 },
 });

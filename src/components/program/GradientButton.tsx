@@ -1,23 +1,27 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Pressable, StyleSheet, Text, type ViewStyle } from 'react-native';
+import { StyleSheet, Text, type ViewStyle } from 'react-native';
 
-import { tap, type IconName } from '@/components/ui';
-import { C, R } from '@/theme';
+import { impact, PressableScale, type IconName } from '@/components/ui';
+import { C, G, glow, R } from '@/theme';
 
-export const START_COLORS: [string, string] = ['#FF8A5B', '#E5484D'];
-export const PRIMARY_COLORS: [string, string] = [C.primary, C.primaryDark];
+export const START_COLORS: [string, string] = G.warm;
+export const PRIMARY_COLORS: [string, string] = G.brand;
 
-/** Big pill CTA with a gradient fill (START / CONTINUE / ✓ / Cool!). */
-export function GradientButton({ title, onPress, colors = START_COLORS, icon, height = 56, style, iconSize = 20 }: { title?: string; onPress: () => void; colors?: [string, string]; icon?: IconName; height?: number; style?: ViewStyle; iconSize?: number }) {
+/** Big gradient CTA (START / CONTINUE / ✓ / Cool!). Titled buttons are rounded rects; icon-only ones are pills. */
+export function GradientButton({ title, onPress, colors = START_COLORS, icon, height = 54, style, iconSize = 20 }: { title?: string; onPress: () => void; colors?: [string, string]; icon?: IconName; height?: number; style?: ViewStyle; iconSize?: number }) {
+  const radius = title ? R.md : height / 2;
   return (
-    <Pressable
+    <PressableScale
+      accessibilityRole="button"
+      accessibilityLabel={title}
+      scaleTo={0.97}
       onPress={() => {
-        tap();
+        impact();
         onPress();
       }}
-      style={({ pressed }) => [{ borderRadius: R.pill }, pressed && { opacity: 0.88, transform: [{ scale: 0.98 }] }, style]}>
-      <LinearGradient colors={colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={[s.fill, { height, borderRadius: height / 2 }]}>
+      style={[{ borderRadius: radius, backgroundColor: colors[1] }, glow(colors[1]), style]}>
+      <LinearGradient colors={colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[s.fill, { height, borderRadius: radius }]}>
         {icon && <Ionicons name={icon} size={iconSize} color={C.white} style={title ? { marginRight: 8 } : undefined} />}
         {!!title && (
           <Text style={s.text} numberOfLines={1}>
@@ -25,11 +29,11 @@ export function GradientButton({ title, onPress, colors = START_COLORS, icon, he
           </Text>
         )}
       </LinearGradient>
-    </Pressable>
+    </PressableScale>
   );
 }
 
 const s = StyleSheet.create({
   fill: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 18 },
-  text: { color: C.white, fontSize: 17, fontWeight: '800', letterSpacing: 0.8 },
+  text: { color: C.white, fontSize: 16, fontWeight: '700', letterSpacing: 0.4 },
 });

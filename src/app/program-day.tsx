@@ -2,29 +2,50 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, LayoutAnimation, Platform, Pressable, StyleSheet, Text, View, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, {
+  Extrapolation,
+  FadeIn,
+  FadeOut,
+  interpolate,
+  LinearTransition,
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withSpring,
+  ZoomIn,
+  ZoomOut,
+  type SharedValue,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Circle } from 'react-native-svg';
+import { scheduleOnRN } from 'react-native-worklets';
 
 import { ExerciseArt } from '@/components/program/ExerciseArt';
 import { ExerciseSheet } from '@/components/program/ExerciseSheet';
 import { GradientButton, PRIMARY_COLORS } from '@/components/program/GradientButton';
 import { editedPlans, findSession, itemLabel, planItems, programFlags, resumePoints, sessionMeta } from '@/components/program/session';
 import { WorkoutSettingsSheet } from '@/components/program/WorkoutSettingsSheet';
-import { Button, Card, EmptyState, Header, ListRow, Screen, Sheet, T, tap, useToast, type IconName } from '@/components/ui';
+import { Button, Card, EmptyState, enter, Header, IconTile, ListRow, PressableScale, Screen, SectionTitle, Sheet, T, tap, useToast, type IconName } from '@/components/ui';
 import { exerciseById, sessionStats, type Session, type SessionItem } from '@/data/program';
 import { useStore } from '@/lib/store';
-import { C, R, shadow } from '@/theme';
+import { C, MOTION, R, shadowLg, shadowSm } from '@/theme';
 
-const ND = Platform.OS !== 'web';
 const goBack = () => (router.canGoBack() ? router.back() : router.replace('/fitness'));
-const REST_TIPS = [
-  { e: '💧', t: 'Drink 8+ glasses of water to help your muscles recover.' },
-  { e: '🚶', t: 'Go for a light 20-minute walk to keep blood flowing.' },
-  { e: '🧘', t: 'Do some gentle stretching or yoga for 10 minutes.' },
-  { e: '🥗', t: 'Eat enough protein — it rebuilds the muscle you trained.' },
-  { e: '😴', t: 'Aim for 7–9 hours of sleep tonight.' },
+const REST_TIPS: { icon: IconName; color: string; bg: string; t: string }[] = [
+  { icon: 'water', color: C.water, bg: C.waterSoft, t: 'Drink 8+ glasses of water to help your muscles recover.' },
+  { icon: 'walk', color: C.steps, bg: C.stepsSoft, t: 'Go for a light 20-minute walk to keep blood flowing.' },
+  { icon: 'body', color: C.primaryDark, bg: C.primarySoft, t: 'Do some gentle stretching or yoga for 10 minutes.' },
+  { icon: 'nutrition', color: C.accent, bg: C.accentSoft, t: 'Eat enough protein — it rebuilds the muscle you trained.' },
+  { icon: 'moon', color: C.weight, bg: C.weightSoft, t: 'Aim for 7–9 hours of sleep tonight.' },
 ];
+
+const rowLayout = LinearTransition.duration(MOTION.base);
+const rowOut = FadeOut.duration(MOTION.fast);
+const ctlIn = ZoomIn.duration(MOTION.base);
+const ctlOut = ZoomOut.duration(MOTION.fast);
 
 export default function ProgramDayScreen() {
   const { key } = useLocalSearchParams<{ key?: string }>();
@@ -33,18 +54,27 @@ export default function ProgramDayScreen() {
     return (
       <Screen>
         <Header title="Workout" />
-        <EmptyState emoji="🤷" title="Workout not found" text="This plan day doesn't exist or the link is incorrect." action="Go back" onAction={goBack} />
+        <EmptyState icon="barbell-outline" title="Workout not found" text="This plan day doesn't exist or the link is incorrect." action="Go back" onAction={goBack} />
       </Screen>
     );
   return <DayPlan key={session.key} session={session} />;
 }
+
+/** Stable-ish row keys: exercise id + occurrence, so removing a row animates the right one. */
+const rowKeys = (items: SessionItem[]) => {
+  const seen: Record<string, number> = {};
+  return items.map((it) => {
+    seen[it.exerciseId] = (seen[it.exerciseId] ?? 0) + 1;
+    return `${it.exerciseId}-${seen[it.exerciseId]}`;
+  });
+};
 
 function DayPlan({ session }: { session: Session }) {
   const { state, completeSession } = useStore();
   const toast = useToast();
   const insets = useSafeAreaInsets();
   const meta = sessionMeta(session);
-  const HERO = insets.top + 210;
+  const HERO = insets.top + 236;
 
   const [items, setItems] = useState<SessionItem[]>(() => planItems(session));
   const [editing, setEditing] = useState(false);
@@ -54,14 +84,14 @@ function DayPlan({ session }: { session: Session }) {
   const [settings, setSettings] = useState(false);
   const [resumeAt, setResumeAt] = useState(0);
   const [solid, setSolid] = useState(false);
-  const solidRef = useRef(false);
-  const y = useRef(new Animated.Value(0)).current;
-  const tipAnim = useRef(new Animated.Value(0)).current;
+  const y = useSharedValue(0);
+  const solidSV = useSharedValue(false);
+  const tipP = useSharedValue(0);
 
   useEffect(() => {
     if (!tip) return;
     programFlags.tipShown = true;
-    Animated.spring(tipAnim, { toValue: 1, delay: 450, friction: 6, useNativeDriver: ND }).start();
+    tipP.set(withDelay(450, withSpring(1, { damping: 13, stiffness: 190, mass: 0.8 })));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -81,24 +111,38 @@ function DayPlan({ session }: { session: Session }) {
   const done = meta.program ? state.programProgress[meta.program.id] ?? 0 : 0;
   const completed = meta.day !== undefined && done >= meta.day;
   const edited = JSON.stringify(items) !== JSON.stringify(session.items);
-  const barOpacity = y.interpolate({ inputRange: [HERO - 140, HERO - 80], outputRange: [0, 1], extrapolate: 'clamp' });
+  const keys = rowKeys(items);
 
-  const dismissTip = () => {
-    Animated.timing(tipAnim, { toValue: 0, duration: 160, useNativeDriver: ND }).start(() => setTip(false));
-  };
+  // Scroll-linked header (UI thread); only the status-bar flip crosses to JS.
+  const onScroll = useAnimatedScrollHandler((e) => {
+    const off = e.contentOffset.y;
+    y.set(off);
+    const v = off > HERO - 110;
+    if (v !== solidSV.get()) {
+      solidSV.set(v);
+      scheduleOnRN(setSolid, v);
+    }
+  });
+  const barBg = useAnimatedStyle(() => ({ opacity: interpolate(y.get(), [HERO - 140, HERO - 80], [0, 1], Extrapolation.CLAMP) }));
+  const barTitle = useAnimatedStyle(() => ({ opacity: interpolate(y.get(), [HERO - 120, HERO - 70], [0, 1], Extrapolation.CLAMP) }));
+  const heroContent = useAnimatedStyle(() => ({
+    opacity: interpolate(y.get(), [0, HERO * 0.55], [1, 0], Extrapolation.CLAMP),
+    transform: [{ translateY: interpolate(y.get(), [-120, 0, HERO], [-24, 0, HERO * 0.32], Extrapolation.CLAMP) }],
+  }));
+  const heroArt = useAnimatedStyle(() => ({ transform: [{ scale: interpolate(y.get(), [-140, 0], [1.18, 1], Extrapolation.CLAMP) }] }));
+  const tipStyle = useAnimatedStyle(() => ({ opacity: Math.min(1, tipP.get()), transform: [{ scale: interpolate(tipP.get(), [0, 1], [0.85, 1]) }] }));
+
+  const dismissTip = () => setTip(false);
   const toggleEdit = () => {
     if (tip) dismissTip();
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setEditing((e) => !e);
   };
   const finishEdit = () => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setEditing(false);
     if (edited) toast('Workout plan updated', 'create');
   };
   const remove = (i: number) => {
     if (items.length <= 1) return toast('Keep at least one exercise', 'alert-circle');
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setItems((list) => list.filter((_, k) => k !== i));
     resumePoints.delete(session.key);
     setResumeAt(0);
@@ -112,7 +156,6 @@ function DayPlan({ session }: { session: Session }) {
       }),
     );
   const resetPlan = () => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setItems(session.items);
     resumePoints.delete(session.key);
     setResumeAt(0);
@@ -136,49 +179,47 @@ function DayPlan({ session }: { session: Session }) {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: C.card }}>
+    <View style={{ flex: 1, backgroundColor: C.bg }}>
       <StatusBar style={solid ? 'dark' : 'light'} />
       <View style={[s.overscroll, { height: HERO, backgroundColor: session.colors[0] }]} />
-      <Animated.ScrollView
-        onScroll={Animated.event([{ nativeEvent: { contentOffset: { y } } }], {
-          useNativeDriver: ND,
-          listener: (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-            const v = e.nativeEvent.contentOffset.y > HERO - 110;
-            if (v !== solidRef.current) {
-              solidRef.current = v;
-              setSolid(v);
-            }
-          },
-        })}
-        scrollEventThrottle={16}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 150 }}>
-        <LinearGradient colors={session.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[s.hero, { height: HERO, paddingTop: insets.top + 58 }]}>
-          <View style={[s.blob, { width: 220, height: 220, top: -60, right: -50 }]} />
-          <View style={[s.blob, { width: 120, height: 120, bottom: 10, left: -40 }]} />
-          <View style={{ flex: 1, paddingRight: 112 }}>
-            <Text style={s.eyebrow} numberOfLines={1}>
-              {meta.eyebrow.toUpperCase()}
-            </Text>
-            <Text style={[s.heroTitle, session.title.length > 12 && { fontSize: 26 }]} numberOfLines={2}>
-              {session.title}
-            </Text>
-            <View style={s.levelRow}>
-              <View style={{ flexDirection: 'row' }}>
-                {[1, 2, 3].map((n) => (
-                  <Ionicons key={n} name="flash" size={16} color={n <= meta.bolts ? C.gold : 'rgba(255,255,255,0.35)'} />
-                ))}
-              </View>
-              <Text style={s.levelText}>{meta.level}</Text>
-            </View>
-            {completed && (
-              <View style={s.doneBadge}>
-                <Ionicons name="checkmark-circle" size={14} color={C.white} />
-                <Text style={s.doneBadgeText}>Completed</Text>
-              </View>
-            )}
+      <Animated.ScrollView onScroll={onScroll} scrollEventThrottle={16} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 150 + insets.bottom }}>
+        <LinearGradient colors={session.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[s.hero, { height: HERO, paddingTop: insets.top + 60 }]}>
+          <View pointerEvents="none" style={s.heroDeco}>
+            <Svg width={300} height={300}>
+              <Circle cx={150} cy={150} r={150} fill={C.white} opacity={0.08} />
+              <Circle cx={150} cy={150} r={98} fill="none" stroke={C.white} strokeOpacity={0.16} strokeWidth={1.5} />
+              <Circle cx={150} cy={150} r={46} fill={C.white} opacity={0.07} />
+            </Svg>
           </View>
-          <Text style={[s.heroEmoji, { top: insets.top + 56 }]}>{session.emoji}</Text>
+          <Animated.View style={[{ flex: 1 }, heroContent]}>
+            <View style={{ paddingRight: 116 }}>
+              <View style={s.eyebrowPill}>
+                <Text style={s.eyebrow} numberOfLines={1}>
+                  {meta.eyebrow}
+                </Text>
+              </View>
+              <Text style={[s.heroTitle, session.title.length > 12 && { fontSize: 28 }]} numberOfLines={2}>
+                {session.title}
+              </Text>
+              <View style={s.levelRow}>
+                <View style={{ flexDirection: 'row' }}>
+                  {[1, 2, 3].map((n) => (
+                    <Ionicons key={n} name="flash" size={15} color={n <= meta.bolts ? C.gold : 'rgba(255,255,255,0.35)'} />
+                  ))}
+                </View>
+                <Text style={s.levelText}>{meta.level}</Text>
+              </View>
+              {completed && (
+                <View style={s.doneBadge}>
+                  <Ionicons name="checkmark-circle" size={14} color={C.white} />
+                  <Text style={s.doneBadgeText}>Completed</Text>
+                </View>
+              )}
+            </View>
+            <Animated.View style={[s.heroDisc, heroArt]}>
+              <Text style={s.heroEmoji}>{session.emoji}</Text>
+            </Animated.View>
+          </Animated.View>
         </LinearGradient>
 
         <View style={s.body}>
@@ -186,91 +227,100 @@ function DayPlan({ session }: { session: Session }) {
             <RestDay done={completed} />
           ) : (
             <>
-              <View style={s.stats}>
-                <Stat value={`${stats.exercises}`} label="Exercises" />
-                <View style={s.statDiv} />
-                <Stat value={`${stats.minutes}`} unit=" min" label="Time" />
-                <View style={s.statDiv} />
-                <Stat value={`${stats.kcal}`} unit=" kcal(≈)" label="Calories" />
-              </View>
+              <Animated.View entering={enter(0)}>
+                <Card style={s.stats}>
+                  <Stat icon="list" color={C.primaryDark} bg={C.primarySoft} value={`${stats.exercises}`} label="Exercises" />
+                  <View style={s.statDiv} />
+                  <Stat icon="time" color={C.water} bg={C.waterSoft} value={`${stats.minutes}`} unit=" min" label="Time" />
+                  <View style={s.statDiv} />
+                  <Stat icon="flame" color={C.accent} bg={C.accentSoft} value={`${stats.kcal}`} unit=" kcal" label="Calories (≈)" />
+                </Card>
+              </Animated.View>
 
-              <View style={s.settingsCard}>
-                <ListRow icon="options" iconBg={C.accentSoft} iconColor={C.accent} title="Workout Settings" subtitle="Music & Coach & Timer, etc." onPress={() => setSettings(true)} />
-              </View>
+              <Animated.View entering={enter(1)}>
+                <Card style={s.settingsCard}>
+                  <ListRow icon="options" iconBg={C.accentSoft} iconColor={C.accent} title="Workout settings" subtitle="Music, coach, timer & more" onPress={() => setSettings(true)} />
+                </Card>
+              </Animated.View>
 
-              <View style={s.exHead}>
-                <Text style={s.exTitle}>
-                  Exercise <Text style={{ color: C.muted, fontWeight: '700' }}>({items.length})</Text>
-                </Text>
+              <Animated.View entering={enter(2)} style={s.exHead}>
+                <Text style={s.exTitle}>Exercises</Text>
+                <View style={s.countPill}>
+                  <Text style={s.countText}>{items.length}</Text>
+                </View>
+                <View style={{ flex: 1 }} />
                 {editing && edited && (
-                  <Pressable hitSlop={10} onPress={resetPlan} style={{ marginRight: 12 }}>
-                    <Text style={{ color: C.primary, fontWeight: '800' }}>Reset</Text>
-                  </Pressable>
-                )}
-                <Pressable onPress={toggleEdit} hitSlop={8} style={[s.pencil, editing && { backgroundColor: C.primary }]}>
-                  <Ionicons name={editing ? 'checkmark' : 'pencil'} size={18} color={editing ? C.white : C.text} />
-                </Pressable>
-                {tip && (
-                  <Animated.View style={[s.tip, { opacity: tipAnim, transform: [{ scale: tipAnim.interpolate({ inputRange: [0, 1], outputRange: [0.85, 1] }) }] }]}>
-                    <View style={s.tipArrow} />
-                    <View style={{ flexDirection: 'row', gap: 12 }}>
-                      <View style={s.coach}>
-                        <Text style={{ fontSize: 26 }}>🧔</Text>
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={s.tipTitle}>Don't like some exercises?</Text>
-                        <Text style={s.tipText}>Tap here to customize your workout plan just the way you like it!</Text>
-                      </View>
-                    </View>
-                    <Pressable
-                      onPress={() => {
-                        tap();
-                        dismissTip();
-                      }}
-                      style={({ pressed }) => [s.gotIt, pressed && { opacity: 0.85 }]}>
-                      <Text style={s.gotItText}>GOT IT</Text>
+                  <Animated.View entering={FadeIn.duration(MOTION.base)} exiting={FadeOut.duration(MOTION.fast)}>
+                    <Pressable hitSlop={10} onPress={resetPlan} style={{ marginRight: 14 }}>
+                      <Text style={s.resetText}>Reset</Text>
                     </Pressable>
                   </Animated.View>
                 )}
-              </View>
-
-              {items.map((it, i) => {
-                const ex = exerciseById(it.exerciseId);
-                return (
-                  <Pressable
-                    key={`${it.exerciseId}-${i}`}
-                    onPress={() => {
-                      tap();
-                      setSheetIdx(i);
-                    }}
-                    style={({ pressed }) => [s.row, i > 0 && s.rowBorder, pressed && { opacity: 0.7 }]}>
-                    {editing && (
-                      <Pressable hitSlop={8} onPress={() => remove(i)} style={s.minus}>
-                        <Ionicons name="remove" size={16} color={C.white} />
-                      </Pressable>
-                    )}
-                    <ExerciseArt emoji={ex.emoji} size={editing ? 58 : 68} radius={14} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={s.rowName} numberOfLines={2}>
-                        {ex.name.toUpperCase()}
-                      </Text>
-                      <Text style={s.rowSub}>{itemLabel(it)}</Text>
-                    </View>
-                    {editing ? (
-                      <View style={s.adjust}>
-                        <Pressable hitSlop={6} onPress={() => (tap(), adjust(i, -1))} style={s.adjBtn}>
-                          <Ionicons name="remove" size={16} color={C.text} />
-                        </Pressable>
-                        <Pressable hitSlop={6} onPress={() => (tap(), adjust(i, 1))} style={[s.adjBtn, { backgroundColor: C.primary }]}>
-                          <Ionicons name="add" size={16} color={C.white} />
-                        </Pressable>
+                <PressableScale scaleTo={0.9} hitSlop={8} accessibilityRole="button" accessibilityLabel={editing ? 'Finish editing' : 'Edit plan'} onPress={toggleEdit} style={[s.pencil, editing && s.pencilOn]}>
+                  <Ionicons name={editing ? 'checkmark' : 'pencil'} size={18} color={editing ? C.white : C.text} />
+                </PressableScale>
+                {tip && (
+                  <Animated.View exiting={FadeOut.duration(160)} style={[s.tip, tipStyle]}>
+                    <View style={s.tipArrow} />
+                    <View style={{ flexDirection: 'row', gap: 12 }}>
+                      <IconTile icon="create-outline" size={42} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={s.tipTitle}>{"Don't like some exercises?"}</Text>
+                        <Text style={s.tipText}>Tap here to customize your workout plan just the way you like it!</Text>
                       </View>
-                    ) : (
-                      <Ionicons name="information-circle-outline" size={20} color={C.muted} />
-                    )}
-                  </Pressable>
-                );
-              })}
+                    </View>
+                    <Button title="Got it" small onPress={dismissTip} style={{ marginTop: 14 }} />
+                  </Animated.View>
+                )}
+              </Animated.View>
+
+              <View style={{ gap: 10 }}>
+                {items.map((it, i) => {
+                  const ex = exerciseById(it.exerciseId);
+                  return (
+                    <Animated.View key={keys[i]} entering={enter(i + 3)} exiting={rowOut} layout={rowLayout}>
+                      <PressableScale
+                        scaleTo={0.98}
+                        accessibilityRole="button"
+                        onPress={() => {
+                          tap();
+                          setSheetIdx(i);
+                        }}
+                        style={s.row}>
+                        {editing && (
+                          <Animated.View entering={ctlIn} exiting={ctlOut}>
+                            <Pressable hitSlop={8} accessibilityLabel={`Remove ${ex.name}`} onPress={() => remove(i)} style={s.minus}>
+                              <Ionicons name="remove" size={16} color={C.white} />
+                            </Pressable>
+                          </Animated.View>
+                        )}
+                        <ExerciseArt emoji={ex.emoji} size={60} radius={R.sm} />
+                        <View style={{ flex: 1 }}>
+                          <Text style={s.rowName} numberOfLines={2}>
+                            {ex.name}
+                          </Text>
+                          <View style={s.amount}>
+                            <Ionicons name={it.seconds ? 'timer-outline' : 'repeat'} size={13} color={C.primaryDark} />
+                            <Text style={s.amountText}>{itemLabel(it)}</Text>
+                          </View>
+                        </View>
+                        {editing ? (
+                          <Animated.View entering={ctlIn} exiting={ctlOut} style={s.adjust}>
+                            <PressableScale scaleTo={0.88} hitSlop={6} accessibilityLabel="Less" onPress={() => (tap(), adjust(i, -1))} style={s.adjBtn}>
+                              <Ionicons name="remove" size={16} color={C.text} />
+                            </PressableScale>
+                            <PressableScale scaleTo={0.88} hitSlop={6} accessibilityLabel="More" onPress={() => (tap(), adjust(i, 1))} style={[s.adjBtn, s.adjBtnOn]}>
+                              <Ionicons name="add" size={16} color={C.white} />
+                            </PressableScale>
+                          </Animated.View>
+                        ) : (
+                          <Ionicons name="information-circle-outline" size={20} color={C.muted} />
+                        )}
+                      </PressableScale>
+                    </Animated.View>
+                  );
+                })}
+              </View>
             </>
           )}
         </View>
@@ -278,52 +328,57 @@ function DayPlan({ session }: { session: Session }) {
 
       {/* Top bar: fades from transparent-over-hero to solid white on scroll */}
       <View style={[s.topBar, { paddingTop: insets.top + 6 }]} pointerEvents="box-none">
-        <Animated.View style={[StyleSheet.absoluteFill, s.topBarBg, { opacity: barOpacity }]} pointerEvents="none" />
-        <TopIcon icon="arrow-back" fade={barOpacity} onPress={goBack} />
-        <Animated.Text style={[s.topTitle, { opacity: barOpacity }]} numberOfLines={1}>
+        <Animated.View style={[StyleSheet.absoluteFill, s.topBarBg, barBg]} pointerEvents="none" />
+        <TopIcon icon="arrow-back" label="Back" y={y} hero={HERO} onPress={goBack} />
+        <Animated.Text style={[s.topTitle, barTitle]} numberOfLines={1}>
           {session.title}
         </Animated.Text>
-        <TopIcon icon="ellipsis-vertical" fade={barOpacity} onPress={() => setMore(true)} />
+        <TopIcon icon="ellipsis-horizontal" label="Options" y={y} hero={HERO} onPress={() => setMore(true)} />
       </View>
 
       {/* Sticky bottom CTA */}
       <View style={[s.bottom, { paddingBottom: Math.max(insets.bottom, 14) }]}>
         {session.restDay ? (
           completed ? (
-            <Button title="Rest day completed ✓" variant="secondary" onPress={goBack} style={{ borderRadius: R.pill }} />
+            <Button title="Rest day completed" icon="checkmark-circle" variant="secondary" onPress={goBack} />
           ) : (
             <GradientButton title="Mark rest day as done" icon="moon" colors={PRIMARY_COLORS} onPress={markRest} />
           )
         ) : editing ? (
-          <View style={s.adjustPill}>
+          <Animated.View entering={FadeIn.duration(MOTION.base)} style={s.adjustPill}>
             <View style={{ flex: 1 }}>
               <Text style={s.adjustTitle}>Adjust</Text>
               <Text style={s.adjustHint}>Remove or change reps & time</Text>
             </View>
-            <Pressable
+            <PressableScale
+              scaleTo={0.95}
+              accessibilityRole="button"
               onPress={() => {
                 tap();
                 finishEdit();
               }}
-              style={({ pressed }) => [s.doneBtn, pressed && { opacity: 0.85 }]}>
+              style={s.doneBtn}>
               <Ionicons name="checkmark" size={18} color={C.white} />
               <Text style={s.doneText}>Done</Text>
-            </Pressable>
-          </View>
+            </PressableScale>
+          </Animated.View>
         ) : resumeAt > 0 ? (
-          <View style={{ flexDirection: 'row', gap: 10 }}>
-            <Pressable
+          <Animated.View entering={FadeIn.duration(MOTION.base)} style={{ flexDirection: 'row', gap: 10 }}>
+            <PressableScale
+              scaleTo={0.96}
+              accessibilityRole="button"
               onPress={() => {
                 tap();
                 start(false);
               }}
-              style={({ pressed }) => [s.restart, pressed && { opacity: 0.8 }]}>
-              <Text style={s.restartText}>RESTART</Text>
-            </Pressable>
-            <GradientButton title={`CONTINUE · ${Math.round((resumeAt / items.length) * 100)}% completed`} onPress={() => start(true)} style={{ flex: 1 }} />
-          </View>
+              style={s.restart}>
+              <Ionicons name="refresh" size={17} color={C.text} />
+              <Text style={s.restartText}>Restart</Text>
+            </PressableScale>
+            <GradientButton title={`Continue · ${Math.round((resumeAt / items.length) * 100)}% done`} onPress={() => start(true)} style={{ flex: 1 }} />
+          </Animated.View>
         ) : (
-          <GradientButton title={completed ? 'START AGAIN' : 'START'} onPress={() => start(false)} />
+          <GradientButton title={completed ? 'START AGAIN' : 'START'} icon="play" onPress={() => start(false)} />
         )}
       </View>
 
@@ -350,110 +405,126 @@ function DayPlan({ session }: { session: Session }) {
   );
 }
 
-function Stat({ value, unit, label }: { value: string; unit?: string; label: string }) {
+function Stat({ icon, color, bg, value, unit, label }: { icon: IconName; color: string; bg: string; value: string; unit?: string; label: string }) {
   return (
-    <View style={{ flex: 1, alignItems: 'center' }}>
-      <Text style={s.statVal} numberOfLines={1} adjustsFontSizeToFit>
-        {value}
-        {unit && <Text style={s.statUnit}>{unit}</Text>}
-      </Text>
-      <Text style={s.statLabel}>{label}</Text>
+    <View style={{ flex: 1, alignItems: 'center', gap: 6 }}>
+      <IconTile icon={icon} color={color} bg={bg} size={34} />
+      <View style={{ alignItems: 'center' }}>
+        <Text style={s.statVal} numberOfLines={1} adjustsFontSizeToFit>
+          {value}
+          {unit && <Text style={s.statUnit}>{unit}</Text>}
+        </Text>
+        <Text style={s.statLabel}>{label}</Text>
+      </View>
     </View>
   );
 }
 
-function TopIcon({ icon, fade, onPress }: { icon: IconName; fade: Animated.AnimatedInterpolation<number>; onPress: () => void }) {
+function TopIcon({ icon, label, y, hero, onPress }: { icon: IconName; label: string; y: SharedValue<number>; hero: number; onPress: () => void }) {
+  const light = useAnimatedStyle(() => ({ opacity: 1 - interpolate(y.get(), [hero - 140, hero - 80], [0, 1], Extrapolation.CLAMP) }));
+  const dark = useAnimatedStyle(() => ({ opacity: interpolate(y.get(), [hero - 140, hero - 80], [0, 1], Extrapolation.CLAMP) }));
   return (
-    <Pressable
+    <PressableScale
       hitSlop={8}
+      scaleTo={0.9}
+      accessibilityRole="button"
+      accessibilityLabel={label}
       onPress={() => {
         tap();
         onPress();
       }}
-      style={({ pressed }) => [s.topIcon, pressed && { opacity: 0.6 }]}>
-      <Animated.View style={[StyleSheet.absoluteFill, s.topIconLight, { opacity: fade.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }) }]}>
-        <Ionicons name={icon} size={22} color={C.white} />
+      style={s.topIcon}>
+      <Animated.View style={[StyleSheet.absoluteFill, s.topIconLight, light]}>
+        <Ionicons name={icon} size={21} color={C.white} />
       </Animated.View>
-      <Animated.View style={[StyleSheet.absoluteFill, s.topIconCenter, { opacity: fade }]}>
-        <Ionicons name={icon} size={22} color={C.text} />
+      <Animated.View style={[StyleSheet.absoluteFill, s.topIconDark, dark]}>
+        <Ionicons name={icon} size={21} color={C.text} />
       </Animated.View>
-    </Pressable>
+    </PressableScale>
   );
 }
 
 function RestDay({ done }: { done: boolean }) {
   return (
-    <View style={{ paddingTop: 8 }}>
-      <View style={{ alignItems: 'center', paddingHorizontal: 12 }}>
-        <Text style={{ fontSize: 72 }}>😴</Text>
-        <Text style={[T.h2, { textAlign: 'center', marginTop: 6 }]}>Recovery is part of training</Text>
-        <Text style={[T.body, { textAlign: 'center', marginTop: 8 }]}>
-          {done ? "You've already logged this rest day. Great discipline — your muscles thank you!" : 'Muscles grow and repair while you rest. Take it easy today — you have earned it.'}
-        </Text>
-      </View>
-      <Card style={{ marginTop: 20, gap: 14 }}>
-        <Text style={T.label}>Rest-day tips</Text>
-        {REST_TIPS.map((t) => (
-          <View key={t.e} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <View style={s.tipEmoji}>
-              <Text style={{ fontSize: 18 }}>{t.e}</Text>
-            </View>
-            <Text style={[T.body, { flex: 1 }]}>{t.t}</Text>
+    <View>
+      <Animated.View entering={enter(0)}>
+        <Card style={{ alignItems: 'center', paddingVertical: 24, paddingHorizontal: 20 }}>
+          <View style={s.restArt}>
+            <Text style={{ fontSize: 52 }}>😴</Text>
           </View>
-        ))}
-      </Card>
+          <Text style={[T.h2, { textAlign: 'center', marginTop: 14 }]}>Recovery is part of training</Text>
+          <Text style={[T.body, { textAlign: 'center', marginTop: 8 }]}>
+            {done ? "You've already logged this rest day. Great discipline — your muscles thank you!" : 'Muscles grow and repair while you rest. Take it easy today — you have earned it.'}
+          </Text>
+        </Card>
+      </Animated.View>
+      <Animated.View entering={enter(1)}>
+        <SectionTitle title="Rest-day tips" />
+        <Card style={{ gap: 14 }}>
+          {REST_TIPS.map((t) => (
+            <View key={t.icon} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <IconTile icon={t.icon} color={t.color} bg={t.bg} size={38} />
+              <Text style={[T.body, { flex: 1, color: C.text }]}>{t.t}</Text>
+            </View>
+          ))}
+        </Card>
+      </Animated.View>
     </View>
   );
 }
 
 const s = StyleSheet.create({
-  hero: { paddingHorizontal: 22, overflow: 'hidden' },
+  hero: { paddingHorizontal: 20, overflow: 'hidden' },
+  heroDeco: { position: 'absolute', top: -90, right: -110 },
   overscroll: { position: 'absolute', top: 0, left: 0, right: 0 },
-  blob: { position: 'absolute', borderRadius: 200, backgroundColor: 'rgba(255,255,255,0.1)' },
-  eyebrow: { color: 'rgba(255,255,255,0.85)', fontSize: 12, fontWeight: '800', letterSpacing: 1.2 },
-  heroTitle: { color: C.white, fontSize: 36, fontWeight: '900', letterSpacing: -0.5, marginTop: 2 },
+  eyebrowPill: { alignSelf: 'flex-start', backgroundColor: 'rgba(255,255,255,0.18)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: R.pill },
+  eyebrow: { color: C.white, fontSize: 12, fontWeight: '700', letterSpacing: 0.2 },
+  heroTitle: { color: C.white, fontSize: 36, fontWeight: '800', letterSpacing: -1, marginTop: 10 },
   levelRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 },
-  levelText: { color: C.white, fontSize: 14, fontWeight: '700' },
+  levelText: { color: C.white, fontSize: 14, fontWeight: '600' },
   doneBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', marginTop: 10, backgroundColor: 'rgba(255,255,255,0.22)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: R.pill },
-  doneBadgeText: { color: C.white, fontSize: 12, fontWeight: '800' },
-  heroEmoji: { position: 'absolute', right: 20, fontSize: 92 },
-  body: { marginTop: -30, backgroundColor: C.card, borderTopLeftRadius: 30, borderTopRightRadius: 30, paddingHorizontal: 20, paddingTop: 22 },
-  stats: { flexDirection: 'row', alignItems: 'center', paddingVertical: 6 },
-  statDiv: { width: 1, height: 30, backgroundColor: C.border },
-  statVal: { fontSize: 22, fontWeight: '900', color: C.text },
-  statUnit: { fontSize: 13, fontWeight: '700', color: C.textSoft },
-  statLabel: { fontSize: 12, color: C.muted, fontWeight: '600', marginTop: 2 },
-  settingsCard: { marginTop: 16, backgroundColor: C.bg, borderRadius: R.lg, paddingHorizontal: 12 },
-  exHead: { flexDirection: 'row', alignItems: 'center', marginTop: 24, marginBottom: 6, zIndex: 20 },
-  exTitle: { flex: 1, fontSize: 20, fontWeight: '900', color: C.text },
-  pencil: { width: 38, height: 38, borderRadius: 19, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
-  tip: { position: 'absolute', top: 50, right: -4, width: 290, backgroundColor: C.card, borderRadius: 18, padding: 16, ...shadow, shadowOpacity: 0.18, shadowRadius: 20, elevation: 12 },
+  doneBadgeText: { color: C.white, fontSize: 12, fontWeight: '700' },
+  heroDisc: { position: 'absolute', right: 0, top: 4, width: 104, height: 104, borderRadius: 52, backgroundColor: 'rgba(255,255,255,0.16)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.24)', alignItems: 'center', justifyContent: 'center' },
+  heroEmoji: { fontSize: 58 },
+  body: { marginTop: -28, backgroundColor: C.bg, borderTopLeftRadius: R.xl, borderTopRightRadius: R.xl, paddingHorizontal: 16, paddingTop: 18 },
+  stats: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14 },
+  statDiv: { width: StyleSheet.hairlineWidth * 2, height: 44, backgroundColor: C.borderSoft },
+  statVal: { fontSize: 19, fontWeight: '800', color: C.text, fontVariant: ['tabular-nums'], letterSpacing: -0.4 },
+  statUnit: { fontSize: 12, fontWeight: '600', color: C.textSoft, letterSpacing: 0 },
+  statLabel: { fontSize: 11, color: C.muted, fontWeight: '600', marginTop: 1 },
+  settingsCard: { marginTop: 10, paddingVertical: 2, paddingHorizontal: 10 },
+  exHead: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 24, marginBottom: 12, zIndex: 20 },
+  exTitle: { fontSize: 18, fontWeight: '700', color: C.text, letterSpacing: -0.3 },
+  countPill: { minWidth: 26, height: 22, paddingHorizontal: 7, borderRadius: R.pill, backgroundColor: C.primarySoft, alignItems: 'center', justifyContent: 'center' },
+  countText: { fontSize: 12, fontWeight: '700', color: C.primaryDark, fontVariant: ['tabular-nums'] },
+  resetText: { color: C.primary, fontWeight: '700', fontSize: 14 },
+  pencil: { width: 38, height: 38, borderRadius: 19, backgroundColor: C.card, borderWidth: StyleSheet.hairlineWidth * 2, borderColor: C.border, alignItems: 'center', justifyContent: 'center', ...shadowSm },
+  pencilOn: { backgroundColor: C.primaryDark, borderColor: C.primaryDark },
+  tip: { position: 'absolute', top: 50, right: -4, width: 290, backgroundColor: C.card, borderRadius: R.lg, padding: 16, borderWidth: StyleSheet.hairlineWidth, borderColor: C.borderSoft, ...shadowLg },
   tipArrow: { position: 'absolute', top: -7, right: 16, width: 16, height: 16, backgroundColor: C.card, transform: [{ rotate: '45deg' }], borderRadius: 3 },
-  coach: { width: 46, height: 46, borderRadius: 23, backgroundColor: C.primarySoft, alignItems: 'center', justifyContent: 'center' },
-  tipTitle: { fontSize: 15, fontWeight: '800', color: C.text },
+  tipTitle: { fontSize: 15, fontWeight: '700', color: C.text },
   tipText: { fontSize: 13, color: C.textSoft, lineHeight: 18, marginTop: 3 },
-  gotIt: { marginTop: 14, height: 40, borderRadius: R.pill, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center' },
-  gotItText: { color: C.white, fontWeight: '900', letterSpacing: 1 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 12 },
-  rowBorder: { borderTopWidth: 1, borderTopColor: C.borderSoft },
-  rowName: { fontSize: 15, fontWeight: '900', color: C.text, letterSpacing: 0.2 },
-  rowSub: { fontSize: 14, color: C.textSoft, fontWeight: '600', marginTop: 4 },
-  minus: { width: 24, height: 24, borderRadius: 12, backgroundColor: C.danger, alignItems: 'center', justifyContent: 'center' },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 10, paddingRight: 14, backgroundColor: C.card, borderRadius: R.md, borderWidth: StyleSheet.hairlineWidth, borderColor: C.borderSoft, ...shadowSm },
+  rowName: { fontSize: 15, fontWeight: '700', color: C.text, letterSpacing: -0.2 },
+  amount: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', marginTop: 6, backgroundColor: C.primarySoft, paddingHorizontal: 8, paddingVertical: 3, borderRadius: R.pill },
+  amountText: { fontSize: 12, fontWeight: '700', color: C.primaryDark, fontVariant: ['tabular-nums'] },
+  minus: { width: 26, height: 26, borderRadius: 13, backgroundColor: C.danger, alignItems: 'center', justifyContent: 'center' },
   adjust: { flexDirection: 'row', gap: 8 },
-  adjBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: C.borderSoft, alignItems: 'center', justifyContent: 'center' },
+  adjBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: C.surfaceAlt, borderWidth: StyleSheet.hairlineWidth * 2, borderColor: C.border, alignItems: 'center', justifyContent: 'center' },
+  adjBtnOn: { backgroundColor: C.primaryDark, borderColor: C.primaryDark },
   topBar: { position: 'absolute', top: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingBottom: 8 },
-  topBarBg: { backgroundColor: C.card, borderBottomWidth: 1, borderBottomColor: C.borderSoft },
-  topTitle: { flex: 1, textAlign: 'center', fontSize: 17, fontWeight: '800', color: C.text },
+  topBarBg: { backgroundColor: C.card, borderBottomWidth: StyleSheet.hairlineWidth * 2, borderBottomColor: C.borderSoft },
+  topTitle: { flex: 1, textAlign: 'center', fontSize: 17, fontWeight: '700', color: C.text, letterSpacing: -0.2 },
   topIcon: { width: 40, height: 40 },
-  topIconLight: { alignItems: 'center', justifyContent: 'center', borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.16)' },
-  topIconCenter: { alignItems: 'center', justifyContent: 'center' },
-  bottom: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 20, paddingTop: 12, backgroundColor: C.card, borderTopWidth: 1, borderTopColor: C.borderSoft },
-  restart: { height: 56, paddingHorizontal: 20, borderRadius: R.pill, borderWidth: 2, borderColor: C.border, alignItems: 'center', justifyContent: 'center' },
-  restartText: { fontSize: 15, fontWeight: '900', color: C.text, letterSpacing: 0.8 },
-  adjustPill: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.navy, borderRadius: R.pill, paddingLeft: 22, paddingRight: 6, height: 60, ...shadow },
-  adjustTitle: { color: C.white, fontSize: 16, fontWeight: '800' },
+  topIconLight: { alignItems: 'center', justifyContent: 'center', borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.18)' },
+  topIconDark: { alignItems: 'center', justifyContent: 'center', borderRadius: 20, backgroundColor: C.surfaceAlt },
+  bottom: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 16, paddingTop: 12, backgroundColor: C.card, borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: C.borderSoft },
+  restart: { flexDirection: 'row', gap: 6, height: 54, paddingHorizontal: 18, borderRadius: R.md, borderWidth: 1.5, borderColor: C.border, backgroundColor: C.card, alignItems: 'center', justifyContent: 'center' },
+  restartText: { fontSize: 15, fontWeight: '700', color: C.text },
+  adjustPill: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.navy, borderRadius: R.lg, paddingLeft: 20, paddingRight: 6, height: 60, ...shadowSm },
+  adjustTitle: { color: C.white, fontSize: 16, fontWeight: '700' },
   adjustHint: { color: 'rgba(255,255,255,0.65)', fontSize: 12, marginTop: 1 },
-  doneBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: C.primary, height: 48, paddingHorizontal: 20, borderRadius: R.pill },
-  doneText: { color: C.white, fontSize: 15, fontWeight: '800' },
-  tipEmoji: { width: 38, height: 38, borderRadius: 19, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
+  doneBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: C.primary, height: 48, paddingHorizontal: 20, borderRadius: R.md },
+  doneText: { color: C.white, fontSize: 15, fontWeight: '700' },
+  restArt: { width: 96, height: 96, borderRadius: 32, backgroundColor: C.primarySoft, alignItems: 'center', justifyContent: 'center' },
 });

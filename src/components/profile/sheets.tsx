@@ -1,14 +1,18 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import Animated, { FadeIn } from 'react-native-reanimated';
 
-import { Button, Chip, Divider, ListRow, OptionCard, Sheet, Stepper, T, Toggle, tap, useToast } from '@/components/ui';
+import { Button, Divider, IconTile, ListRow, OptionCard, PressableScale, Segmented, Sheet, Stepper, T, Toggle, tap, useToast } from '@/components/ui';
 import { useStore } from '@/lib/store';
-import { C } from '@/theme';
+import { C, MOTION, R } from '@/theme';
+import { tint } from './shared';
 
 type SheetProps = { visible: boolean; onClose: () => void };
 
 export const LANGUAGES = ['English', 'हिन्दी (Hindi)', 'தமிழ் (Tamil)', 'తెలుగు (Telugu)', 'मराठी (Marathi)', 'বাংলা (Bengali)'];
+
+const COUNTDOWNS = [5, 10, 15];
 
 export function WorkoutSettingsSheet({ visible, onClose }: SheetProps) {
   const { state, updateSettings } = useStore();
@@ -16,45 +20,62 @@ export function WorkoutSettingsSheet({ visible, onClose }: SheetProps) {
   const s = state.settings;
   return (
     <Sheet visible={visible} onClose={onClose} title="Workout settings" scroll>
-      <View style={st.row}>
-        <View style={{ flex: 1 }}>
-          <Text style={st.label}>Rest duration</Text>
-          <Text style={T.small}>Break between exercises</Text>
+      <View style={st.group}>
+        <View style={st.row}>
+          <IconTile icon="timer-outline" color={C.workout} bg={C.workoutSoft} size={36} />
+          <View style={{ flex: 1 }}>
+            <Text style={st.label}>Rest duration</Text>
+            <Text style={T.small}>Break between exercises</Text>
+          </View>
         </View>
-        <Stepper value={s.restSeconds} step={5} min={10} max={60} format={(v) => `${v}s`} onChange={(restSeconds) => updateSettings({ restSeconds })} />
+        <View style={st.stepperWrap}>
+          <Stepper value={s.restSeconds} step={5} min={10} max={60} format={(v) => `${v}s`} onChange={(restSeconds) => updateSettings({ restSeconds })} />
+        </View>
       </View>
-      <Divider style={{ marginVertical: 14 }} />
-      <Text style={st.label}>Countdown before exercise</Text>
-      <Text style={[T.small, { marginBottom: 10 }]}>Get ready time before each move starts</Text>
-      <View style={st.chips}>
-        {[5, 10, 15].map((v) => (
-          <Chip key={v} label={`${v} sec`} selected={s.countdown === v} onPress={() => updateSettings({ countdown: v })} />
-        ))}
+
+      <View style={[st.group, { marginTop: 10 }]}>
+        <View style={st.row}>
+          <IconTile icon="hourglass-outline" color={C.steps} bg={C.stepsSoft} size={36} />
+          <View style={{ flex: 1 }}>
+            <Text style={st.label}>Countdown before exercise</Text>
+            <Text style={T.small}>Get ready time before each move starts</Text>
+          </View>
+        </View>
+        <Segmented<string>
+          style={{ marginTop: 14 }}
+          options={COUNTDOWNS.map((v) => ({ value: String(v), label: `${v} sec` }))}
+          value={String(s.countdown)}
+          onChange={(v) => updateSettings({ countdown: Number(v) })}
+        />
       </View>
-      <Divider style={{ marginVertical: 14 }} />
-      <ListRow
-        icon="mic-outline"
-        iconColor={C.white}
-        iconBg={C.protein}
-        title="Coach voice"
-        subtitle="Spoken cues and rep counting"
-        chevron={false}
-        onPress={() => updateSettings({ coachVoice: !s.coachVoice })}
-        right={<Toggle value={s.coachVoice} onChange={(coachVoice) => updateSettings({ coachVoice })} />}
-      />
-      <ListRow
-        icon="musical-notes-outline"
-        iconColor={C.white}
-        iconBg={C.fat}
-        title="Background music"
-        subtitle="Upbeat tracks during workouts"
-        chevron={false}
-        onPress={() => updateSettings({ music: !s.music })}
-        right={<Toggle value={s.music} onChange={(music) => updateSettings({ music })} />}
-      />
+
+      <Text style={[T.label, { marginTop: 22, marginBottom: 6, marginLeft: 4 }]}>Audio</Text>
+      <View style={st.audio}>
+        <ListRow
+          icon="mic-outline"
+          iconColor={C.protein}
+          iconBg={tint(C.protein)}
+          title="Coach voice"
+          subtitle="Spoken cues and rep counting"
+          chevron={false}
+          onPress={() => updateSettings({ coachVoice: !s.coachVoice })}
+          right={<Toggle value={s.coachVoice} onChange={(coachVoice) => updateSettings({ coachVoice })} />}
+        />
+        <Divider style={{ marginLeft: 52 }} />
+        <ListRow
+          icon="musical-notes-outline"
+          iconColor={C.fat}
+          iconBg={tint(C.fat)}
+          title="Background music"
+          subtitle="Upbeat tracks during workouts"
+          chevron={false}
+          onPress={() => updateSettings({ music: !s.music })}
+          right={<Toggle value={s.music} onChange={(music) => updateSettings({ music })} />}
+        />
+      </View>
       <Button
         title="Done"
-        style={{ marginTop: 16 }}
+        style={{ marginTop: 18 }}
         onPress={() => {
           onClose();
           toast(`Workout settings saved · ${s.restSeconds}s rest, ${s.countdown}s countdown`, 'barbell');
@@ -92,21 +113,29 @@ export function RateSheet({ visible, onClose }: SheetProps) {
   const [rating, setRating] = useState(5);
   return (
     <Sheet visible={visible} onClose={onClose} title="Rate us">
-      <Text style={[T.body, { textAlign: 'center' }]}>Enjoying Fitora? Your rating helps more people find us.</Text>
+      <View style={st.rateHead}>
+        <IconTile icon="star" color={C.warning} bg={C.warningSoft} size={56} />
+        <Text style={[T.body, { textAlign: 'center', marginTop: 12 }]}>Enjoying Fitora? Your rating helps more people find us.</Text>
+      </View>
       <View style={st.stars}>
         {[1, 2, 3, 4, 5].map((n) => (
-          <Pressable
+          <PressableScale
             key={n}
             hitSlop={6}
+            scaleTo={0.82}
+            accessibilityRole="button"
+            accessibilityLabel={`${n} star${n > 1 ? 's' : ''}`}
             onPress={() => {
               tap();
               setRating(n);
             }}>
             <Ionicons name={n <= rating ? 'star' : 'star-outline'} size={40} color={n <= rating ? C.gold : C.border} />
-          </Pressable>
+          </PressableScale>
         ))}
       </View>
-      <Text style={st.ratingText}>{RATING_TEXT[rating]}</Text>
+      <Animated.Text key={rating} entering={FadeIn.duration(MOTION.base)} style={st.ratingText}>
+        {RATING_TEXT[rating]}
+      </Animated.Text>
       <Button
         title="Submit"
         style={{ marginTop: 18 }}
@@ -120,9 +149,12 @@ export function RateSheet({ visible, onClose }: SheetProps) {
 }
 
 const st = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center' },
-  label: { fontSize: 16, fontWeight: '700', color: C.text },
-  chips: { flexDirection: 'row', gap: 8 },
+  group: { backgroundColor: C.surfaceAlt, borderRadius: R.md, padding: 14, borderWidth: StyleSheet.hairlineWidth * 2, borderColor: C.borderSoft },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  stepperWrap: { alignItems: 'center', marginTop: 14 },
+  label: { fontSize: 15, fontWeight: '700', color: C.text },
+  audio: { borderRadius: R.md, borderWidth: StyleSheet.hairlineWidth * 2, borderColor: C.border, paddingHorizontal: 10, paddingVertical: 2 },
+  rateHead: { alignItems: 'center', paddingHorizontal: 8 },
   stars: { flexDirection: 'row', justifyContent: 'center', gap: 10, marginTop: 20 },
   ratingText: { textAlign: 'center', fontSize: 15, fontWeight: '700', color: C.text, marginTop: 12 },
 });

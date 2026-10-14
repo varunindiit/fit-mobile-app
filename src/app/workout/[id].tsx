@@ -3,14 +3,16 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
-import { Animated, BackHandler, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { BackHandler, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Animated, { FadeIn, ZoomIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Circle } from 'react-native-svg';
 
-import { Button, Card, Dialog, EmptyState, Header, IconButton, Ring, Screen, SectionTitle, T, tap, useToast, type IconName } from '@/components/ui';
+import { Button, Card, Dialog, EmptyState, enter, Header, IconButton, IconTile, PressableScale, Ring, Screen, SectionTitle, T, tap, useToast, type IconName } from '@/components/ui';
 import { workoutById, type Workout } from '@/data/fitness';
 import { pad, todayKey } from '@/lib/calc';
 import { useStore } from '@/lib/store';
-import { C, R, shadow } from '@/theme';
+import { C, glow, MOTION, R, shadow, shadowSm } from '@/theme';
 
 type Phase = 'overview' | 'player' | 'done';
 type Run = { idx: number; left: number; elapsed: number; prep: number; finished: boolean };
@@ -43,7 +45,7 @@ export default function WorkoutScreen() {
     return (
       <Screen>
         <Header title="Workout" />
-        <EmptyState emoji="🤷" title="Workout not found" text="This workout may have been removed or the link is incorrect." action="Back to Fitness" onAction={goBack} />
+        <EmptyState icon="barbell-outline" title="Workout not found" text="This workout may have been removed or the link is incorrect." action="Back to Fitness" onAction={goBack} />
       </Screen>
     );
   return <WorkoutFlow w={w} />;
@@ -63,7 +65,6 @@ function WorkoutFlow({ w }: { w: Workout }) {
   const [askEnd, setAskEnd] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
   const wasPaused = useRef(false);
-  const pop = useRef(new Animated.Value(0)).current;
 
   const timesDone = state.workouts.filter((x) => x.workoutId === w.id).length;
   const cur = w.exercises[run.idx];
@@ -100,15 +101,11 @@ function WorkoutFlow({ w }: { w: Workout }) {
     setPhase('done');
   };
 
-  // Celebration pop once the completion view is mounted
+  // Hand off to the completion view once the last exercise runs out (deferred a tick, outside the effect body).
   useEffect(() => {
-    if (phase !== 'done') return;
-    pop.setValue(0);
-    Animated.spring(pop, { toValue: 1, friction: 5, useNativeDriver: Platform.OS !== 'web' }).start();
-  }, [phase, pop]);
-
-  useEffect(() => {
-    if (run.finished && phase === 'player') finish(true);
+    if (!(run.finished && phase === 'player')) return;
+    const t = setTimeout(() => finish(true), 0);
+    return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [run.finished]);
 
@@ -160,27 +157,35 @@ function WorkoutFlow({ w }: { w: Workout }) {
         <Stack.Screen options={{ gestureEnabled: true }} />
         <StatusBar style="dark" />
         <ScrollView contentContainerStyle={st.doneWrap}>
-          <Animated.Text style={[st.doneEmoji, { transform: [{ scale: pop }] }]}>{result.completed ? '🎉' : '👏'}</Animated.Text>
-          <Text style={[T.h1, { textAlign: 'center' }]}>{result.completed ? 'Workout complete!' : 'Good effort!'}</Text>
-          <Text style={[T.body, { textAlign: 'center', marginTop: 6 }]}>
-            {w.emoji} {w.title} · {result.completed ? 'all exercises done' : 'ended early'}
-          </Text>
-          <View style={st.doneStats}>
-            <DoneStat emoji="🔥" value={String(result.kcal)} label="kcal burned" />
-            <DoneStat emoji="⏱️" value={String(result.minutes)} label="minutes" />
-            <DoneStat emoji="✅" value={`${result.done}/${n}`} label="exercises" />
-          </View>
+          <Animated.View entering={ZoomIn.springify().damping(11).stiffness(160)} style={st.doneDisc}>
+            <Text style={st.doneEmoji}>{result.completed ? '🎉' : '👏'}</Text>
+          </Animated.View>
+          <Animated.View entering={enter(1)} style={{ alignItems: 'center' }}>
+            <Text style={[T.h1, { textAlign: 'center' }]}>{result.completed ? 'Workout complete!' : 'Good effort!'}</Text>
+            <Text style={[T.body, { textAlign: 'center', marginTop: 6 }]}>
+              {w.emoji} {w.title} · {result.completed ? 'all exercises done' : 'ended early'}
+            </Text>
+          </Animated.View>
+          <Animated.View entering={enter(2)} style={st.doneStats}>
+            <DoneStat icon="flame" color={C.accent} bg={C.accentSoft} value={String(result.kcal)} label="kcal burned" />
+            <DoneStat icon="time" color={C.water} bg={C.waterSoft} value={String(result.minutes)} label="minutes" />
+            <DoneStat icon="checkmark-done" color={C.primaryDark} bg={C.primarySoft} value={`${result.done}/${n}`} label="exercises" />
+          </Animated.View>
           {rotis >= 1 && (
-            <View style={st.fact}>
-              <Text style={{ fontSize: 22 }}>🫓</Text>
+            <Animated.View entering={enter(3)} style={st.fact}>
+              <View style={st.factTile}>
+                <Text style={{ fontSize: 22 }}>🫓</Text>
+              </View>
               <Text style={[T.small, { flex: 1, color: C.text }]}>
                 That&apos;s roughly <Text style={{ fontWeight: '800' }}>{rotis === 1 ? '1 roti' : `${rotis} rotis`}</Text> worth of energy. {result.completed ? 'Fantastic work!' : 'Every minute counts!'}
               </Text>
-            </View>
+            </Animated.View>
           )}
-          <Button title="Save to activity log" icon="checkmark-circle" onPress={save} style={{ marginTop: 28, alignSelf: 'stretch' }} />
-          <Button title="Do it again" icon="refresh" variant="outline" onPress={start} style={{ marginTop: 10, alignSelf: 'stretch' }} />
-          <Button title="Close without saving" variant="ghost" onPress={goBack} style={{ marginTop: 4, alignSelf: 'stretch' }} />
+          <Animated.View entering={enter(4)} style={{ alignSelf: 'stretch' }}>
+            <Button title="Save to activity log" icon="checkmark-circle" onPress={save} style={{ marginTop: 28 }} />
+            <Button title="Do it again" icon="refresh" variant="outline" onPress={start} style={{ marginTop: 10 }} />
+            <Button title="Close without saving" variant="ghost" onPress={goBack} style={{ marginTop: 4 }} />
+          </Animated.View>
         </ScrollView>
       </Screen>
     );
@@ -195,10 +200,15 @@ function WorkoutFlow({ w }: { w: Workout }) {
         <Stack.Screen options={{ gestureEnabled: false }} />
         <StatusBar style="light" />
         <View style={st.pTop}>
-          <IconButton icon="close" color={C.white} bg="rgba(255,255,255,0.18)" onPress={requestEnd} />
-          <Text style={st.pTopTitle}>{prepping ? w.title : `Exercise ${run.idx + 1} of ${n}`}</Text>
-          <Pressable
+          <IconButton icon="close" color={C.white} bg="rgba(255,255,255,0.16)" onPress={requestEnd} />
+          <Text style={st.pTopTitle} numberOfLines={1}>
+            {prepping ? w.title : `Exercise ${run.idx + 1} of ${n}`}
+          </Text>
+          <PressableScale
             hitSlop={8}
+            scaleTo={0.92}
+            accessibilityRole="button"
+            accessibilityLabel={`Demo speed ${speed}x`}
             onPress={() => {
               tap();
               setSpeed((s) => SPEEDS[(SPEEDS.indexOf(s) + 1) % SPEEDS.length]);
@@ -206,7 +216,7 @@ function WorkoutFlow({ w }: { w: Workout }) {
             style={st.speed}>
             <Ionicons name="speedometer-outline" size={13} color={C.white} />
             <Text style={st.speedText}>{speed}×</Text>
-          </Pressable>
+          </PressableScale>
         </View>
 
         <View style={st.segs}>
@@ -222,49 +232,61 @@ function WorkoutFlow({ w }: { w: Workout }) {
           {prepping ? (
             <>
               <Text style={st.kicker}>GET READY</Text>
-              <Text style={st.prepNum}>{Math.ceil(run.prep)}</Text>
+              <Animated.Text key={Math.ceil(run.prep)} entering={ZoomIn.duration(MOTION.base)} style={st.prepNum}>
+                {Math.ceil(run.prep)}
+              </Animated.Text>
               <Text style={st.pDetail}>
                 {n} exercises · {w.minutes} min · {w.kcal} kcal
               </Text>
             </>
           ) : (
-            <>
+            <Animated.View key={run.idx} entering={FadeIn.duration(MOTION.base)} style={{ alignItems: 'center' }}>
               <Text style={st.pName} numberOfLines={2}>
                 {cur.name}
               </Text>
               <Text style={st.pDetail}>{cur.detail}</Text>
-              <View style={{ marginTop: 22 }}>
-                <Ring size={220} stroke={14} value={(cur.seconds - run.left) / cur.seconds} color={C.white} track="rgba(255,255,255,0.18)">
+              <View style={st.ringWrap}>
+                <Ring size={220} stroke={14} value={(cur.seconds - run.left) / cur.seconds} color={C.white} track="rgba(255,255,255,0.16)">
                   <Text style={st.timer}>{clock(run.left)}</Text>
                   <Text style={st.timerLabel}>{paused ? 'PAUSED' : 'REMAINING'}</Text>
                 </Ring>
               </View>
-            </>
+            </Animated.View>
           )}
           <View style={st.pStats}>
             <PStat icon="time-outline" value={clock(run.elapsed, true)} label="Elapsed" />
+            <View style={st.pStatDiv} />
             <PStat icon="flame-outline" value={String(liveKcal)} label="kcal" />
+            <View style={st.pStatDiv} />
             <PStat icon="list-outline" value={`${run.idx}/${n}`} label="Done" />
           </View>
         </View>
 
         <View style={st.next}>
-          <Text style={st.nextKicker}>{prepping ? 'FIRST UP' : next ? 'UP NEXT' : 'LAST ONE'}</Text>
-          <Text style={st.nextName} numberOfLines={1}>
-            {next ? `${next.name} · ${next.detail}` : 'Finish strong — you’ve got this! 💪'}
-          </Text>
+          <View style={st.nextIcon}>
+            <Ionicons name={next || prepping ? 'arrow-forward' : 'flag'} size={16} color={C.white} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={st.nextKicker}>{prepping ? 'FIRST UP' : next ? 'UP NEXT' : 'LAST ONE'}</Text>
+            <Text style={st.nextName} numberOfLines={1}>
+              {next ? `${next.name} · ${next.detail}` : 'Finish strong — you’ve got this! 💪'}
+            </Text>
+          </View>
         </View>
 
         <View style={st.controls}>
           <Ctrl icon="stop" label="End" onPress={requestEnd} />
-          <Pressable
+          <PressableScale
+            scaleTo={0.92}
+            accessibilityRole="button"
+            accessibilityLabel={paused ? 'Resume' : 'Pause'}
             onPress={() => {
               tap();
               setPaused((p) => !p);
             }}
-            style={({ pressed }) => [st.playBtn, pressed && { transform: [{ scale: 0.95 }] }]}>
+            style={st.playBtn}>
             <Ionicons name={paused ? 'play' : 'pause'} size={34} color={w.color} style={paused ? { marginLeft: 4 } : undefined} />
-          </Pressable>
+          </PressableScale>
           <Ctrl icon="play-skip-forward" label={next || prepping ? 'Skip' : 'Finish'} onPress={skip} />
         </View>
 
@@ -298,11 +320,11 @@ function WorkoutFlow({ w }: { w: Workout }) {
 
   /* ---------- Overview ---------- */
   const coachText = /\s\w\.$/.test(w.coach) ? `with ${w.coach}` : w.coach;
-  const meta: [IconName, string][] = [
-    ['time-outline', `${w.minutes} min`],
-    ['flame-outline', `${w.kcal} kcal`],
-    ['speedometer-outline', w.level],
-    ['barbell-outline', w.equipment],
+  const meta: [IconName, string, string, string, string][] = [
+    ['time', `${w.minutes} min`, 'Duration', C.water, C.waterSoft],
+    ['flame', `${w.kcal} kcal`, 'Burn', C.accent, C.accentSoft],
+    ['speedometer', w.level, 'Level', C.steps, C.stepsSoft],
+    ['barbell', w.equipment, 'Equipment', C.workout, C.workoutSoft],
   ];
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
@@ -310,71 +332,93 @@ function WorkoutFlow({ w }: { w: Workout }) {
       <StatusBar style="light" />
       <ScrollView contentContainerStyle={{ paddingBottom: 110 + insets.bottom }} showsVerticalScrollIndicator={false}>
         <LinearGradient colors={[w.color, w.color + 'C7']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[st.hero, { paddingTop: insets.top + 8 }]}>
+          <View pointerEvents="none" style={st.heroDeco}>
+            <Svg width={320} height={320}>
+              <Circle cx={160} cy={160} r={160} fill={C.white} opacity={0.08} />
+              <Circle cx={160} cy={160} r={104} fill="none" stroke={C.white} strokeOpacity={0.16} strokeWidth={1.5} />
+              <Circle cx={160} cy={160} r={50} fill={C.white} opacity={0.07} />
+            </Svg>
+          </View>
           <View style={st.heroTop}>
             <IconButton icon="arrow-back" color={C.white} bg="rgba(255,255,255,0.2)" onPress={goBack} />
             <View style={st.catPill}>
-              <Text style={st.catText}>{w.category.toUpperCase()}</Text>
+              <Text style={st.catText}>{w.category}</Text>
             </View>
           </View>
-          <Text style={st.heroEmoji}>{w.emoji}</Text>
+          <Animated.View entering={ZoomIn.duration(MOTION.enter)} style={st.heroDisc}>
+            <Text style={st.heroEmoji}>{w.emoji}</Text>
+          </Animated.View>
           <Text style={st.heroTitle}>{w.title}</Text>
           <Text style={st.heroCoach}>{coachText}</Text>
-          <View style={st.metaRow}>
-            {meta.map(([icon, text]) => (
-              <View key={text} style={st.metaPill}>
-                <Ionicons name={icon} size={13} color={C.white} />
-                <Text style={st.metaText}>{text}</Text>
-              </View>
-            ))}
-          </View>
         </LinearGradient>
 
-        <View style={{ paddingHorizontal: 16, marginTop: -18 }}>
-          <Card>
-            <Text style={T.h3}>About this workout</Text>
-            <Text style={[T.body, { marginTop: 6 }]}>{w.description}</Text>
-            {timesDone > 0 && (
-              <View style={st.doneBefore}>
-                <Ionicons name="trophy" size={14} color={C.primaryDark} />
-                <Text style={st.doneBeforeText}>
-                  You&apos;ve completed this {timesDone === 1 ? 'once' : `${timesDone} times`} — nice consistency!
-                </Text>
-              </View>
-            )}
-          </Card>
+        <View style={{ paddingHorizontal: 16, marginTop: -30 }}>
+          <Animated.View entering={enter(0)}>
+            <Card style={st.statsCard}>
+              {meta.map(([icon, value, label, color, bg]) => (
+                <View key={label} style={st.statCol}>
+                  <IconTile icon={icon} color={color} bg={bg} size={36} />
+                  <Text style={st.statVal} numberOfLines={2}>
+                    {value}
+                  </Text>
+                  <Text style={T.tiny}>{label}</Text>
+                </View>
+              ))}
+            </Card>
+          </Animated.View>
 
-          <SectionTitle title={`Exercises · ${n}`} />
-          <Card style={{ paddingVertical: 4 }}>
-            {w.exercises.map((e, i) => (
-              <View key={i} style={[st.exRow, i > 0 && { borderTopWidth: 1, borderTopColor: C.borderSoft }]}>
-                <View style={[st.exNum, { backgroundColor: w.color + '1F' }]}>
-                  <Text style={[st.exNumText, { color: w.color }]}>{i + 1}</Text>
+          <Animated.View entering={enter(1)}>
+            <Card style={{ marginTop: 12 }}>
+              <Text style={T.h3}>About this workout</Text>
+              <Text style={[T.body, { marginTop: 6 }]}>{w.description}</Text>
+              {timesDone > 0 && (
+                <View style={st.doneBefore}>
+                  <Ionicons name="trophy" size={14} color={C.primaryDark} />
+                  <Text style={st.doneBeforeText}>
+                    You&apos;ve completed this {timesDone === 1 ? 'once' : `${timesDone} times`} — nice consistency!
+                  </Text>
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={st.exName}>{e.name}</Text>
-                  <Text style={T.small}>{e.detail}</Text>
+              )}
+            </Card>
+          </Animated.View>
+
+          <Animated.View entering={enter(2)}>
+            <SectionTitle title={`Exercises · ${n}`} />
+            <Card style={{ paddingVertical: 4 }}>
+              {w.exercises.map((e, i) => (
+                <View key={i} style={[st.exRow, i > 0 && st.exBorder]}>
+                  <View style={[st.exNum, { backgroundColor: w.color + '1A' }]}>
+                    <Text style={[st.exNumText, { color: w.color }]}>{i + 1}</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={st.exName}>{e.name}</Text>
+                    <Text style={T.small}>{e.detail}</Text>
+                  </View>
+                  <View style={st.exTime}>
+                    <Ionicons name="timer-outline" size={12} color={C.textSoft} />
+                    <Text style={st.exTimeText}>{clock(e.seconds)}</Text>
+                  </View>
                 </View>
-                <Text style={st.exTime}>{clock(e.seconds)}</Text>
-              </View>
-            ))}
-          </Card>
-          <View style={st.tip}>
-            <Text style={{ fontSize: 18 }}>💡</Text>
+              ))}
+            </Card>
+          </Animated.View>
+          <Animated.View entering={enter(3)} style={st.tip}>
+            <IconTile icon="bulb" color={C.warning} bg={C.warningSoft} size={34} />
             <Text style={[T.small, { flex: 1 }]}>Keep water nearby and stop if you feel dizzy or any sharp pain. Demo runs at 5× speed — tap the speed badge to change it.</Text>
-          </View>
+          </Animated.View>
         </View>
       </ScrollView>
       <View style={[st.sticky, { paddingBottom: Math.max(insets.bottom, 12) }]}>
-        <Button title="Start workout" icon="play" onPress={start} style={{ backgroundColor: w.color, borderColor: w.color }} />
+        <Button title="Start workout" icon="play" onPress={start} style={{ backgroundColor: w.color, borderColor: w.color, ...glow(w.color) }} />
       </View>
     </View>
   );
 }
 
-function DoneStat({ emoji, value, label }: { emoji: string; value: string; label: string }) {
+function DoneStat({ icon, color, bg, value, label }: { icon: IconName; color: string; bg: string; value: string; label: string }) {
   return (
     <View style={st.doneStat}>
-      <Text style={{ fontSize: 22 }}>{emoji}</Text>
+      <IconTile icon={icon} color={color} bg={bg} size={36} />
       <Text style={st.doneStatValue}>{value}</Text>
       <Text style={T.tiny}>{label}</Text>
     </View>
@@ -395,73 +439,85 @@ function PStat({ icon, value, label }: { icon: IconName; value: string; label: s
 
 function Ctrl({ icon, label, onPress }: { icon: IconName; label: string; onPress: () => void }) {
   return (
-    <Pressable
+    <PressableScale
       hitSlop={6}
+      scaleTo={0.9}
+      accessibilityRole="button"
+      accessibilityLabel={label}
       onPress={() => {
         tap();
         onPress();
       }}
-      style={({ pressed }) => [{ alignItems: 'center', gap: 6, width: 72 }, pressed && { opacity: 0.6 }]}>
+      style={{ alignItems: 'center', gap: 6, width: 72 }}>
       <View style={st.ctrl}>
         <Ionicons name={icon} size={22} color={C.white} />
       </View>
       <Text style={st.ctrlLabel}>{label}</Text>
-    </Pressable>
+    </PressableScale>
   );
 }
 
 const st = StyleSheet.create({
-  hero: { paddingHorizontal: 20, paddingBottom: 38, alignItems: 'center' },
+  hero: { paddingHorizontal: 20, paddingBottom: 48, alignItems: 'center', overflow: 'hidden' },
+  heroDeco: { position: 'absolute', top: -110, right: -120 },
   heroTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', alignSelf: 'stretch' },
   catPill: { backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: R.pill },
-  catText: { color: C.white, fontSize: 11, fontWeight: '800', letterSpacing: 0.8 },
-  heroEmoji: { fontSize: 76, marginTop: 6 },
-  heroTitle: { color: C.white, fontSize: 27, fontWeight: '800', textAlign: 'center', marginTop: 8, letterSpacing: -0.5 },
-  heroCoach: { color: 'rgba(255,255,255,0.88)', fontSize: 14, fontWeight: '600', marginTop: 4 },
-  metaRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8, marginTop: 16 },
-  metaPill: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 10, paddingVertical: 6, borderRadius: R.pill },
-  metaText: { color: C.white, fontSize: 12, fontWeight: '700' },
+  catText: { color: C.white, fontSize: 12, fontWeight: '700', letterSpacing: 0.2 },
+  heroDisc: { width: 104, height: 104, borderRadius: 52, backgroundColor: 'rgba(255,255,255,0.18)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.26)', alignItems: 'center', justifyContent: 'center', marginTop: 4 },
+  heroEmoji: { fontSize: 58 },
+  heroTitle: { color: C.white, fontSize: 28, fontWeight: '800', textAlign: 'center', marginTop: 12, letterSpacing: -0.7 },
+  heroCoach: { color: 'rgba(255,255,255,0.9)', fontSize: 14, fontWeight: '600', marginTop: 4 },
+  statsCard: { flexDirection: 'row', paddingVertical: 14, paddingHorizontal: 8 },
+  statCol: { flex: 1, alignItems: 'center', gap: 6, paddingHorizontal: 2 },
+  statVal: { fontSize: 13, fontWeight: '700', color: C.text, textAlign: 'center', letterSpacing: -0.1, fontVariant: ['tabular-nums'] },
   doneBefore: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: C.primarySoft, borderRadius: R.sm, paddingHorizontal: 10, paddingVertical: 8, marginTop: 12 },
   doneBeforeText: { fontSize: 12, fontWeight: '700', color: C.primaryDark, flex: 1 },
   exRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
-  exNum: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
-  exNumText: { fontSize: 14, fontWeight: '800' },
-  exName: { fontSize: 15, fontWeight: '700', color: C.text, marginBottom: 2 },
-  exTime: { fontSize: 13, fontWeight: '700', color: C.textSoft, fontVariant: ['tabular-nums'] },
-  tip: { flexDirection: 'row', gap: 10, alignItems: 'center', backgroundColor: C.card, borderRadius: R.md, padding: 14, marginTop: 14, borderWidth: 1, borderColor: C.borderSoft },
-  sticky: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 16, paddingTop: 12, backgroundColor: C.card, borderTopWidth: 1, borderTopColor: C.borderSoft, ...shadow },
+  exBorder: { borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: C.borderSoft, marginLeft: 46 },
+  exNum: { width: 34, height: 34, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
+  exNumText: { fontSize: 14, fontWeight: '800', fontVariant: ['tabular-nums'] },
+  exName: { fontSize: 15, fontWeight: '700', color: C.text, marginBottom: 2, letterSpacing: -0.1 },
+  exTime: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: C.surfaceAlt, borderRadius: R.pill, paddingHorizontal: 8, paddingVertical: 4 },
+  exTimeText: { fontSize: 12, fontWeight: '700', color: C.textSoft, fontVariant: ['tabular-nums'] },
+  tip: { flexDirection: 'row', gap: 12, alignItems: 'center', backgroundColor: C.card, borderRadius: R.md, padding: 14, marginTop: 14, borderWidth: StyleSheet.hairlineWidth * 2, borderColor: C.borderSoft },
+  sticky: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 16, paddingTop: 12, backgroundColor: C.card, borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: C.borderSoft },
 
   player: { flex: 1, paddingHorizontal: 20 },
-  pTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  pTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   pTopTitle: { color: C.white, fontSize: 15, fontWeight: '700', flex: 1, textAlign: 'center' },
-  speed: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(255,255,255,0.18)', paddingHorizontal: 10, height: 32, borderRadius: R.pill, minWidth: 40, justifyContent: 'center' },
-  speedText: { color: C.white, fontSize: 13, fontWeight: '800' },
+  speed: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(255,255,255,0.16)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)', paddingHorizontal: 10, height: 32, borderRadius: R.pill, minWidth: 40, justifyContent: 'center' },
+  speedText: { color: C.white, fontSize: 13, fontWeight: '700', fontVariant: ['tabular-nums'] },
   segs: { flexDirection: 'row', gap: 4, marginTop: 16 },
-  seg: { flex: 1, height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.22)', overflow: 'hidden' },
+  seg: { flex: 1, height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.2)', overflow: 'hidden' },
   segFill: { height: '100%', backgroundColor: C.white, borderRadius: 3 },
-  pctText: { color: 'rgba(255,255,255,0.75)', fontSize: 12, fontWeight: '700', marginTop: 8 },
+  pctText: { color: 'rgba(255,255,255,0.75)', fontSize: 12, fontWeight: '600', marginTop: 8, fontVariant: ['tabular-nums'] },
   pMid: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  kicker: { color: 'rgba(255,255,255,0.8)', fontSize: 13, fontWeight: '800', letterSpacing: 2 },
-  prepNum: { color: C.white, fontSize: 120, fontWeight: '800', lineHeight: 140 },
-  pName: { color: C.white, fontSize: 30, fontWeight: '800', textAlign: 'center', letterSpacing: -0.5 },
+  kicker: { color: 'rgba(255,255,255,0.8)', fontSize: 13, fontWeight: '700', letterSpacing: 2 },
+  prepNum: { color: C.white, fontSize: 120, fontWeight: '800', lineHeight: 140, fontVariant: ['tabular-nums'], letterSpacing: -2 },
+  pName: { color: C.white, fontSize: 30, fontWeight: '800', textAlign: 'center', letterSpacing: -0.7 },
   pDetail: { color: 'rgba(255,255,255,0.85)', fontSize: 16, fontWeight: '600', marginTop: 6, textAlign: 'center' },
-  timer: { color: C.white, fontSize: 50, fontWeight: '800', fontVariant: ['tabular-nums'], letterSpacing: -1 },
-  timerLabel: { color: 'rgba(255,255,255,0.7)', fontSize: 11, fontWeight: '800', letterSpacing: 1.5, marginTop: 2 },
-  pStats: { flexDirection: 'row', alignSelf: 'stretch', marginTop: 28 },
+  ringWrap: { marginTop: 22, padding: 10, borderRadius: 130, backgroundColor: 'rgba(255,255,255,0.05)' },
+  timer: { color: C.white, fontSize: 50, fontWeight: '800', fontVariant: ['tabular-nums'], letterSpacing: -1.5 },
+  timerLabel: { color: 'rgba(255,255,255,0.7)', fontSize: 11, fontWeight: '700', letterSpacing: 1.5, marginTop: 2 },
+  pStats: { flexDirection: 'row', alignItems: 'center', alignSelf: 'stretch', marginTop: 28 },
+  pStatDiv: { width: 1, height: 28, backgroundColor: 'rgba(255,255,255,0.14)' },
   pStatValue: { color: C.white, fontSize: 18, fontWeight: '800', fontVariant: ['tabular-nums'] },
-  pStatLabel: { color: 'rgba(255,255,255,0.65)', fontSize: 11, fontWeight: '700', marginTop: 2 },
-  next: { backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: R.md, paddingHorizontal: 16, paddingVertical: 12 },
-  nextKicker: { color: 'rgba(255,255,255,0.65)', fontSize: 11, fontWeight: '800', letterSpacing: 1 },
-  nextName: { color: C.white, fontSize: 15, fontWeight: '700', marginTop: 3 },
+  pStatLabel: { color: 'rgba(255,255,255,0.65)', fontSize: 11, fontWeight: '600', marginTop: 2 },
+  next: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)', borderRadius: R.md, paddingHorizontal: 14, paddingVertical: 12 },
+  nextIcon: { width: 34, height: 34, borderRadius: 11, backgroundColor: 'rgba(255,255,255,0.14)', alignItems: 'center', justifyContent: 'center' },
+  nextKicker: { color: 'rgba(255,255,255,0.65)', fontSize: 11, fontWeight: '700', letterSpacing: 1 },
+  nextName: { color: C.white, fontSize: 15, fontWeight: '700', marginTop: 2 },
   controls: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around', marginTop: 20 },
-  ctrl: { width: 52, height: 52, borderRadius: 26, backgroundColor: 'rgba(255,255,255,0.16)', alignItems: 'center', justifyContent: 'center' },
-  ctrlLabel: { color: 'rgba(255,255,255,0.8)', fontSize: 12, fontWeight: '700' },
+  ctrl: { width: 52, height: 52, borderRadius: 26, backgroundColor: 'rgba(255,255,255,0.14)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.16)', alignItems: 'center', justifyContent: 'center' },
+  ctrlLabel: { color: 'rgba(255,255,255,0.8)', fontSize: 12, fontWeight: '600' },
   playBtn: { width: 80, height: 80, borderRadius: 40, backgroundColor: C.white, alignItems: 'center', justifyContent: 'center', ...shadow },
 
   doneWrap: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
-  doneEmoji: { fontSize: 84, marginBottom: 10 },
+  doneDisc: { width: 128, height: 128, borderRadius: 64, backgroundColor: C.primarySoft, borderWidth: 6, borderColor: C.card, alignItems: 'center', justifyContent: 'center', marginBottom: 18, ...shadowSm },
+  doneEmoji: { fontSize: 64 },
   doneStats: { flexDirection: 'row', gap: 10, marginTop: 26, alignSelf: 'stretch' },
-  doneStat: { flex: 1, backgroundColor: C.card, borderRadius: R.lg, paddingVertical: 16, alignItems: 'center', gap: 4, ...shadow },
-  doneStatValue: { fontSize: 22, fontWeight: '800', color: C.text, marginTop: 2 },
+  doneStat: { flex: 1, backgroundColor: C.card, borderRadius: R.lg, paddingVertical: 16, alignItems: 'center', gap: 4, borderWidth: StyleSheet.hairlineWidth, borderColor: C.borderSoft, ...shadow },
+  doneStatValue: { fontSize: 22, fontWeight: '800', color: C.text, marginTop: 6, fontVariant: ['tabular-nums'], letterSpacing: -0.4 },
   fact: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: C.primarySoft, borderRadius: R.md, padding: 14, marginTop: 16, alignSelf: 'stretch' },
+  factTile: { width: 40, height: 40, borderRadius: 13, backgroundColor: C.card, alignItems: 'center', justifyContent: 'center' },
 });

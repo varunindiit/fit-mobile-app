@@ -1,11 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, { cancelAnimation, Easing, FadeIn, useAnimatedStyle, useReducedMotion, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 
-import { Card, Dialog, Divider, ListRow, Sheet, T, tap, useToast } from '@/components/ui';
+import { Card, Dialog, Divider, IconTile, ListRow, PressableScale, ProgressBar, Sheet, T, tap, useToast } from '@/components/ui';
 import { useStore } from '@/lib/store';
-import { BRAND, C, R, shadow } from '@/theme';
-import { initials, shared } from './shared';
+import { BRAND, C, MOTION, R, shadowLg, shadowSm } from '@/theme';
+import { initials, shared, tint } from './shared';
 
 const pad = (n: number) => (n < 10 ? '0' + n : '' + n);
 export const fmtClock = (d = new Date()) => `${d.getHours() % 12 || 12}:${pad(d.getMinutes())} ${d.getHours() < 12 ? 'am' : 'pm'}`;
@@ -30,9 +31,29 @@ export function GBadge({ size = 18 }: { size?: number }) {
 
 function Initial({ name, color = C.primary, size = 44 }: { name: string; color?: string; size?: number }) {
   return (
-    <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: color, alignItems: 'center', justifyContent: 'center' }}>
-      <Text style={{ color: C.white, fontWeight: '800', fontSize: size * 0.4 }}>{initials(name).slice(0, 1)}</Text>
+    <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: tint(color, '22'), alignItems: 'center', justifyContent: 'center' }}>
+      <Text style={{ color, fontWeight: '800', fontSize: size * 0.4 }}>{initials(name).slice(0, 1)}</Text>
     </View>
+  );
+}
+
+/** Refresh glyph that spins while a sync runs (static under reduced motion). */
+function SpinIcon({ spinning }: { spinning: boolean }) {
+  const reduce = useReducedMotion();
+  const r = useSharedValue(0);
+  useEffect(() => {
+    if (spinning && !reduce) r.set(withRepeat(withTiming(360, { duration: 900, easing: Easing.linear }), -1, false));
+    else {
+      cancelAnimation(r);
+      r.set(withTiming(0, { duration: MOTION.fast }));
+    }
+  }, [spinning, reduce, r]);
+  const spin = useAnimatedStyle(() => ({ transform: [{ rotate: `${r.get()}deg` }] }));
+  if (spinning && reduce) return <ActivityIndicator size="small" color={C.primaryDark} />;
+  return (
+    <Animated.View style={spin}>
+      <Ionicons name="refresh" size={19} color={C.primaryDark} />
+    </Animated.View>
   );
 }
 
@@ -83,39 +104,54 @@ export function BackupCard() {
     <>
       {backup ? (
         <Card onPress={() => setStep('manage')} style={st.card}>
-          <Initial name={backup.name} />
-          <View style={{ flex: 1 }}>
-            <View style={st.nameRow}>
-              <Text style={st.title} numberOfLines={1}>
-                {backup.name}
-              </Text>
-              <GBadge />
+          <View>
+            <Initial name={backup.name} />
+            <View style={st.gOnAvatar}>
+              <GBadge size={18} />
             </View>
-            <Text style={T.small}>Last sync: {backup.lastSync}</Text>
           </View>
-          <Pressable
+          <View style={{ flex: 1 }}>
+            <Text style={st.title} numberOfLines={1}>
+              {backup.name}
+            </Text>
+            {syncing ? (
+              <Animated.View entering={FadeIn.duration(MOTION.fast)} style={st.statusRow}>
+                <ProgressBar value={1} height={4} style={{ flex: 1, maxWidth: 120 }} />
+                <Text style={[T.tiny, { color: C.primaryDark }]}>Syncing…</Text>
+              </Animated.View>
+            ) : (
+              <Animated.View entering={FadeIn.duration(MOTION.fast)} style={st.statusRow}>
+                <Ionicons name="cloud-done" size={14} color={C.primary} />
+                <Text style={T.small} numberOfLines={1}>
+                  Last sync: {backup.lastSync}
+                </Text>
+              </Animated.View>
+            )}
+          </View>
+          <PressableScale
             hitSlop={10}
+            scaleTo={0.9}
+            accessibilityRole="button"
+            accessibilityLabel="Sync now"
             onPress={() => {
               tap();
               sync();
             }}
             style={st.syncBtn}>
-            {syncing ? <ActivityIndicator size="small" color={C.primary} /> : <Ionicons name="refresh" size={20} color={C.primary} />}
-          </Pressable>
+            <SpinIcon spinning={syncing} />
+          </PressableScale>
         </Card>
       ) : (
         <Card onPress={() => setStep('accounts')} style={st.card}>
-          <View style={st.cloud}>
-            <Ionicons name="cloud-upload" size={22} color={C.white} />
-          </View>
+          <IconTile icon="cloud-upload-outline" color={C.water} bg={C.waterSoft} size={44} />
           <View style={{ flex: 1 }}>
-            <View style={st.nameRow}>
-              <Text style={st.title}>Backup & Restore</Text>
-              <GBadge />
-            </View>
+            <Text style={st.title}>Backup & Restore</Text>
             <Text style={T.small}>Sign in and synchronize your data</Text>
           </View>
-          <Ionicons name="sync" size={22} color={C.primary} />
+          <View style={st.signIn}>
+            <GBadge size={16} />
+            <Text style={st.signInText}>Sign in</Text>
+          </View>
         </Card>
       )}
 
@@ -125,25 +161,31 @@ export function BackupCard() {
           <GBadge size={28} />
           <Text style={T.small}>to continue to {BRAND}</Text>
         </View>
-        {accounts.map((a, i) => (
-          <View key={a.email}>
-            <Pressable onPress={() => choose(a)} style={({ pressed }) => [st.acct, pressed && { backgroundColor: C.borderSoft }]}>
-              <Initial name={a.name} color={AVATAR_COLORS[i]} size={40} />
-              <View style={{ flex: 1 }}>
-                <Text style={st.acctName}>{a.name}</Text>
-                <Text style={T.small}>{a.email}</Text>
-              </View>
-            </Pressable>
-            <Divider />
-          </View>
-        ))}
-        <Pressable onPress={() => toast('Demo only — pick one of the accounts above', 'information-circle')} style={({ pressed }) => [st.acct, pressed && { backgroundColor: C.borderSoft }]}>
-          <View style={st.addIcon}>
-            <Ionicons name="person-add-outline" size={18} color={C.textSoft} />
-          </View>
-          <Text style={st.acctName}>Add another account</Text>
-        </Pressable>
-        <Text style={[T.tiny, { marginTop: 12, textAlign: 'center' }]}>Demo sign-in — no data leaves this device</Text>
+        <View style={st.acctList}>
+          {accounts.map((a, i) => (
+            <View key={a.email}>
+              <Pressable onPress={() => choose(a)} style={({ pressed }) => [st.acct, pressed && { backgroundColor: C.surfaceAlt }]}>
+                <Initial name={a.name} color={AVATAR_COLORS[i]} size={40} />
+                <View style={{ flex: 1 }}>
+                  <Text style={st.acctName}>{a.name}</Text>
+                  <Text style={T.small}>{a.email}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={C.muted} />
+              </Pressable>
+              <Divider style={st.acctInset} />
+            </View>
+          ))}
+          <Pressable onPress={() => toast('Demo only — pick one of the accounts above', 'information-circle')} style={({ pressed }) => [st.acct, pressed && { backgroundColor: C.surfaceAlt }]}>
+            <View style={st.addIcon}>
+              <Ionicons name="person-add-outline" size={18} color={C.textSoft} />
+            </View>
+            <Text style={st.acctName}>Add another account</Text>
+          </Pressable>
+        </View>
+        <View style={st.demoNote}>
+          <Ionicons name="lock-closed" size={12} color={C.muted} />
+          <Text style={T.tiny}>Demo sign-in — no data leaves this device</Text>
+        </View>
       </Sheet>
 
       <Dialog
@@ -160,7 +202,10 @@ export function BackupCard() {
       <Modal visible={step === 'loading'} transparent animationType="fade" statusBarTranslucent onRequestClose={() => {}}>
         <View style={st.overlay}>
           <View style={st.loader}>
-            <ActivityIndicator size="large" color={C.primary} />
+            <View style={st.loaderBadge}>
+              <GBadge size={34} />
+            </View>
+            <ActivityIndicator size="small" color={C.primary} />
             <Text style={st.loaderText}>Loading…</Text>
           </View>
         </View>
@@ -169,14 +214,19 @@ export function BackupCard() {
       {/* Manage */}
       <Sheet visible={step === 'manage'} onClose={() => setStep(null)} title="Backup & Restore">
         {backup && (
-          <View style={st.gHead}>
-            <Initial name={backup.name} size={40} />
+          <View style={st.manageHead}>
+            <Initial name={backup.name} size={44} />
             <View style={{ flex: 1 }}>
               <Text style={st.acctName}>{backup.name}</Text>
-              <Text style={T.small}>
-                {backup.email} · last sync {backup.lastSync}
+              <Text style={T.small} numberOfLines={1}>
+                {backup.email}
               </Text>
+              <View style={[st.statusRow, { marginTop: 4 }]}>
+                <Ionicons name="cloud-done" size={13} color={C.primary} />
+                <Text style={[T.tiny, { color: C.primaryDark }]}>Last sync {backup.lastSync}</Text>
+              </View>
             </View>
+            <GBadge size={24} />
           </View>
         )}
         <View style={shared.listCard}>
@@ -193,7 +243,7 @@ export function BackupCard() {
           <ListRow
             icon="cloud-download-outline"
             iconColor={C.protein}
-            iconBg="#E8F0FE"
+            iconBg={tint(C.protein)}
             title="Restore data"
             subtitle="Bring back data from your last backup"
             onPress={() => {
@@ -236,17 +286,24 @@ export function BackupCard() {
 }
 
 const st = StyleSheet.create({
-  card: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 },
-  title: { fontSize: 16, fontWeight: '800', color: C.text, flexShrink: 1 },
-  cloud: { width: 44, height: 44, borderRadius: 12, backgroundColor: C.protein, alignItems: 'center', justifyContent: 'center' },
+  card: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14 },
+  title: { fontSize: 16, fontWeight: '700', color: C.text, letterSpacing: -0.2, flexShrink: 1, marginBottom: 3 },
+  statusRow: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 18 },
+  gOnAvatar: { position: 'absolute', right: -3, bottom: -3, borderRadius: 11, borderWidth: 2, borderColor: C.card },
   syncBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: C.primarySoft, alignItems: 'center', justifyContent: 'center' },
-  g: { backgroundColor: C.white, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: C.border },
-  gHead: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
-  acct: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 4, borderRadius: 12 },
+  signIn: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 34, paddingHorizontal: 12, borderRadius: R.pill, borderWidth: 1, borderColor: C.border, backgroundColor: C.card, ...shadowSm },
+  signInText: { fontSize: 13, fontWeight: '700', color: C.text },
+  g: { backgroundColor: C.white, alignItems: 'center', justifyContent: 'center', borderWidth: StyleSheet.hairlineWidth * 2, borderColor: C.border },
+  gHead: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
+  acctList: { borderRadius: R.md, borderWidth: StyleSheet.hairlineWidth * 2, borderColor: C.border, overflow: 'hidden' },
+  acct: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 14 },
+  acctInset: { marginLeft: 66 },
   acctName: { fontSize: 15, fontWeight: '700', color: C.text },
-  addIcon: { width: 40, height: 40, borderRadius: 20, borderWidth: 1.5, borderColor: C.border, alignItems: 'center', justifyContent: 'center' },
+  addIcon: { width: 40, height: 40, borderRadius: 20, borderWidth: 1.5, borderColor: C.border, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' },
+  demoNote: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, marginTop: 14 },
   overlay: { flex: 1, backgroundColor: C.overlay, alignItems: 'center', justifyContent: 'center' },
-  loader: { backgroundColor: C.card, borderRadius: R.lg, paddingVertical: 24, paddingHorizontal: 36, alignItems: 'center', gap: 12, ...shadow },
+  loader: { backgroundColor: C.card, borderRadius: R.lg, paddingVertical: 24, paddingHorizontal: 40, alignItems: 'center', gap: 12, ...shadowLg },
+  loaderBadge: { marginBottom: 2 },
   loaderText: { fontSize: 15, fontWeight: '700', color: C.text },
+  manageHead: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: R.md, backgroundColor: C.surfaceAlt, marginBottom: 8 },
 });

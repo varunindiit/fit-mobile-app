@@ -1,10 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import React from 'react';
 import { ScrollView, StyleSheet, Text, View, ViewStyle } from 'react-native';
+import Animated, { ZoomIn } from 'react-native-reanimated';
 
-import { Chip, type IconName } from '@/components/ui';
+import { Chip, Ring, type IconName } from '@/components/ui';
 import { MEALS, type Food, type MealKey } from '@/data/foods';
-import { C } from '@/theme';
+import { C, MOTION, R } from '@/theme';
 
 export const isMeal = (m?: string | string[]): m is MealKey => typeof m === 'string' && MEALS.some((x) => x.key === m);
 export const isDateKey = (d?: string | string[]): d is string => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d);
@@ -16,8 +18,8 @@ export const fmtNum = (n: number) => String(Math.round(n)).replace(/\B(?=(\d{3})
 
 export const goBack = () => (router.canGoBack() ? router.back() : router.replace('/'));
 
-export const scoreColor = (s: number) => (s >= 8 ? C.primary : s >= 5 ? C.carbs : C.danger);
-export const scoreBg = (s: number) => (s >= 8 ? C.primarySoft : s >= 5 ? '#FEF3C7' : C.dangerSoft);
+export const scoreColor = (s: number) => (s >= 8 ? C.primary : s >= 5 ? C.warning : C.danger);
+export const scoreBg = (s: number) => (s >= 8 ? C.primarySoft : s >= 5 ? C.warningSoft : C.dangerSoft);
 export const scoreWord = (s: number) => (s >= 8 ? 'Healthy pick' : s >= 5 ? 'Moderate' : 'Indulgent');
 
 export const TYPE_META: Record<Food['type'], { color: string; label: string }> = {
@@ -28,15 +30,15 @@ export const TYPE_META: Record<Food['type'], { color: string; label: string }> =
 
 const CAT_BG: Record<Food['category'], string> = {
   Breakfast: '#FFF4E0',
-  Meals: '#FDECE3',
-  'Breads & Rice': '#F6EEDF',
-  Snacks: '#FFF1E6',
-  Fruits: '#FDECEF',
-  Beverages: '#E6F4FB',
-  Protein: '#EAF1FE',
-  Sweets: '#FBEAF3',
+  Meals: '#FDEEE6',
+  'Breads & Rice': '#F7F0E3',
+  Snacks: '#FFF2E8',
+  Fruits: '#FDEEF1',
+  Beverages: '#E8F4FB',
+  Protein: '#ECF2FE',
+  Sweets: '#FBECF4',
 };
-export const foodBg = (f: Food) => CAT_BG[f.category] ?? C.bg;
+export const foodBg = (f: Food) => CAT_BG[f.category] ?? C.surfaceAlt;
 
 export const MEAL_ICON = (k: MealKey) => (MEALS.find((m) => m.key === k)?.icon ?? 'restaurant-outline') as IconName;
 
@@ -53,7 +55,7 @@ export const scaled = (f: Food, qty: number) => ({
 export function VegDot({ type, size = 12, style }: { type: Food['type']; size?: number; style?: ViewStyle }) {
   const color = TYPE_META[type].color;
   return (
-    <View style={[{ width: size, height: size, borderWidth: 1.5, borderColor: color, borderRadius: 2, alignItems: 'center', justifyContent: 'center' }, style]}>
+    <View style={[{ width: size, height: size, borderWidth: 1.5, borderColor: color, borderRadius: Math.max(2, size * 0.22), alignItems: 'center', justifyContent: 'center', backgroundColor: C.card }, style]}>
       <View style={{ width: size * 0.45, height: size * 0.45, borderRadius: size, backgroundColor: color }} />
     </View>
   );
@@ -61,7 +63,7 @@ export function VegDot({ type, size = 12, style }: { type: Food['type']; size?: 
 
 export function EmojiTile({ food, size = 46 }: { food: Food; size?: number }) {
   return (
-    <View style={{ width: size, height: size, borderRadius: size * 0.32, backgroundColor: foodBg(food), alignItems: 'center', justifyContent: 'center' }}>
+    <View style={[st.tile, { width: size, height: size, borderRadius: size * 0.3, backgroundColor: foodBg(food) }]}>
       <Text style={{ fontSize: size * 0.5 }}>{food.emoji}</Text>
     </View>
   );
@@ -78,7 +80,7 @@ export function MealChips({ value, onChange, style, dark }: { value: MealKey; on
           icon={m.icon as IconName}
           selected={value === m.key}
           onPress={() => onChange(m.key)}
-          color={dark ? C.navy : C.primary}
+          color={dark ? C.navy : C.primaryDark}
         />
       ))}
     </ScrollView>
@@ -97,18 +99,54 @@ export function MiniMacro({ label, value, color }: { label: string; value: numbe
 
 export function CheckMark({ on, size = 22 }: { on: boolean; size?: number }) {
   return (
-    <View style={[st.check, { width: size, height: size, borderRadius: size * 0.3 }, on && st.checkOn]}>
-      {on && <Ionicons name="checkmark" size={size * 0.68} color={C.white} />}
+    <View style={[st.check, { width: size, height: size, borderRadius: size * 0.32 }, on && st.checkOn]}>
+      {on && (
+        <Animated.View entering={ZoomIn.duration(MOTION.base)}>
+          <Ionicons name="checkmark" size={size * 0.68} color={C.white} />
+        </Animated.View>
+      )}
+    </View>
+  );
+}
+
+/** Health-score ring badge (score out of 10), coloured by band. */
+export function ScoreRing({ score, size = 44, stroke }: { score: number; size?: number; stroke?: number }) {
+  const color = scoreColor(score);
+  return (
+    <Ring size={size} stroke={stroke ?? Math.max(3, Math.round(size * 0.09))} value={score / 10} color={color} track={scoreBg(score)}>
+      <Text style={{ fontSize: Math.round(size * 0.34), fontWeight: '800', color, fontVariant: ['tabular-nums'], letterSpacing: -0.3 }}>{score}</Text>
+    </Ring>
+  );
+}
+
+/** Ria (AI) note: mint fill, tinted hairline, sparkles. One style everywhere AI speaks. */
+export function RiaNote({ title = "Ria's insight", text, children, style }: { title?: string; text?: string; children?: React.ReactNode; style?: ViewStyle }) {
+  return (
+    <View style={[st.ria, style]}>
+      <View style={st.riaHead}>
+        <View style={st.riaIcon}>
+          <Ionicons name="sparkles" size={13} color={C.ai} />
+        </View>
+        <Text style={st.riaTitle}>{title}</Text>
+      </View>
+      {!!text && <Text style={st.riaText}>{text}</Text>}
+      {children}
     </View>
   );
 }
 
 const st = StyleSheet.create({
+  tile: { alignItems: 'center', justifyContent: 'center', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(28,25,23,0.04)' },
   chips: { gap: 8, paddingHorizontal: 16 },
   miniMacro: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  miniDot: { width: 8, height: 8, borderRadius: 4 },
-  miniVal: { fontSize: 13, fontWeight: '800', color: C.text },
+  miniDot: { width: 7, height: 7, borderRadius: 4 },
+  miniVal: { fontSize: 13, fontWeight: '700', color: C.text, fontVariant: ['tabular-nums'] },
   miniLabel: { fontSize: 12, color: C.muted, fontWeight: '600' },
-  check: { borderWidth: 2, borderColor: C.border, alignItems: 'center', justifyContent: 'center', backgroundColor: C.card },
+  check: { borderWidth: 1.5, borderColor: C.border, alignItems: 'center', justifyContent: 'center', backgroundColor: C.card },
   checkOn: { backgroundColor: C.primary, borderColor: C.primary },
+  ria: { backgroundColor: C.aiSoft, borderRadius: R.lg, borderWidth: 1, borderColor: C.aiBorder, padding: 14 },
+  riaHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  riaIcon: { width: 26, height: 26, borderRadius: 9, backgroundColor: C.card, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: C.aiBorder },
+  riaTitle: { fontSize: 13, fontWeight: '700', color: C.ai, letterSpacing: 0.1 },
+  riaText: { fontSize: 14, color: C.text, lineHeight: 20, marginTop: 8 },
 });

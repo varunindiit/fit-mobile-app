@@ -1,18 +1,32 @@
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { router, type Href } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import Animated, {
+  cancelAnimation,
+  FadeIn,
+  FadeInDown,
+  FadeOut,
+  interpolate,
+  interpolateColor,
+  LinearTransition,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { dietKind, firstName, fmtNum, fmtWeight, goalSummary, useKeyboardShown, type DietKind } from '@/components/profile/shared';
-import { IconButton, Screen, T, tap, useToast, type IconName } from '@/components/ui';
+import { EASE_OUT, IconButton, PressableScale, Screen, T, tap, useToast, type IconName } from '@/components/ui';
 import { foodById, type Food } from '@/data/foods';
 import { workoutById } from '@/data/fitness';
 import { exerciseById, PROGRAM_DAYS, programById, programDay, sessionStats } from '@/data/program';
 import { round1, todayKey } from '@/lib/calc';
 import { burnedOn, dayTotals, useStore, type AppState } from '@/lib/store';
-import { C, R } from '@/theme';
+import { C, MOTION, R } from '@/theme';
 
 type Action = { label: string; icon: IconName; href?: Href; water?: boolean };
 type Msg = { id: string; from: 'bot' | 'user'; text: string; action?: Action };
@@ -274,16 +288,25 @@ function reply(raw: string, c: Ctx): Reply {
 
 /* ---------- Screen ---------- */
 
+const replyDelay = () => 900 + Math.random() * 600;
+const BUBBLE_IN = FadeInDown.duration(MOTION.base).easing(EASE_OUT).withInitialValues({ transform: [{ translateY: 10 }] });
+const LIST = LinearTransition.duration(MOTION.base);
+// Hide the browser focus ring on react-native-web.
+const webNoOutline = Platform.OS === 'web' ? ({ outlineStyle: 'none' } as object) : null;
+
 export default function CoachScreen() {
   const store = useStore();
   const toast = useToast();
   const insets = useSafeAreaInsets();
   const kb = useKeyboardShown();
   const latest = useRef(store);
-  latest.current = store;
+  useEffect(() => {
+    latest.current = store;
+  });
 
   const [msgs, setMsgs] = useState<Msg[]>(() => [{ id: mid(), from: 'bot', text: greeting(ctxOf(store.state, store.targets)) }]);
   const [input, setInput] = useState('');
+  const [focused, setFocused] = useState(false);
   const [typing, setTyping] = useState(false);
   const scroll = useRef<ScrollView>(null);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -301,7 +324,7 @@ export default function CoachScreen() {
       const r = reply(text, ctxOf(s.state, s.targets));
       setMsgs((m) => [...m, { id: mid(), from: 'bot', ...r }]);
       setTyping(false);
-    }, 900 + Math.random() * 600);
+    }, replyDelay());
     timers.current.push(t);
   };
 
@@ -323,16 +346,18 @@ export default function CoachScreen() {
     toast('Started a new chat', 'chatbubbles');
   };
 
+  const canSend = !!input.trim() && !typing;
+
   return (
     <Screen>
       {/* Header */}
       <View style={st.header}>
-        <IconButton icon="arrow-back" onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))} />
+        <IconButton icon="arrow-back" bordered onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))} />
         <View style={st.headMid}>
           <View>
-            <LinearGradient colors={[C.primary, '#0D9488']} style={st.avatar}>
-              <Ionicons name="sparkles" size={18} color={C.white} />
-            </LinearGradient>
+            <View style={st.avatar}>
+              <Ionicons name="sparkles" size={18} color={C.ai} />
+            </View>
             <View style={st.online} />
           </View>
           <View>
@@ -340,20 +365,26 @@ export default function CoachScreen() {
             <Text style={st.status}>{typing ? 'typing…' : 'Online · replies instantly'}</Text>
           </View>
         </View>
-        <IconButton icon="refresh" onPress={clear} />
+        <IconButton icon="refresh" bordered onPress={clear} />
       </View>
 
       {!store.state.premium && (
-        <Pressable
+        <PressableScale
+          scaleTo={0.98}
           onPress={() => {
             tap();
             router.push('/plans');
           }}
-          style={st.upsell}>
-          <Ionicons name="diamond" size={14} color="#B45309" />
-          <Text style={st.upsellText}>Free preview · Unlimited Ria with Fitora Smart</Text>
+          style={st.upsell}
+          accessibilityRole="button">
+          <View style={st.upsellIcon}>
+            <Ionicons name="diamond" size={12} color={C.gold} />
+          </View>
+          <Text style={st.upsellText} numberOfLines={1}>
+            Free preview · Unlimited Ria with Fitora Smart
+          </Text>
           <Text style={st.upsellCta}>Upgrade</Text>
-        </Pressable>
+        </PressableScale>
       )}
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -363,133 +394,174 @@ export default function CoachScreen() {
           contentContainerStyle={st.list}
           keyboardShouldPersistTaps="handled"
           onContentSizeChange={() => scroll.current?.scrollToEnd({ animated: true })}>
-          <Text style={st.dayLabel}>TODAY</Text>
+          <View style={st.dayPill}>
+            <Text style={st.dayLabel}>TODAY</Text>
+          </View>
           {msgs.map((m) =>
             m.from === 'user' ? (
-              <View key={m.id} style={[st.bubble, st.user]}>
+              <Animated.View key={m.id} entering={BUBBLE_IN} layout={LIST} style={[st.bubble, st.user]}>
                 <Text style={st.userText}>{m.text}</Text>
-              </View>
+              </Animated.View>
             ) : (
-              <View key={m.id} style={st.botRow}>
-                <LinearGradient colors={[C.primary, '#0D9488']} style={st.botAvatar}>
-                  <Ionicons name="sparkles" size={12} color={C.white} />
-                </LinearGradient>
+              <Animated.View key={m.id} entering={BUBBLE_IN} layout={LIST} style={st.botRow}>
+                <RiaAvatar />
                 <View style={{ flex: 1, alignItems: 'flex-start' }}>
                   <View style={[st.bubble, st.bot]}>
                     <Text style={st.botText}>{m.text}</Text>
                   </View>
                   {m.action && (
-                    <Pressable
+                    <PressableScale
+                      scaleTo={0.96}
                       onPress={() => {
                         tap();
                         runAction(m.action!);
                       }}
-                      style={({ pressed }) => [st.action, pressed && { opacity: 0.7 }]}>
-                      <Ionicons name={m.action.icon} size={16} color={C.primaryDark} />
+                      style={st.action}
+                      accessibilityRole="button">
+                      <Ionicons name={m.action.icon} size={16} color={C.ai} />
                       <Text style={st.actionText}>{m.action.label}</Text>
-                    </Pressable>
+                      <Ionicons name="chevron-forward" size={14} color={C.ai} />
+                    </PressableScale>
                   )}
                 </View>
-              </View>
+              </Animated.View>
             ),
           )}
           {typing && (
-            <View style={st.botRow}>
-              <LinearGradient colors={[C.primary, '#0D9488']} style={st.botAvatar}>
-                <Ionicons name="sparkles" size={12} color={C.white} />
-              </LinearGradient>
-              <View style={[st.bubble, st.bot, { paddingVertical: 14 }]}>
+            <Animated.View entering={FadeIn.duration(MOTION.base)} exiting={FadeOut.duration(MOTION.fast)} layout={LIST} style={st.botRow}>
+              <RiaAvatar />
+              <View style={[st.bubble, st.bot, st.typingBubble]}>
                 <TypingDots />
               </View>
-            </View>
+            </Animated.View>
           )}
         </ScrollView>
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={st.chipsBar} contentContainerStyle={st.chips} keyboardShouldPersistTaps="handled">
           {SUGGESTIONS.map((s) => (
-            <Pressable key={s} onPress={() => send(s)} disabled={typing} style={({ pressed }) => [st.chip, (pressed || typing) && { opacity: 0.6 }]}>
+            <PressableScale key={s} scaleTo={0.95} onPress={() => send(s)} disabled={typing} style={[st.chip, typing && { opacity: 0.5 }]} accessibilityRole="button">
+              <Ionicons name="sparkles" size={13} color={C.ai} />
               <Text style={st.chipText}>{s}</Text>
-            </Pressable>
+            </PressableScale>
           ))}
         </ScrollView>
 
         <View style={[st.inputBar, { paddingBottom: kb ? 10 : Math.max(insets.bottom, 10) }]}>
-          <TextInput
-            value={input}
-            onChangeText={setInput}
-            placeholder="Ask Ria anything…"
-            placeholderTextColor={C.muted}
-            style={st.input}
-            returnKeyType="send"
-            onSubmitEditing={() => send(input)}
-            submitBehavior="submit"
-          />
-          <Pressable onPress={() => send(input)} disabled={!input.trim() || typing} style={[st.send, (!input.trim() || typing) && { backgroundColor: C.border }]}>
-            <Ionicons name="arrow-up" size={22} color={C.white} />
-          </Pressable>
+          <View style={[st.inputWrap, focused && st.inputFocus]}>
+            <TextInput
+              value={input}
+              onChangeText={setInput}
+              onFocus={() => setFocused(true)}
+              onBlur={() => setFocused(false)}
+              placeholder="Ask Ria anything…"
+              placeholderTextColor={C.muted}
+              style={[st.input, webNoOutline]}
+              returnKeyType="send"
+              onSubmitEditing={() => send(input)}
+              submitBehavior="submit"
+              selectionColor={C.primary}
+            />
+          </View>
+          <SendButton enabled={canSend} onPress={() => send(input)} />
         </View>
       </KeyboardAvoidingView>
     </Screen>
   );
 }
 
-function TypingDots() {
-  const dots = useRef([0, 1, 2].map(() => new Animated.Value(0))).current;
+function RiaAvatar() {
+  return (
+    <View style={st.botAvatar}>
+      <Ionicons name="sparkles" size={12} color={C.ai} />
+    </View>
+  );
+}
+
+/** Send button that fills with brand colour once there is something to send. */
+function SendButton({ enabled, onPress }: { enabled: boolean; onPress: () => void }) {
+  const p = useSharedValue(enabled ? 1 : 0);
   useEffect(() => {
-    const nd = Platform.OS !== 'web';
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.stagger(
-          150,
-          dots.map((v) =>
-            Animated.sequence([Animated.timing(v, { toValue: 1, duration: 260, useNativeDriver: nd }), Animated.timing(v, { toValue: 0, duration: 260, useNativeDriver: nd })]),
-          ),
-        ),
-        Animated.delay(120),
-      ]),
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [dots]);
+    p.set(withTiming(enabled ? 1 : 0, { duration: MOTION.base }));
+  }, [enabled, p]);
+  const fill = useAnimatedStyle(() => ({
+    backgroundColor: interpolateColor(p.get(), [0, 1], [C.border, C.primaryDark]),
+    transform: [{ scale: interpolate(p.get(), [0, 1], [0.92, 1]) }],
+  }));
+  return (
+    <PressableScale scaleTo={0.9} onPress={onPress} disabled={!enabled} accessibilityRole="button" accessibilityLabel="Send" accessibilityState={{ disabled: !enabled }}>
+      <Animated.View style={[st.send, fill]}>
+        <Ionicons name="arrow-up" size={22} color={C.white} />
+      </Animated.View>
+    </PressableScale>
+  );
+}
+
+const DOT_CYCLE = 940;
+
+function TypingDots() {
+  const reduce = useReducedMotion();
   return (
     <View style={{ flexDirection: 'row', gap: 5 }}>
-      {dots.map((v, i) => (
-        <Animated.View
-          key={i}
-          style={[st.dot, { opacity: v.interpolate({ inputRange: [0, 1], outputRange: [0.35, 1] }), transform: [{ translateY: v.interpolate({ inputRange: [0, 1], outputRange: [0, -4] }) }] }]}
-        />
+      {[0, 1, 2].map((i) => (
+        <Dot key={i} index={i} still={reduce} />
       ))}
     </View>
   );
 }
 
+function Dot({ index, still }: { index: number; still: boolean }) {
+  const v = useSharedValue(0);
+  useEffect(() => {
+    if (still) {
+      v.set(0.5);
+      return;
+    }
+    const lead = index * 150;
+    v.set(
+      withRepeat(
+        withSequence(withTiming(0, { duration: lead }), withTiming(1, { duration: 260 }), withTiming(0, { duration: 260 }), withTiming(0, { duration: DOT_CYCLE - 520 - lead })),
+        -1,
+        false,
+      ),
+    );
+    return () => cancelAnimation(v);
+  }, [index, still, v]);
+  const style = useAnimatedStyle(() => ({ opacity: interpolate(v.get(), [0, 1], [0.35, 1]), transform: [{ translateY: interpolate(v.get(), [0, 1], [0, -4]) }] }));
+  return <Animated.View style={[st.dot, style]} />;
+}
+
 const st = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: C.borderSoft },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth * 2, borderBottomColor: C.borderSoft },
   headMid: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, marginLeft: 4 },
-  avatar: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-  online: { position: 'absolute', right: 0, bottom: 0, width: 12, height: 12, borderRadius: 6, backgroundColor: '#22C55E', borderWidth: 2, borderColor: C.bg },
-  title: { fontSize: 16, fontWeight: '800', color: C.text },
+  avatar: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: C.aiSoft, borderWidth: 1, borderColor: C.aiBorder },
+  online: { position: 'absolute', right: 0, bottom: 0, width: 12, height: 12, borderRadius: 6, backgroundColor: C.primary, borderWidth: 2, borderColor: C.bg },
+  title: { fontSize: 16, fontWeight: '700', color: C.text, letterSpacing: -0.2 },
   status: { fontSize: 12, color: C.primary, fontWeight: '600', marginTop: 1 },
-  upsell: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#FEF3C7', paddingHorizontal: 16, paddingVertical: 9 },
-  upsellText: { flex: 1, fontSize: 12, fontWeight: '600', color: '#92400E' },
-  upsellCta: { fontSize: 12, fontWeight: '800', color: '#B45309' },
+  upsell: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: C.navy, marginHorizontal: 16, marginTop: 10, borderRadius: R.md, paddingHorizontal: 12, height: 42 },
+  upsellIcon: { width: 24, height: 24, borderRadius: 8, backgroundColor: 'rgba(245,196,81,0.16)', alignItems: 'center', justifyContent: 'center' },
+  upsellText: { flex: 1, fontSize: 12, fontWeight: '600', color: 'rgba(255,255,255,0.86)' },
+  upsellCta: { fontSize: 12, fontWeight: '800', color: C.gold },
   list: { padding: 16, gap: 12 },
+  dayPill: { alignSelf: 'center', backgroundColor: C.card, borderRadius: R.pill, paddingHorizontal: 10, paddingVertical: 4, borderWidth: StyleSheet.hairlineWidth * 2, borderColor: C.borderSoft },
   dayLabel: { ...T.tiny, textAlign: 'center', letterSpacing: 0.8 },
-  bubble: { maxWidth: '86%', borderRadius: 18, paddingHorizontal: 14, paddingVertical: 10 },
-  user: { alignSelf: 'flex-end', backgroundColor: C.primary, borderBottomRightRadius: 6 },
+  bubble: { maxWidth: '86%', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 10 },
+  user: { alignSelf: 'flex-end', backgroundColor: C.primaryDark, borderBottomRightRadius: 6 },
   userText: { color: C.white, fontSize: 15, lineHeight: 21 },
   botRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8 },
-  botAvatar: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center', marginBottom: 2 },
-  bot: { backgroundColor: C.card, borderBottomLeftRadius: 6, borderWidth: 1, borderColor: C.borderSoft, maxWidth: '96%' },
+  botAvatar: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginBottom: 2, backgroundColor: C.aiSoft, borderWidth: 1, borderColor: C.aiBorder },
+  bot: { backgroundColor: C.aiSoft, borderBottomLeftRadius: 6, borderWidth: 1, borderColor: C.aiBorder, maxWidth: '96%' },
   botText: { color: C.text, fontSize: 15, lineHeight: 21 },
-  action: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8, backgroundColor: C.primarySoft, borderRadius: R.pill, paddingHorizontal: 14, paddingVertical: 9 },
-  actionText: { color: C.primaryDark, fontWeight: '800', fontSize: 14 },
-  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: C.muted },
-  chipsBar: { flexGrow: 0, borderTopWidth: 1, borderTopColor: C.borderSoft },
+  typingBubble: { paddingVertical: 14 },
+  action: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8, backgroundColor: C.card, borderRadius: R.pill, borderWidth: 1, borderColor: C.aiBorder, paddingLeft: 12, paddingRight: 10, height: 38 },
+  actionText: { color: C.ai, fontWeight: '700', fontSize: 14 },
+  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: C.ai },
+  chipsBar: { flexGrow: 0, borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: C.borderSoft, backgroundColor: C.card },
   chips: { paddingHorizontal: 16, paddingVertical: 10, gap: 8 },
-  chip: { paddingHorizontal: 14, height: 36, borderRadius: R.pill, borderWidth: 1.5, borderColor: C.primary + '55', backgroundColor: C.primarySoft, justifyContent: 'center' },
-  chipText: { fontSize: 13, fontWeight: '700', color: C.primaryDark },
-  inputBar: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingTop: 4 },
-  input: { flex: 1, height: 48, borderRadius: 24, backgroundColor: C.card, borderWidth: 1.5, borderColor: C.border, paddingHorizontal: 18, fontSize: 15, color: C.text },
-  send: { width: 48, height: 48, borderRadius: 24, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center' },
+  chip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, height: 36, borderRadius: R.pill, borderWidth: 1, borderColor: C.aiBorder, backgroundColor: C.aiSoft },
+  chipText: { fontSize: 13, fontWeight: '600', color: C.ai },
+  inputBar: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingTop: 4, backgroundColor: C.card },
+  inputWrap: { flex: 1, height: 48, borderRadius: 24, backgroundColor: C.bg, borderWidth: 1, borderColor: C.border, justifyContent: 'center' },
+  inputFocus: { borderColor: C.primary, backgroundColor: C.card },
+  input: { flex: 1, paddingHorizontal: 18, fontSize: 15, color: C.text },
+  send: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
 });

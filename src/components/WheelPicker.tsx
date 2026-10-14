@@ -1,14 +1,37 @@
+import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useMemo, useRef } from 'react';
 import { NativeScrollEvent, NativeSyntheticEvent, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { C } from '@/theme';
+import { C, R, shadowSm } from '@/theme';
 import { IconButton, tap } from './ui';
 
 const ITEM_H = 52;
 const VISIBLE = 5;
+const BAND_TOP = ITEM_H * Math.floor(VISIBLE / 2);
+
+/** `#RRGGBB` → the same colour fully transparent, so edge fades blend into the backdrop. */
+const clear = (hex: string) => {
+  const n = parseInt(hex.slice(1, 7), 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},0)`;
+};
 
 /** Snap-scrolling vertical wheel with +/- buttons. Works on iOS, Android and web. */
-export function WheelPicker({ values, value, onChange, format, unit }: { values: number[]; value: number; onChange: (v: number) => void; format?: (v: number) => string; unit?: string }) {
+export function WheelPicker({
+  values,
+  value,
+  onChange,
+  format,
+  unit,
+  bg = C.bg,
+}: {
+  values: number[];
+  value: number;
+  onChange: (v: number) => void;
+  format?: (v: number) => string;
+  unit?: string;
+  /** Colour behind the wheel (`#RRGGBB`); the top/bottom fades blend into it. */
+  bg?: string;
+}) {
   const ref = useRef<ScrollView>(null);
   const idx = useMemo(() => {
     let best = 0;
@@ -62,9 +85,10 @@ export function WheelPicker({ values, value, onChange, format, unit }: { values:
 
   return (
     <View style={s.wrap}>
-      <IconButton icon="remove" bg={C.primarySoft} color={C.primaryDark} onPress={() => step(-1)} />
+      <IconButton icon="remove" bordered color={C.primaryDark} onPress={() => step(-1)} />
       <View style={s.wheel}>
-        <View pointerEvents="none" style={s.highlight} />
+        {/* Selection band sits under the list so the chosen value reads as "on" it. */}
+        <View style={s.band} />
         <ScrollView
           ref={ref}
           showsVerticalScrollIndicator={false}
@@ -75,7 +99,7 @@ export function WheelPicker({ values, value, onChange, format, unit }: { values:
           onScrollBeginDrag={() => (dragging.current = true)}
           onMomentumScrollBegin={() => (dragging.current = true)}
           onLayout={() => scrollToIdx(idx, false)}
-          contentContainerStyle={{ paddingVertical: ITEM_H * Math.floor(VISIBLE / 2) }}>
+          contentContainerStyle={{ paddingVertical: BAND_TOP }}>
           {values.map((v, i) => {
             const d = Math.abs(i - idx);
             return (
@@ -94,8 +118,10 @@ export function WheelPicker({ values, value, onChange, format, unit }: { values:
             );
           })}
         </ScrollView>
+        <LinearGradient colors={[bg, clear(bg)]} style={[s.fade, s.fadeTop]} />
+        <LinearGradient colors={[clear(bg), bg]} style={[s.fade, s.fadeBottom]} />
       </View>
-      <IconButton icon="add" bg={C.primary} color={C.white} onPress={() => step(1)} />
+      <IconButton icon="add" bg={C.primaryDark} color={C.white} onPress={() => step(1)} />
     </View>
   );
 }
@@ -108,12 +134,26 @@ export const range = (from: number, to: number, stepBy = 1) => {
 
 const s = StyleSheet.create({
   wrap: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 14 },
-  wheel: { height: ITEM_H * VISIBLE, width: 190, overflow: 'hidden' },
-  highlight: { position: 'absolute', left: 0, right: 0, top: ITEM_H * Math.floor(VISIBLE / 2), height: ITEM_H, borderRadius: 14, backgroundColor: C.primarySoft, borderWidth: 1.5, borderColor: C.primary },
+  wheel: { height: ITEM_H * VISIBLE, width: 196, overflow: 'hidden' },
+  band: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: BAND_TOP,
+    height: ITEM_H,
+    borderRadius: R.md,
+    backgroundColor: C.card,
+    borderWidth: StyleSheet.hairlineWidth * 2,
+    borderColor: C.border,
+    ...shadowSm,
+  },
   item: { height: ITEM_H, alignItems: 'center', justifyContent: 'center' },
-  itemText: { fontWeight: '700' },
-  itemOn: { fontSize: 30, color: C.text, fontWeight: '800' },
-  itemNear: { fontSize: 22, color: C.muted },
-  itemFar: { fontSize: 18, color: C.border },
-  unit: { fontSize: 16, color: C.textSoft, fontWeight: '700' },
+  itemText: { fontWeight: '600', fontVariant: ['tabular-nums'] },
+  itemOn: { fontSize: 30, color: C.text, fontWeight: '800', letterSpacing: -0.6 },
+  itemNear: { fontSize: 21, color: C.muted },
+  itemFar: { fontSize: 18, color: C.muted },
+  unit: { fontSize: 15, color: C.muted, fontWeight: '700', letterSpacing: 0 },
+  fade: { position: 'absolute', left: 0, right: 0, height: ITEM_H * 1.7, pointerEvents: 'none' },
+  fadeTop: { top: 0 },
+  fadeBottom: { bottom: 0 },
 });

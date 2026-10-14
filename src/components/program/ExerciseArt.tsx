@@ -1,43 +1,46 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { useEffect, useRef } from 'react';
-import { Animated, Easing, Platform, StyleSheet, View, type DimensionValue, type ViewStyle } from 'react-native';
+import { useEffect } from 'react';
+import { StyleSheet, View, type DimensionValue, type ViewStyle } from 'react-native';
+import Animated, { cancelAnimation, Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 
-const ND = Platform.OS !== 'web';
+import { C } from '@/theme';
 
-/** Illustration tile: exercise emoji standing on a light-blue mat, optionally with a looping "rep" motion. */
+const ART: [string, string] = ['#F6FBF8', '#E1F2EA'];
+
+/** Illustration tile: exercise emoji standing on a soft mint mat, optionally with a looping "rep" motion. */
 export function ExerciseArt({ emoji, size = 64, width, height, animated = false, radius, style }: { emoji: string; size?: number; width?: DimensionValue; height?: number; animated?: boolean; radius?: number; style?: ViewStyle }) {
   const h = height ?? size;
-  const t = useRef(new Animated.Value(0)).current;
+  const reduce = useReducedMotion();
+  const loop = animated && !reduce;
+  const t = useSharedValue(0);
 
   useEffect(() => {
-    if (!animated) return;
-    const ease = Easing.inOut(Easing.quad);
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(t, { toValue: 1, duration: 850, easing: ease, useNativeDriver: ND }),
-        Animated.timing(t, { toValue: 0, duration: 850, easing: ease, useNativeDriver: ND }),
-      ]),
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [animated, t]);
+    if (!loop) {
+      t.set(0);
+      return;
+    }
+    t.set(withRepeat(withTiming(1, { duration: 850, easing: Easing.inOut(Easing.quad) }), -1, true));
+    return () => cancelAnimation(t);
+  }, [loop, t]);
+
+  const lift = h * 0.06;
+  const figure = useAnimatedStyle(() => {
+    if (!loop) return { transform: [{ translateY: 0 }, { scale: 1 }, { rotate: '0deg' }] };
+    const v = t.get();
+    return { transform: [{ translateY: -lift * v }, { scale: 1 + 0.07 * v }, { rotate: `${-3 + 6 * v}deg` }] };
+  });
+  const shade = useAnimatedStyle(() => {
+    const v = loop ? t.get() : 0;
+    return { opacity: 1 - 0.45 * v, transform: [{ scaleX: 1 - 0.28 * v }] };
+  });
 
   const fs = Math.round(h * 0.48);
   const matBottom = Math.round(h * 0.13);
   const matH = Math.max(4, Math.round(h * 0.065));
   const shadowW = Math.round(h * 0.42);
-  const anim = animated
-    ? {
-        transform: [
-          { translateY: t.interpolate({ inputRange: [0, 1], outputRange: [0, -h * 0.06] }) },
-          { scale: t.interpolate({ inputRange: [0, 1], outputRange: [1, 1.07] }) },
-          { rotate: t.interpolate({ inputRange: [0, 1], outputRange: ['-3deg', '3deg'] }) },
-        ],
-      }
-    : null;
 
   return (
-    <LinearGradient colors={['#F9FBFF', '#E8F0FE']} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={[{ width: width ?? size, height: h, borderRadius: radius ?? Math.min(28, Math.round(h * 0.22)), overflow: 'hidden' }, style]}>
+    <LinearGradient colors={ART} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={[{ width: width ?? size, height: h, borderRadius: radius ?? Math.min(28, Math.round(h * 0.22)), overflow: 'hidden' }, style]}>
       {h > 120 && (
         <>
           <View style={[s.bubble, { width: h * 0.5, height: h * 0.5, borderRadius: h * 0.25, top: -h * 0.12, right: -h * 0.08 }]} />
@@ -46,16 +49,10 @@ export function ExerciseArt({ emoji, size = 64, width, height, animated = false,
       )}
       <View style={[s.mat, { bottom: matBottom, height: matH }]} />
       <View style={[s.figure, { bottom: matBottom + matH - 2 }]}>
-        <Animated.View
-          style={[
-            s.shadow,
-            { width: shadowW, height: Math.max(4, h * 0.05), borderRadius: shadowW },
-            animated && { transform: [{ scaleX: t.interpolate({ inputRange: [0, 1], outputRange: [1, 0.72] }) }], opacity: t.interpolate({ inputRange: [0, 1], outputRange: [1, 0.55] }) },
-          ]}
-        />
+        <Animated.View style={[s.shadow, { width: shadowW, height: Math.max(4, h * 0.05), borderRadius: shadowW }, shade]} />
       </View>
       <View style={[s.figure, { bottom: matBottom + matH * 0.6 }]}>
-        <Animated.Text style={[{ fontSize: fs, lineHeight: Math.round(fs * 1.2), textAlign: 'center' }, anim]}>{emoji}</Animated.Text>
+        <Animated.Text style={[{ fontSize: fs, lineHeight: Math.round(fs * 1.2), textAlign: 'center' }, figure]}>{emoji}</Animated.Text>
       </View>
     </LinearGradient>
   );
@@ -63,7 +60,7 @@ export function ExerciseArt({ emoji, size = 64, width, height, animated = false,
 
 const s = StyleSheet.create({
   bubble: { position: 'absolute', backgroundColor: 'rgba(255,255,255,0.7)' },
-  mat: { position: 'absolute', left: '9%', right: '9%', borderRadius: 99, backgroundColor: '#BCD5FB' },
-  shadow: { backgroundColor: 'rgba(20,27,52,0.12)' },
+  mat: { position: 'absolute', left: '9%', right: '9%', borderRadius: 99, backgroundColor: C.primaryTint },
+  shadow: { backgroundColor: 'rgba(19,35,31,0.12)' },
   figure: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
 });

@@ -2,17 +2,19 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View, type ViewStyle } from 'react-native';
+import Animated, { FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated';
+import Svg, { Circle } from 'react-native-svg';
 
 import { WeekStrip } from '@/components/charts/Calendar';
 import { fmtNum } from '@/components/charts/Charts';
 import { Bolts } from '@/components/program/PlanAccordion';
-import { Button, Card, Chip, Dialog, EmptyState, Ring, Screen, Sheet, Stepper, T, tap, useToast } from '@/components/ui';
+import { Button, Card, Chip, CountUp, Dialog, EmptyState, enter, IconButton, IconTile, PressableScale, ProgressBar, Ring, Screen, ScreenTitle, SectionTitle, Sheet, Stepper, T, tap, useToast, type IconName } from '@/components/ui';
 import { ACTIVITIES, WORKOUT_CATEGORIES, WORKOUTS } from '@/data/fitness';
 import { BODY_PARTS, FOCUS_SESSIONS, programById, programDay, PROGRAM_DAYS, sessionStats, type Session } from '@/data/program';
 import { kcalFromSteps, kmFromSteps, todayKey } from '@/lib/calc';
 import { burnedOn, useStore, weekProgress, workoutStreak, type WorkoutLog } from '@/lib/store';
-import { C, R, shadow } from '@/theme';
+import { C, MOTION, R, shadowSm } from '@/theme';
 
 const SOURCE = Platform.OS === 'ios' ? 'Apple Health' : 'Google Fit';
 type Focus = (typeof FOCUS_SESSIONS)[number];
@@ -23,6 +25,10 @@ const focusMinutes = (s: Session) => Number(/(\d+)\s*min/i.exec(s.subtitle)?.[1]
 const openSession = (key: string) => router.push({ pathname: '/program-day', params: { key } });
 const PUSH = FOCUS_SESSIONS.filter((s) => !s.equipment && (s.level === 'Advanced' || s.level === 'Intermediate'));
 const EQUIP = FOCUS_SESSIONS.filter((s) => s.equipment);
+
+const listLayout = LinearTransition.duration(MOTION.base);
+const rowIn = FadeIn.duration(MOTION.base);
+const rowOut = FadeOut.duration(MOTION.fast);
 
 export default function TrainingScreen() {
   const { state, targets, addSteps, logWorkout, removeWorkout, updateProfile, resetProgram } = useStore();
@@ -37,6 +43,11 @@ export default function TrainingScreen() {
   const session = programDay(program.id, day);
   const stats = sessionStats(session);
   const [askRestart, setAskRestart] = useState(false);
+  const openChallenge = () => {
+    tap();
+    if (finished) setAskRestart(true);
+    else openSession(session.key);
+  };
 
   // Weekly goal
   const streak = workoutStreak(state);
@@ -95,262 +106,273 @@ export default function TrainingScreen() {
   const [cat, setCat] = useState<Cat>('All');
   const classes = WORKOUTS.filter((w) => cat === 'All' || w.category === cat);
   const doneToday = new Set(todays.map((w) => w.workoutId).filter(Boolean));
+  const pct = Math.round((done / PROGRAM_DAYS) * 100);
+  const goalHint: { icon: IconName; color: string; text: string } =
+    goalDraft <= 2
+      ? { icon: 'leaf', color: C.primary, text: 'An easy start — great for building the habit' }
+      : goalDraft <= 4
+        ? { icon: 'checkmark-circle', color: C.primary, text: 'Recommended for steady, sustainable progress' }
+        : { icon: 'flame', color: C.accent, text: 'Ambitious! Remember to include rest days' };
 
   return (
     <Screen>
       <ScrollView contentContainerStyle={st.content} showsVerticalScrollIndicator={false}>
         {/* Header */}
-        <View style={st.top}>
-          <Text style={st.title}>{`${program.title} in 30 Days`.toUpperCase()}</Text>
-          <Pressable
-            onPress={() => {
-              tap();
-              router.push('/history');
-            }}
-            style={({ pressed }) => [st.streak, pressed && { opacity: 0.8 }]}>
-            <Text style={{ fontSize: 16 }}>🔥</Text>
-            <Text style={st.streakText}>{streak}</Text>
-          </Pressable>
-        </View>
+        <Animated.View entering={enter(0)}>
+          <ScreenTitle
+            title="Training"
+            subtitle={`${program.title} in 30 Days`}
+            right={
+              <PressableScale
+                scaleTo={0.94}
+                accessibilityRole="button"
+                accessibilityLabel={`Workout streak: ${streak}`}
+                onPress={() => {
+                  tap();
+                  router.push('/history');
+                }}
+                style={st.streak}>
+                <Ionicons name="flame" size={17} color={C.accent} />
+                <CountUp value={streak} style={st.streakText} />
+              </PressableScale>
+            }
+          />
+        </Animated.View>
 
         {/* Weekly goal */}
-        <Card>
-          <View style={st.rowBetween}>
-            <Pressable
-              hitSlop={8}
-              onPress={() => {
-                tap();
-                setGoalDraft(goal);
-                setGoalOpen(true);
-              }}
-              style={st.goalTitleRow}>
-              <Text style={T.h3}>Weekly Goal</Text>
-              <Ionicons name="pencil" size={15} color={C.textSoft} />
-            </Pressable>
-            <Text style={st.goalCount}>
-              <Text style={{ color: C.primary }}>{wp.done}</Text>/{goal}
-              <Text style={st.goalCountUnit}> workouts</Text>
-            </Text>
-          </View>
-          <View style={{ marginTop: 14 }}>
-            <WeekStrip week={wp.week} days={wp.days} onPress={(k) => router.push({ pathname: '/history', params: { date: k } })} />
-          </View>
-          <View style={st.nudge}>
-            <View style={st.avatar}>
-              <Text style={{ fontSize: 22 }}>🧔</Text>
+        <Animated.View entering={enter(1)} style={{ marginTop: 12 }}>
+          <Card>
+            <View style={st.goalHead}>
+              <Ring size={62} stroke={7} value={wp.done / goal} color={C.primary} track={C.primarySoft}>
+                <Text style={st.ringNum}>
+                  {wp.done}
+                  <Text style={st.ringOf}>/{goal}</Text>
+                </Text>
+              </Ring>
+              <View style={{ flex: 1 }}>
+                <Text style={T.h3}>Weekly goal</Text>
+                <Text style={[T.small, { marginTop: 2 }]}>
+                  <Text style={{ color: C.primary, fontWeight: '700' }}>{wp.done}</Text> of {goal} workouts this week
+                </Text>
+              </View>
+              <IconButton
+                icon="pencil"
+                size={16}
+                bg={C.surfaceAlt}
+                style={{ width: 36, height: 36 }}
+                onPress={() => {
+                  setGoalDraft(goal);
+                  setGoalOpen(true);
+                }}
+              />
             </View>
-            <View style={st.bubble}>
-              <Text style={st.bubbleText}>{nudge}</Text>
+            <View style={{ marginTop: 16 }}>
+              <WeekStrip week={wp.week} days={wp.days} onPress={(k) => router.push({ pathname: '/history', params: { date: k } })} />
             </View>
-          </View>
-        </Card>
+            <View style={st.nudge}>
+              <IconTile icon="chatbubble-ellipses" size={34} />
+              <View style={st.bubble}>
+                <Text style={st.bubbleText}>{nudge}</Text>
+              </View>
+            </View>
+          </Card>
+        </Animated.View>
 
         {/* Daily challenge */}
-        <View style={st.sectionRow}>
-          <Text style={st.sectionTitle}>Daily Challenge</Text>
-          <Pressable
-            hitSlop={10}
-            onPress={() => {
-              tap();
-              router.push('/select-plan');
-            }}
-            style={st.optBtn}>
-            <Ionicons name="options-outline" size={18} color={C.text} />
-          </Pressable>
-        </View>
-        <Pressable
-          onPress={() => {
-            tap();
-            if (finished) setAskRestart(true);
-            else openSession(session.key);
-          }}
-          style={({ pressed }) => [pressed && { transform: [{ scale: 0.985 }] }]}>
-          <LinearGradient colors={program.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.challenge}>
-            <View style={st.deco1} />
-            <View style={st.deco2} />
-            <View style={{ flex: 1 }}>
-              <View style={st.kickerRow}>
+        <Animated.View entering={enter(2)}>
+          <SectionTitle title="Daily challenge" action="Change plan" onAction={() => router.push('/select-plan')} />
+          <PressableScale scaleTo={0.98} accessibilityRole="button" accessibilityLabel={finished ? `Restart ${program.title}` : `Start day ${day}`} onPress={openChallenge} style={[st.heroShell, { backgroundColor: program.colors[1] }]}>
+            <LinearGradient colors={program.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.challenge}>
+              <Deco size={260} style={{ top: -70, right: -80 }} />
+              <View style={st.kickerPill}>
                 <Text style={st.kicker}>{program.title}</Text>
                 <Bolts n={program.bolts} />
               </View>
-              <Text style={st.dayBig}>{finished ? 'Completed 🏆' : `Day ${day}`}</Text>
-              <Text style={st.dayMeta}>{finished ? 'You finished all 30 days!' : session.restDay ? 'Rest day · recover & stretch' : `${stats.exercises} exercises · ${stats.minutes} min · ${stats.kcal} kcal`}</Text>
+              <View style={st.challengeMid}>
+                <View style={{ flex: 1 }}>
+                  <Text style={st.dayBig}>{finished ? 'Completed' : `Day ${day}`}</Text>
+                  <Text style={st.dayMeta}>{finished ? 'You finished all 30 days!' : session.restDay ? 'Rest day · recover & stretch' : `${stats.exercises} exercises · ${stats.minutes} min · ${stats.kcal} kcal`}</Text>
+                </View>
+                <View style={st.heroDisc}>
+                  <Text style={st.challengeEmoji}>{finished ? '🏆' : session.emoji}</Text>
+                </View>
+              </View>
               <View style={st.daysRow}>
                 <Text style={st.daysText}>
-                  {done}/{PROGRAM_DAYS} Days
+                  {done}/{PROGRAM_DAYS} days
                 </Text>
-                <Text style={st.daysText}>{Math.round((done / PROGRAM_DAYS) * 100)}%</Text>
+                <Text style={st.daysText}>{pct}%</Text>
               </View>
-              <View style={st.thinTrack}>
-                <View style={[st.thinFill, { width: `${(done / PROGRAM_DAYS) * 100}%` }]} />
-              </View>
-              <View style={st.startPill}>
+              <ProgressBar value={done / PROGRAM_DAYS} color={C.white} track="rgba(255,255,255,0.28)" height={6} style={{ marginTop: 8 }} />
+              <PressableScale scaleTo={0.94} accessibilityRole="button" onPress={openChallenge} style={st.startPill}>
+                <Ionicons name={finished ? 'refresh' : 'play'} size={15} color={program.colors[1]} />
                 <Text style={[st.startText, { color: program.colors[1] }]}>{finished ? 'RESTART' : 'START'}</Text>
-              </View>
-            </View>
-            <Text style={st.challengeEmoji}>{finished ? '🏆' : session.emoji}</Text>
-          </LinearGradient>
-        </Pressable>
+              </PressableScale>
+            </LinearGradient>
+          </PressableScale>
+        </Animated.View>
 
         {/* Today */}
-        <View style={st.sectionRow}>
-          <Text style={st.sectionTitle}>Today</Text>
-          <Pressable hitSlop={10} onPress={openLog}>
-            <Text style={st.sectionAction}>+ Log activity</Text>
-          </Pressable>
-        </View>
-        <Card style={st.stepsCard}>
-          <Ring size={60} stroke={7} value={steps / stepGoal} color={C.steps} track={C.stepsSoft}>
-            <Ionicons name="footsteps" size={20} color={C.steps} />
-          </Ring>
-          <View style={{ flex: 1 }}>
-            <Text style={st.stepsBig}>
-              {fmtNum(steps)}
-              <Text style={st.stepsOf}> / {fmtNum(stepGoal)} steps</Text>
-            </Text>
-            <Text style={T.small}>
-              {kmFromSteps(steps)} km · {kcalFromSteps(steps)} kcal{steps >= stepGoal ? ' · Goal reached 🎉' : ''}
-            </Text>
-          </View>
-          <Button title="Sync" icon="sync" small variant="secondary" loading={syncing} onPress={sync} style={{ minWidth: 86 }} />
-        </Card>
-        <Card style={st.summary}>
-          <SumCol emoji="🔥" value={fmtNum(burned.total)} label="kcal burned" />
-          <View style={st.vDivider} />
-          <SumCol emoji="⏱️" value={String(activeMin)} label="active min" />
-          <View style={st.vDivider} />
-          <SumCol emoji="🏆" value={String(todays.length)} label="workouts" />
-        </Card>
-        <Card style={{ marginTop: 10, paddingVertical: todays.length ? 6 : 0 }}>
-          {todays.length === 0 ? (
-            <EmptyState emoji="🏃" title="No activity logged yet" text="Start today's challenge or log a walk, a badminton game or a gym session." action="Log activity" onAction={openLog} />
-          ) : (
-            todays.map((w, i) => {
-              const linked = !!(w.sessionKey || w.workoutId);
-              return (
-                <Pressable key={w.id} onPress={() => linked && openLogged(w)} style={({ pressed }) => [st.actRow, i > 0 && st.actBorder, pressed && linked && { opacity: 0.7 }]}>
-                  <View style={st.actEmoji}>
-                    <Text style={{ fontSize: 22 }}>{w.emoji}</Text>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={st.actTitle} numberOfLines={1}>
-                      {w.title}
-                    </Text>
-                    <Text style={T.small}>
-                      {w.minutes} min · <Text style={{ color: C.accent, fontWeight: '700' }}>{w.kcal} kcal</Text>
-                    </Text>
-                  </View>
-                  <Pressable
-                    hitSlop={8}
-                    onPress={() => {
-                      tap();
-                      setDel(w);
-                    }}
-                    style={st.trash}>
-                    <Ionicons name="trash-outline" size={17} color={C.danger} />
-                  </Pressable>
-                </Pressable>
-              );
-            })
-          )}
-        </Card>
+        <Animated.View entering={enter(3)}>
+          <SectionTitle title="Today" action="Log activity" onAction={openLog} />
+          <Card style={st.stepsCard}>
+            <Ring size={58} stroke={7} value={steps / stepGoal} color={C.steps} track={C.stepsSoft}>
+              <Ionicons name="footsteps" size={20} color={C.steps} />
+            </Ring>
+            <View style={{ flex: 1 }}>
+              <CountUp value={steps} format={fmtNum} style={st.stepsBig}>
+                <Text style={st.stepsOf}> / {fmtNum(stepGoal)}</Text>
+              </CountUp>
+              <Text style={[T.small, { marginTop: 1 }]}>
+                {kmFromSteps(steps)} km · {kcalFromSteps(steps)} kcal{steps >= stepGoal ? ' · Goal reached' : ''}
+              </Text>
+            </View>
+            <Button title="Sync" icon="sync" small variant="secondary" loading={syncing} onPress={sync} style={{ minWidth: 86 }} />
+          </Card>
+          <Card style={st.summary}>
+            <SumCol icon="flame" color={C.accent} bg={C.accentSoft} value={burned.total} format={fmtNum} label="kcal burned" />
+            <View style={st.vDivider} />
+            <SumCol icon="time" color={C.water} bg={C.waterSoft} value={activeMin} label="active min" />
+            <View style={st.vDivider} />
+            <SumCol icon="trophy" color={C.workout} bg={C.workoutSoft} value={todays.length} label="workouts" />
+          </Card>
+          <Card style={{ marginTop: 10, paddingVertical: todays.length ? 6 : 0 }}>
+            {todays.length === 0 ? (
+              <EmptyState icon="walk" title="No activity logged yet" text="Start today's challenge or log a walk, a badminton game or a gym session." action="Log activity" onAction={openLog} />
+            ) : (
+              todays.map((w, i) => {
+                const linked = !!(w.sessionKey || w.workoutId);
+                return (
+                  <Animated.View key={w.id} entering={rowIn} exiting={rowOut} layout={listLayout}>
+                    <Pressable onPress={() => linked && openLogged(w)} style={({ pressed }) => [st.actRow, i > 0 && st.actBorder, pressed && linked && st.rowPressed]}>
+                      <View style={st.actEmoji}>
+                        <Text style={{ fontSize: 22 }}>{w.emoji}</Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={st.actTitle} numberOfLines={1}>
+                          {w.title}
+                        </Text>
+                        <View style={st.metaRow}>
+                          <Ionicons name="time-outline" size={13} color={C.muted} />
+                          <Text style={st.metaText}>{w.minutes} min</Text>
+                          <Ionicons name="flame" size={13} color={C.accent} style={{ marginLeft: 6 }} />
+                          <Text style={[st.metaText, { color: C.accent }]}>{w.kcal} kcal</Text>
+                        </View>
+                      </View>
+                      <IconButton icon="trash-outline" size={17} color={C.danger} bg={C.dangerSoft} style={{ width: 34, height: 34 }} onPress={() => setDel(w)} />
+                    </Pressable>
+                  </Animated.View>
+                );
+              })
+            )}
+          </Card>
+        </Animated.View>
 
         {/* Push your limits */}
-        <Text style={[st.sectionTitle, st.sectionGap]}>Push Your Limits</Text>
-        <Carousel items={PUSH} />
+        <Animated.View entering={enter(4)}>
+          <SectionTitle title="Push your limits" />
+          <Carousel items={PUSH} />
+        </Animated.View>
 
         {/* With equipment */}
-        <Text style={[st.sectionTitle, st.sectionGap]}>With Equipment</Text>
-        <Carousel items={EQUIP} />
+        <Animated.View entering={enter(5)}>
+          <SectionTitle title="With equipment" />
+          <Carousel items={EQUIP} />
+        </Animated.View>
 
         {/* Body focus */}
-        <Text style={[st.sectionTitle, st.sectionGap]}>Body Focus</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -16 }} contentContainerStyle={st.tabs}>
-          {BODY_PARTS.map((p) => {
-            const on = p === part;
-            return (
-              <Pressable
-                key={p}
-                onPress={() => {
-                  tap();
-                  setPart(p);
-                }}
-                style={st.tab}>
-                <Text style={[st.tabText, on && st.tabTextOn]}>{p}</Text>
-                <View style={[st.tabLine, on && { backgroundColor: C.primary }]} />
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-        <Card style={{ paddingVertical: 4, marginTop: 10 }}>
-          {partList.map((s, i) => (
-            <Pressable
-              key={s.key}
-              onPress={() => {
-                tap();
-                openSession(s.key);
-              }}
-              style={({ pressed }) => [st.focusRow, i > 0 && st.actBorder, pressed && { opacity: 0.7 }]}>
-              <LinearGradient colors={s.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.focusTile}>
-                <Text style={{ fontSize: 28 }}>{s.emoji}</Text>
-              </LinearGradient>
-              <View style={{ flex: 1 }}>
-                <Text style={st.actTitle} numberOfLines={1}>
-                  {s.title}
-                </Text>
-                <Text style={T.small}>
-                  {s.level} · {focusMinutes(s)} min{s.equipment ? ' · 🏋️ Equipment' : ''}
-                </Text>
-              </View>
-              <View style={st.roundArrow}>
-                <Ionicons name="arrow-forward" size={16} color={C.primaryDark} />
-              </View>
-            </Pressable>
-          ))}
-        </Card>
+        <Animated.View entering={enter(6)}>
+          <SectionTitle title="Body focus" />
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -16 }} contentContainerStyle={st.chips}>
+            {BODY_PARTS.map((p) => (
+              <Chip key={p} label={p} selected={p === part} onPress={() => setPart(p)} />
+            ))}
+          </ScrollView>
+          <Card style={{ paddingVertical: 6 }}>
+            {partList.map((s, i) => (
+              <Animated.View key={s.key} entering={rowIn}>
+                <Pressable
+                  onPress={() => {
+                    tap();
+                    openSession(s.key);
+                  }}
+                  style={({ pressed }) => [st.focusRow, i > 0 && st.actBorder, pressed && st.rowPressed]}>
+                  <LinearGradient colors={s.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.focusTile}>
+                    <Text style={{ fontSize: 26 }}>{s.emoji}</Text>
+                  </LinearGradient>
+                  <View style={{ flex: 1 }}>
+                    <Text style={st.actTitle} numberOfLines={1}>
+                      {s.title}
+                    </Text>
+                    <View style={st.metaRow}>
+                      <Text style={st.metaText}>
+                        {s.level} · {focusMinutes(s)} min
+                      </Text>
+                      {s.equipment && (
+                        <>
+                          <Ionicons name="barbell-outline" size={13} color={C.muted} style={{ marginLeft: 6 }} />
+                          <Text style={st.metaText}>Equipment</Text>
+                        </>
+                      )}
+                    </View>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color={C.muted} />
+                </Pressable>
+              </Animated.View>
+            ))}
+          </Card>
+        </Animated.View>
 
         {/* Guided classes */}
-        <Text style={[st.sectionTitle, st.sectionGap]}>Guided Classes</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={st.chips} style={{ marginHorizontal: -16 }}>
-          {WORKOUT_CATEGORIES.map((c) => (
-            <Chip key={c} label={c} selected={cat === c} onPress={() => setCat(c)} />
-          ))}
-        </ScrollView>
-        <View style={st.grid}>
-          {classes.map((w) => (
-            <Pressable
-              key={w.id}
-              onPress={() => {
-                tap();
-                router.push('/workout/' + w.id);
-              }}
-              style={({ pressed }) => [st.wCard, pressed && { transform: [{ scale: 0.97 }] }]}>
-              <LinearGradient colors={[w.color + '38', w.color + '12']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.wHead}>
-                <Text style={{ fontSize: 42 }}>{w.emoji}</Text>
-                <View style={st.wTime}>
-                  <Ionicons name="time-outline" size={11} color={C.text} />
-                  <Text style={st.wTimeText}>{w.minutes} min</Text>
-                </View>
-                {doneToday.has(w.id) && (
-                  <View style={st.wDone}>
-                    <Ionicons name="checkmark" size={13} color={C.white} />
+        <Animated.View entering={enter(7)}>
+          <SectionTitle title="Guided classes" />
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={st.chips} style={{ marginHorizontal: -16 }}>
+            {WORKOUT_CATEGORIES.map((c) => (
+              <Chip key={c} label={c} selected={cat === c} onPress={() => setCat(c)} />
+            ))}
+          </ScrollView>
+          <View style={st.grid}>
+            {classes.map((w) => (
+              <Animated.View key={w.id} entering={rowIn} layout={listLayout} style={st.wCell}>
+                <PressableScale
+                  scaleTo={0.97}
+                  accessibilityRole="button"
+                  onPress={() => {
+                    tap();
+                    router.push('/workout/' + w.id);
+                  }}
+                  style={st.wCard}>
+                  <View style={[st.wHead, { backgroundColor: w.color + '17' }]}>
+                    <Text style={{ fontSize: 40 }}>{w.emoji}</Text>
+                    <View style={st.wTime}>
+                      <Ionicons name="time-outline" size={11} color={C.text} />
+                      <Text style={st.wTimeText}>{w.minutes} min</Text>
+                    </View>
+                    {doneToday.has(w.id) && (
+                      <View style={st.wDone}>
+                        <Ionicons name="checkmark" size={13} color={C.white} />
+                      </View>
+                    )}
                   </View>
-                )}
-              </LinearGradient>
-              <View style={{ padding: 12, paddingTop: 10 }}>
-                <Text style={st.wTitle} numberOfLines={2}>
-                  {w.title}
-                </Text>
-                <Text style={st.wMeta}>
-                  🔥 {w.kcal} kcal · {w.level}
-                </Text>
-                <Text style={st.wCoach} numberOfLines={1}>
-                  {w.coach}
-                </Text>
-              </View>
-            </Pressable>
-          ))}
-        </View>
+                  <View style={{ padding: 12, paddingTop: 10 }}>
+                    <Text style={st.wTitle} numberOfLines={2}>
+                      {w.title}
+                    </Text>
+                    <View style={[st.metaRow, { marginTop: 4 }]}>
+                      <Ionicons name="flame" size={12} color={C.accent} />
+                      <Text style={st.wMeta}>
+                        {w.kcal} kcal · {w.level}
+                      </Text>
+                    </View>
+                    <Text style={st.wCoach} numberOfLines={1}>
+                      {w.coach}
+                    </Text>
+                  </View>
+                </PressableScale>
+              </Animated.View>
+            ))}
+          </View>
+        </Animated.View>
       </ScrollView>
 
       {/* Weekly goal sheet */}
@@ -360,21 +382,25 @@ export default function TrainingScreen() {
           {[1, 2, 3, 4, 5, 6, 7].map((n) => {
             const on = n === goalDraft;
             return (
-              <Pressable
+              <PressableScale
                 key={n}
+                scaleTo={0.9}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: on }}
                 onPress={() => {
                   tap();
                   setGoalDraft(n);
                 }}
                 style={[st.goalOpt, on && st.goalOptOn]}>
                 <Text style={[st.goalOptText, on && { color: C.white }]}>{n}</Text>
-              </Pressable>
+              </PressableScale>
             );
           })}
         </View>
-        <Text style={[T.small, { textAlign: 'center', marginTop: 12 }]}>
-          {goalDraft <= 2 ? '🌱 An easy start — great for building the habit' : goalDraft <= 4 ? '✅ Recommended for steady, sustainable progress' : '🔥 Ambitious! Remember to include rest days'}
-        </Text>
+        <View style={st.goalHint}>
+          <Ionicons name={goalHint.icon} size={16} color={goalHint.color} />
+          <Text style={[T.small, { flex: 1, color: C.text }]}>{goalHint.text}</Text>
+        </View>
         <Button
           title={`Set ${goalDraft} day${goalDraft === 1 ? '' : 's'} a week`}
           onPress={() => {
@@ -392,20 +418,23 @@ export default function TrainingScreen() {
           {ACTIVITIES.map((a) => {
             const on = a.id === actId;
             return (
-              <Pressable
+              <PressableScale
                 key={a.id}
+                scaleTo={0.92}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: on }}
                 onPress={() => {
                   tap();
                   setActId(a.id);
                 }}
                 style={st.actItem}>
-                <View style={[st.actCircle, on && st.actCircleOn]}>
+                <View style={[st.actTile, on && st.actTileOn]}>
                   <Text style={{ fontSize: 26 }}>{a.emoji}</Text>
                 </View>
                 <Text style={[st.actLabel, on && { color: C.primaryDark }]} numberOfLines={1}>
                   {a.label}
                 </Text>
-              </Pressable>
+              </PressableScale>
             );
           })}
         </View>
@@ -417,14 +446,18 @@ export default function TrainingScreen() {
           <Stepper value={mins} onChange={setMins} step={5} min={5} max={180} format={(v) => `${v} min`} />
         </View>
         <View style={st.kcalBox}>
-          <Text style={{ fontSize: 26 }}>{act.emoji}</Text>
+          <View style={st.kcalEmoji}>
+            <Text style={{ fontSize: 24 }}>{act.emoji}</Text>
+          </View>
           <View style={{ flex: 1 }}>
-            <Text style={st.kcalBig}>{actKcal} kcal</Text>
+            <CountUp value={actKcal} style={st.kcalBig}>
+              <Text style={st.kcalUnit}> kcal</Text>
+            </CountUp>
             <Text style={T.small}>
               {act.label} for {mins} minutes
             </Text>
           </View>
-          <Ionicons name="flame" size={26} color={C.accent} />
+          <Ionicons name="flame" size={24} color={C.accent} />
         </View>
         <Button title="Add activity" icon="checkmark" onPress={addActivity} style={{ marginTop: 16, marginBottom: 4 }} />
       </Sheet>
@@ -464,129 +497,135 @@ export default function TrainingScreen() {
   );
 }
 
+/** Low-opacity concentric circles for gradient hero cards. */
+function Deco({ size, style }: { size: number; style: ViewStyle }) {
+  const c = size / 2;
+  return (
+    <View pointerEvents="none" style={[{ position: 'absolute', width: size, height: size }, style]}>
+      <Svg width={size} height={size}>
+        <Circle cx={c} cy={c} r={c} fill={C.white} opacity={0.08} />
+        <Circle cx={c} cy={c} r={c * 0.62} fill="none" stroke={C.white} strokeOpacity={0.16} strokeWidth={1.5} />
+        <Circle cx={c} cy={c} r={c * 0.3} fill={C.white} opacity={0.07} />
+      </Svg>
+    </View>
+  );
+}
+
 function Carousel({ items }: { items: Focus[] }) {
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -16 }} contentContainerStyle={st.carousel} decelerationRate="fast" snapToInterval={252}>
       {items.map((s) => (
-        <Pressable
+        <PressableScale
           key={s.key}
+          scaleTo={0.97}
+          accessibilityRole="button"
           onPress={() => {
             tap();
             openSession(s.key);
           }}
-          style={({ pressed }) => [pressed && { transform: [{ scale: 0.97 }] }]}>
+          style={[st.cShell, { backgroundColor: s.colors[1] }]}>
           <LinearGradient colors={s.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.cCard}>
-            <View style={st.cDeco} />
+            <Deco size={180} style={{ right: -50, bottom: -70 }} />
             <Text style={st.cEmoji}>{s.emoji}</Text>
             <Text style={st.cTitle} numberOfLines={2}>
               {s.title}
             </Text>
             <Text style={st.cSub}>
-              {s.level} · {focusMinutes(s)} Min
+              {s.level} · {focusMinutes(s)} min
             </Text>
             <View style={st.cStart}>
               <Ionicons name="play" size={11} color={s.colors[1]} />
               <Text style={[st.cStartText, { color: s.colors[1] }]}>Start</Text>
             </View>
           </LinearGradient>
-        </Pressable>
+        </PressableScale>
       ))}
     </ScrollView>
   );
 }
 
-function SumCol({ emoji, value, label }: { emoji: string; value: string; label: string }) {
+function SumCol({ icon, color, bg, value, label, format }: { icon: IconName; color: string; bg: string; value: number; label: string; format?: (n: number) => string }) {
   return (
-    <View style={{ flex: 1, alignItems: 'center' }}>
-      <Text style={st.sumValue}>
-        <Text style={{ fontSize: 15 }}>{emoji} </Text>
-        {value}
-      </Text>
-      <Text style={T.tiny}>{label}</Text>
+    <View style={{ flex: 1, alignItems: 'center', gap: 6 }}>
+      <IconTile icon={icon} color={color} bg={bg} size={32} />
+      <View style={{ alignItems: 'center' }}>
+        <CountUp value={value} format={format} style={st.sumValue} />
+        <Text style={T.tiny}>{label}</Text>
+      </View>
     </View>
   );
 }
 
 const st = StyleSheet.create({
-  content: { padding: 16, paddingBottom: 32 },
-  top: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
-  title: { flex: 1, fontSize: 22, fontWeight: '900', color: C.text, letterSpacing: -0.2, lineHeight: 27 },
-  streak: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: C.card, paddingHorizontal: 12, height: 38, borderRadius: R.pill, ...shadow },
-  streakText: { fontSize: 16, fontWeight: '900', color: C.accent },
-  rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  goalTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  goalCount: { fontSize: 18, fontWeight: '900', color: C.text },
-  goalCountUnit: { fontSize: 12, fontWeight: '600', color: C.muted },
+  content: { paddingHorizontal: 16, paddingBottom: 40 },
+  streak: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: C.card, paddingHorizontal: 13, height: 38, borderRadius: R.pill, borderWidth: StyleSheet.hairlineWidth * 2, borderColor: C.border, ...shadowSm },
+  streakText: { fontSize: 15, fontWeight: '800', color: C.text, fontVariant: ['tabular-nums'] },
+  goalHead: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  ringNum: { fontSize: 17, fontWeight: '800', color: C.text, fontVariant: ['tabular-nums'], letterSpacing: -0.4 },
+  ringOf: { fontSize: 12, fontWeight: '600', color: C.muted },
   nudge: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 16 },
-  avatar: { width: 42, height: 42, borderRadius: 21, backgroundColor: C.accentSoft, alignItems: 'center', justifyContent: 'center' },
-  bubble: { flex: 1, backgroundColor: C.bg, borderRadius: 14, borderTopLeftRadius: 4, paddingHorizontal: 12, paddingVertical: 10 },
+  bubble: { flex: 1, backgroundColor: C.surfaceAlt, borderRadius: R.sm, borderTopLeftRadius: 4, paddingHorizontal: 12, paddingVertical: 10, borderWidth: StyleSheet.hairlineWidth * 2, borderColor: C.borderSoft },
   bubbleText: { fontSize: 13, fontWeight: '600', color: C.text, lineHeight: 18 },
-  sectionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 24, marginBottom: 12 },
-  sectionTitle: { fontSize: 19, fontWeight: '900', color: C.text, letterSpacing: -0.2 },
-  sectionGap: { marginTop: 26, marginBottom: 12 },
-  sectionAction: { fontSize: 14, fontWeight: '700', color: C.primary },
-  optBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: C.card, alignItems: 'center', justifyContent: 'center', ...shadow },
-  challenge: { borderRadius: R.lg, padding: 20, flexDirection: 'row', alignItems: 'center', overflow: 'hidden', minHeight: 200 },
-  deco1: { position: 'absolute', width: 220, height: 220, borderRadius: 110, backgroundColor: 'rgba(255,255,255,0.10)', right: -70, top: -60 },
-  deco2: { position: 'absolute', width: 120, height: 120, borderRadius: 60, backgroundColor: 'rgba(255,255,255,0.08)', right: 60, bottom: -60 },
-  kickerRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  kicker: { color: 'rgba(255,255,255,0.92)', fontSize: 13, fontWeight: '800' },
-  dayBig: { color: C.white, fontSize: 40, fontWeight: '900', letterSpacing: -1, marginTop: 4 },
-  dayMeta: { color: 'rgba(255,255,255,0.88)', fontSize: 12, fontWeight: '600', marginTop: 2 },
-  daysRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 14, marginRight: 8 },
-  daysText: { color: C.white, fontSize: 12, fontWeight: '800' },
-  thinTrack: { height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.3)', marginTop: 6, marginRight: 8, overflow: 'hidden' },
-  thinFill: { height: '100%', backgroundColor: C.white, borderRadius: 2 },
-  startPill: { alignSelf: 'flex-start', backgroundColor: C.white, borderRadius: R.pill, paddingHorizontal: 26, height: 40, justifyContent: 'center', marginTop: 16 },
-  startText: { fontSize: 14, fontWeight: '900', letterSpacing: 1 },
-  challengeEmoji: { fontSize: 76, marginLeft: 4 },
-  stepsCard: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
-  stepsBig: { fontSize: 18, fontWeight: '900', color: C.text },
-  stepsOf: { fontSize: 13, fontWeight: '600', color: C.muted },
-  summary: { flexDirection: 'row', alignItems: 'center', marginTop: 10, paddingVertical: 12 },
-  sumValue: { fontSize: 17, fontWeight: '900', color: C.text },
-  vDivider: { width: 1, height: 28, backgroundColor: C.borderSoft },
-  actRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 },
-  actBorder: { borderTopWidth: 1, borderTopColor: C.borderSoft },
+  heroShell: { borderRadius: R.xl, overflow: 'hidden' },
+  challenge: { borderRadius: R.xl, padding: 20, overflow: 'hidden' },
+  kickerPill: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', backgroundColor: 'rgba(255,255,255,0.18)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: R.pill },
+  kicker: { color: C.white, fontSize: 12, fontWeight: '700' },
+  challengeMid: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 12 },
+  dayBig: { color: C.white, fontSize: 40, fontWeight: '800', letterSpacing: -1.2, fontVariant: ['tabular-nums'] },
+  dayMeta: { color: 'rgba(255,255,255,0.9)', fontSize: 13, fontWeight: '600', marginTop: 2 },
+  heroDisc: { width: 92, height: 92, borderRadius: 46, backgroundColor: 'rgba(255,255,255,0.16)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.24)', alignItems: 'center', justifyContent: 'center' },
+  challengeEmoji: { fontSize: 50 },
+  daysRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 18 },
+  daysText: { color: C.white, fontSize: 12, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  startPill: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', backgroundColor: C.white, borderRadius: R.pill, paddingHorizontal: 24, height: 44, marginTop: 18, ...shadowSm },
+  startText: { fontSize: 14, fontWeight: '800', letterSpacing: 1 },
+  stepsCard: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14 },
+  stepsBig: { fontSize: 20, fontWeight: '800', color: C.text, fontVariant: ['tabular-nums'], letterSpacing: -0.4 },
+  stepsOf: { fontSize: 13, fontWeight: '600', color: C.muted, letterSpacing: 0 },
+  summary: { flexDirection: 'row', alignItems: 'center', marginTop: 10, paddingVertical: 14 },
+  sumValue: { fontSize: 18, fontWeight: '800', color: C.text, fontVariant: ['tabular-nums'], letterSpacing: -0.3 },
+  vDivider: { width: StyleSheet.hairlineWidth * 2, height: 40, backgroundColor: C.borderSoft },
+  actRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, paddingHorizontal: 8, marginHorizontal: -8, borderRadius: R.sm },
+  actBorder: { borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: C.borderSoft, borderTopLeftRadius: 0, borderTopRightRadius: 0 },
+  rowPressed: { backgroundColor: C.surfaceAlt },
   actEmoji: { width: 44, height: 44, borderRadius: 14, backgroundColor: C.workoutSoft, alignItems: 'center', justifyContent: 'center' },
-  actTitle: { fontSize: 15, fontWeight: '700', color: C.text, marginBottom: 2 },
-  trash: { width: 34, height: 34, borderRadius: 17, backgroundColor: C.dangerSoft, alignItems: 'center', justifyContent: 'center' },
-  carousel: { gap: 12, paddingHorizontal: 16 },
+  actTitle: { fontSize: 15, fontWeight: '700', color: C.text, marginBottom: 3, letterSpacing: -0.1 },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  metaText: { fontSize: 13, color: C.textSoft, fontWeight: '500' },
+  carousel: { gap: 12, paddingHorizontal: 16, paddingBottom: 4 },
+  cShell: { borderRadius: R.lg, overflow: 'hidden' },
   cCard: { width: 240, height: 150, borderRadius: R.lg, padding: 16, overflow: 'hidden' },
-  cDeco: { position: 'absolute', width: 160, height: 160, borderRadius: 80, backgroundColor: 'rgba(255,255,255,0.12)', right: -40, bottom: -60 },
-  cEmoji: { position: 'absolute', right: 12, bottom: 8, fontSize: 64 },
-  cTitle: { color: C.white, fontSize: 18, fontWeight: '900', maxWidth: 160, lineHeight: 22 },
-  cSub: { color: 'rgba(255,255,255,0.9)', fontSize: 12, fontWeight: '700', marginTop: 4 },
+  cEmoji: { position: 'absolute', right: 14, bottom: 10, fontSize: 58 },
+  cTitle: { color: C.white, fontSize: 18, fontWeight: '700', maxWidth: 160, lineHeight: 22, letterSpacing: -0.3 },
+  cSub: { color: 'rgba(255,255,255,0.9)', fontSize: 12, fontWeight: '600', marginTop: 4 },
   cStart: { position: 'absolute', left: 16, bottom: 14, flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: C.white, borderRadius: R.pill, paddingHorizontal: 12, height: 28 },
-  cStartText: { fontSize: 12, fontWeight: '900' },
-  tabs: { paddingHorizontal: 16, gap: 22 },
-  tab: { alignItems: 'center', paddingTop: 2 },
-  tabText: { fontSize: 15, fontWeight: '700', color: C.muted },
-  tabTextOn: { color: C.text, fontWeight: '900' },
-  tabLine: { height: 3, borderRadius: 2, alignSelf: 'stretch', marginTop: 6, backgroundColor: 'transparent' },
-  focusRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 },
-  focusTile: { width: 56, height: 56, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  roundArrow: { width: 34, height: 34, borderRadius: 17, backgroundColor: C.primarySoft, alignItems: 'center', justifyContent: 'center' },
-  chips: { gap: 8, paddingHorizontal: 16, paddingBottom: 14 },
+  cStartText: { fontSize: 12, fontWeight: '800' },
+  chips: { gap: 8, paddingHorizontal: 16, paddingBottom: 12 },
+  focusRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, paddingHorizontal: 8, marginHorizontal: -8, borderRadius: R.sm },
+  focusTile: { width: 52, height: 52, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 12 },
-  wCard: { width: '48.3%', backgroundColor: C.card, borderRadius: R.lg, ...shadow },
-  wHead: { height: 96, alignItems: 'center', justifyContent: 'center', borderTopLeftRadius: R.lg, borderTopRightRadius: R.lg },
-  wTime: { position: 'absolute', left: 8, bottom: 8, flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: 'rgba(255,255,255,0.9)', borderRadius: R.pill, paddingHorizontal: 7, paddingVertical: 3 },
-  wTimeText: { fontSize: 11, fontWeight: '800', color: C.text },
+  wCell: { width: '48.3%' },
+  wCard: { backgroundColor: C.card, borderRadius: R.lg, borderWidth: StyleSheet.hairlineWidth, borderColor: C.borderSoft, overflow: 'hidden', ...shadowSm },
+  wHead: { height: 96, alignItems: 'center', justifyContent: 'center' },
+  wTime: { position: 'absolute', left: 8, bottom: 8, flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: C.card, borderRadius: R.pill, paddingHorizontal: 7, paddingVertical: 3 },
+  wTimeText: { fontSize: 11, fontWeight: '700', color: C.text, fontVariant: ['tabular-nums'] },
   wDone: { position: 'absolute', right: 8, top: 8, width: 22, height: 22, borderRadius: 11, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center' },
-  wTitle: { fontSize: 14, fontWeight: '800', color: C.text, minHeight: 36, lineHeight: 18 },
-  wMeta: { fontSize: 12, color: C.textSoft, fontWeight: '600', marginTop: 4 },
+  wTitle: { fontSize: 14, fontWeight: '700', color: C.text, minHeight: 36, lineHeight: 18, letterSpacing: -0.1 },
+  wMeta: { fontSize: 12, color: C.textSoft, fontWeight: '600' },
   wCoach: { fontSize: 11, color: C.muted, fontWeight: '600', marginTop: 3 },
   goalPick: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 18 },
   goalOpt: { width: 42, height: 42, borderRadius: 21, borderWidth: 1.5, borderColor: C.border, alignItems: 'center', justifyContent: 'center', backgroundColor: C.card },
-  goalOptOn: { backgroundColor: C.primary, borderColor: C.primary },
-  goalOptText: { fontSize: 16, fontWeight: '800', color: C.text },
+  goalOptOn: { backgroundColor: C.primaryDark, borderColor: C.primaryDark },
+  goalOptText: { fontSize: 16, fontWeight: '700', color: C.text, fontVariant: ['tabular-nums'] },
+  goalHint: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 16, backgroundColor: C.surfaceAlt, borderRadius: R.sm, paddingHorizontal: 12, paddingVertical: 10 },
   actGrid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 14 },
   actItem: { width: '25%', alignItems: 'center', gap: 6 },
-  actCircle: { width: 58, height: 58, borderRadius: 29, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'transparent' },
-  actCircleOn: { backgroundColor: C.primarySoft, borderColor: C.primary },
-  actLabel: { fontSize: 12, fontWeight: '700', color: C.textSoft },
+  actTile: { width: 58, height: 58, borderRadius: 18, backgroundColor: C.surfaceAlt, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: C.borderSoft },
+  actTileOn: { backgroundColor: C.primarySoft, borderColor: C.primary },
+  actLabel: { fontSize: 12, fontWeight: '600', color: C.textSoft },
   durRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 22 },
   kcalBox: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: C.accentSoft, borderRadius: R.md, padding: 14, marginTop: 18 },
-  kcalBig: { fontSize: 22, fontWeight: '800', color: C.text },
+  kcalEmoji: { width: 44, height: 44, borderRadius: 14, backgroundColor: C.card, alignItems: 'center', justifyContent: 'center' },
+  kcalBig: { fontSize: 22, fontWeight: '800', color: C.text, fontVariant: ['tabular-nums'], letterSpacing: -0.4 },
+  kcalUnit: { fontSize: 14, fontWeight: '600', color: C.textSoft, letterSpacing: 0 },
 });

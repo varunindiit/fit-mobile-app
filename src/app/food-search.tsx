@@ -2,14 +2,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import Animated, { interpolate, interpolateColor, useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming, ZoomIn, ZoomOut } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { EmojiTile, fmtNum, goBack, isDateKey, isMeal, MealChips, VegDot } from '@/components/food/shared';
-import { Button, Chip, EmptyState, Header, IconButton, T, tap, useToast } from '@/components/ui';
+import { Button, Chip, CountUp, EmptyState, enter, fadeEnter, Header, IconButton, PressableScale, T, tap, useToast, type IconName } from '@/components/ui';
 import { FOOD_CATEGORIES, FOODS, foodById, mealLabel, POPULAR_IDS, type Food, type MealKey } from '@/data/foods';
 import { currentMeal, relDay, todayKey } from '@/lib/calc';
 import { useStore } from '@/lib/store';
-import { C, R } from '@/theme';
+import { C, MOTION, R, shadow } from '@/theme';
 
 type Cat = (typeof FOOD_CATEGORIES)[number];
 // Hide the browser focus ring on react-native-web.
@@ -23,6 +24,7 @@ export default function FoodSearchScreen() {
   const [meal, setMeal] = useState<MealKey>(isMeal(params.meal) ? params.meal : (currentMeal() as MealKey));
   const date = isDateKey(params.date) ? params.date : todayKey();
   const [query, setQuery] = useState('');
+  const [focused, setFocused] = useState(false);
   const [cat, setCat] = useState<Cat>('All');
   const [justAdded, setJustAdded] = useState<Record<string, boolean>>({});
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -68,84 +70,116 @@ export default function FoodSearchScreen() {
     <View style={[st.root, { paddingTop: insets.top }]}>
       <Header
         title={`Add to ${mealLabel(meal)}`}
-        right={<IconButton icon="camera-outline" onPress={() => router.push({ pathname: '/snap', params: { meal, date } })} />}
+        right={<IconButton icon="camera-outline" bordered onPress={() => router.push({ pathname: '/snap', params: { meal, date } })} />}
       />
-      {date !== todayKey() && <Text style={st.dateNote}>Logging for {relDay(date)}</Text>}
+      {date !== todayKey() && (
+        <View style={st.dateNote}>
+          <Ionicons name="calendar-outline" size={12} color={C.accent} />
+          <Text style={st.dateNoteText}>Logging for {relDay(date)}</Text>
+        </View>
+      )}
       <MealChips value={meal} onChange={setMeal} style={{ flexGrow: 0, marginTop: 4 }} />
 
-      <View style={st.searchWrap}>
-        <Ionicons name="search" size={20} color={C.muted} />
+      <View style={[st.searchWrap, focused && st.searchFocus]}>
+        <Ionicons name="search" size={19} color={focused ? C.primary : C.muted} />
         <TextInput
           value={query}
           onChangeText={setQuery}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
           placeholder="Search dal, roti, paneer, chai…"
           placeholderTextColor={C.muted}
           style={[st.input, webNoOutline]}
           returnKeyType="search"
           autoCorrect={false}
           autoCapitalize="none"
+          selectionColor={C.primary}
         />
         {!!query && (
-          <Pressable hitSlop={10} onPress={() => setQuery('')}>
-            <Ionicons name="close-circle" size={20} color={C.muted} />
-          </Pressable>
+          <Animated.View entering={ZoomIn.duration(MOTION.fast)} exiting={ZoomOut.duration(MOTION.fast)}>
+            <Pressable hitSlop={10} onPress={() => setQuery('')} accessibilityRole="button" accessibilityLabel="Clear search">
+              <Ionicons name="close-circle" size={20} color={C.muted} />
+            </Pressable>
+          </Animated.View>
         )}
       </View>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={st.cats} keyboardShouldPersistTaps="handled">
         {FOOD_CATEGORIES.map((c) => (
-          <Chip key={c} label={c} selected={cat === c} onPress={() => setCat(c)} color={C.navy} style={{ height: 32 }} />
+          <Chip key={c} label={c} selected={cat === c} onPress={() => setCat(c)} style={{ height: 34 }} />
         ))}
       </ScrollView>
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView style={{ flex: 1 }} contentContainerStyle={st.list} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
           {browsing ? (
-            <>
+            <Animated.View key="browse" entering={fadeEnter()}>
               {recent.length > 0 && (
-                <>
-                  <Text style={[T.label, st.section]}>Recently logged</Text>
+                <Animated.View entering={enter(0)}>
+                  <SectionLabel icon="time-outline" text="Recently logged" />
                   <View style={st.group}>{recent.map(row)}</View>
-                </>
+                </Animated.View>
               )}
-              <Text style={[T.label, st.section]}>Popular in India</Text>
-              <View style={st.group}>{popular.map(row)}</View>
-            </>
+              <Animated.View entering={enter(1)}>
+                <SectionLabel icon="flame-outline" text="Popular in India" />
+                <View style={st.group}>{popular.map(row)}</View>
+              </Animated.View>
+            </Animated.View>
           ) : results.length ? (
-            <>
-              <Text style={[T.label, st.section]}>
-                {results.length} {results.length === 1 ? 'result' : 'results'}
-                {cat !== 'All' ? ` in ${cat}` : ''}
-              </Text>
+            <Animated.View key="results" entering={fadeEnter()}>
+              <SectionLabel
+                icon="search-outline"
+                text={`${results.length} ${results.length === 1 ? 'result' : 'results'}${cat !== 'All' ? ` in ${cat}` : ''}`}
+              />
               <View style={st.group}>{results.map(row)}</View>
-            </>
+            </Animated.View>
           ) : (
-            <EmptyState
-              emoji="🔍"
-              title={`No results for '${query.trim()}'`}
-              text={cat !== 'All' ? `Nothing matched in ${cat}. Try "All" or snap a photo and let AI identify it.` : 'Try a different spelling, or snap a photo and let AI identify it.'}
-              action="Snap it instead"
-              onAction={() => router.push({ pathname: '/snap', params: { meal, date } })}
-            />
+            <Animated.View key="empty" entering={fadeEnter()}>
+              <EmptyState
+                icon="search-outline"
+                title={`No results for '${query.trim()}'`}
+                text={cat !== 'All' ? `Nothing matched in ${cat}. Try "All" or snap a photo and let AI identify it.` : 'Try a different spelling, or snap a photo and let AI identify it.'}
+                action="Snap it instead"
+                onAction={() => router.push({ pathname: '/snap', params: { meal, date } })}
+              />
+            </Animated.View>
           )}
         </ScrollView>
 
         <View style={[st.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
           <View style={{ flex: 1 }}>
             {session.length ? (
-              <>
-                <Text style={st.footTitle}>
-                  {session.length} item{session.length > 1 ? 's' : ''} added
-                </Text>
-                <Text style={T.tiny}>{fmtNum(sessionKcal)} kcal logged</Text>
-              </>
+              <Animated.View key="added" entering={fadeEnter()} style={st.footRow}>
+                <View style={st.footBadge}>
+                  <Text style={st.footBadgeText}>{session.length}</Text>
+                </View>
+                <View>
+                  <Text style={st.footTitle}>
+                    item{session.length > 1 ? 's' : ''} added
+                  </Text>
+                  <CountUp value={sessionKcal} format={fmtNum} style={T.tiny}>
+                    {' kcal logged'}
+                  </CountUp>
+                </View>
+              </Animated.View>
             ) : (
-              <Text style={T.small}>Tap + to quick-add 1 serving</Text>
+              <Animated.View key="hint" entering={fadeEnter()}>
+                <Text style={T.small}>Tap + to quick-add 1 serving</Text>
+              </Animated.View>
             )}
           </View>
           <Button title="Done" small onPress={goBack} style={{ paddingHorizontal: 28 }} variant={session.length ? 'primary' : 'outline'} />
         </View>
       </KeyboardAvoidingView>
+    </View>
+  );
+}
+
+function SectionLabel({ icon, text }: { icon: IconName; text: string }) {
+  return (
+    <View style={st.section}>
+      <Ionicons name={icon} size={13} color={C.muted} />
+      <Text style={T.label}>{text}</Text>
     </View>
   );
 }
@@ -157,7 +191,7 @@ function FoodRow({ food, added, onAdd, onPress, last }: { food: Food; added: boo
         tap();
         onPress();
       }}
-      style={({ pressed }) => [st.row, !last && st.rowBorder, pressed && { backgroundColor: C.bg }]}>
+      style={({ pressed }) => [st.row, pressed && { backgroundColor: C.surfaceAlt }]}>
       <EmojiTile food={food} />
       <View style={{ flex: 1 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -167,37 +201,71 @@ function FoodRow({ food, added, onAdd, onPress, last }: { food: Food; added: boo
           </Text>
         </View>
         <Text style={st.unit} numberOfLines={1}>
-          {food.unit} · <Text style={{ color: C.text, fontWeight: '700' }}>{food.kcal} kcal</Text>
+          {food.unit} · <Text style={st.kcal}>{food.kcal} kcal</Text>
         </Text>
       </View>
-      <Pressable
-        hitSlop={8}
+      <AddButton
+        added={added}
         onPress={() => {
           tap();
           onAdd();
         }}
-        style={({ pressed }) => [st.plus, added && st.plusDone, pressed && { transform: [{ scale: 0.92 }] }]}>
-        <Ionicons name={added ? 'checkmark' : 'add'} size={22} color={added ? C.white : C.primary} />
-      </Pressable>
+      />
+      {!last && <View style={st.sep} />}
     </Pressable>
+  );
+}
+
+/** "+" that morphs into a filled check with a small pop when the item is added. */
+function AddButton({ added, onPress }: { added: boolean; onPress: () => void }) {
+  const p = useSharedValue(added ? 1 : 0);
+  const pop = useSharedValue(1);
+  useEffect(() => {
+    p.set(withTiming(added ? 1 : 0, { duration: MOTION.base }));
+    if (added) pop.set(withSequence(withTiming(1.18, { duration: MOTION.fast }), withSpring(1, MOTION.pressSpring)));
+  }, [added, p, pop]);
+  const box = useAnimatedStyle(() => ({
+    backgroundColor: interpolateColor(p.get(), [0, 1], [C.primarySoft, C.primary]),
+    borderColor: interpolateColor(p.get(), [0, 1], [C.primaryTint, C.primary]),
+    transform: [{ scale: pop.get() }],
+  }));
+  const plus = useAnimatedStyle(() => ({ opacity: 1 - p.get(), transform: [{ rotate: `${p.get() * 90}deg` }, { scale: 1 - p.get() * 0.4 }] }));
+  const check = useAnimatedStyle(() => ({ opacity: p.get(), transform: [{ scale: interpolate(p.get(), [0, 1], [0.4, 1]) }] }));
+  return (
+    <PressableScale scaleTo={0.88} hitSlop={8} onPress={onPress} accessibilityRole="button" accessibilityLabel={added ? 'Added' : 'Quick add'}>
+      <Animated.View style={[st.plus, box]}>
+        <Animated.View style={[st.glyph, plus]}>
+          <Ionicons name="add" size={22} color={C.primaryDark} />
+        </Animated.View>
+        <Animated.View style={[st.glyph, check]}>
+          <Ionicons name="checkmark" size={20} color={C.white} />
+        </Animated.View>
+      </Animated.View>
+    </PressableScale>
   );
 }
 
 const st = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
-  dateNote: { textAlign: 'center', fontSize: 12, fontWeight: '700', color: C.accent, marginTop: -4, marginBottom: 4 },
-  searchWrap: { flexDirection: 'row', alignItems: 'center', gap: 10, marginHorizontal: 16, marginTop: 12, paddingHorizontal: 14, height: 50, borderRadius: R.pill, backgroundColor: C.card, borderWidth: 1.5, borderColor: C.border },
+  dateNote: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, alignSelf: 'center', backgroundColor: C.accentSoft, paddingHorizontal: 10, height: 24, borderRadius: R.pill, marginTop: -2, marginBottom: 6 },
+  dateNoteText: { fontSize: 12, fontWeight: '700', color: C.accent },
+  searchWrap: { flexDirection: 'row', alignItems: 'center', gap: 10, marginHorizontal: 16, marginTop: 12, paddingHorizontal: 14, height: 50, borderRadius: 14, backgroundColor: C.card, borderWidth: 1, borderColor: C.border },
+  searchFocus: { borderColor: C.primary },
   input: { flex: 1, fontSize: 16, color: C.text, height: '100%' },
   cats: { gap: 8, paddingHorizontal: 16, paddingVertical: 12 },
   list: { paddingHorizontal: 16, paddingBottom: 24 },
-  section: { marginTop: 8, marginBottom: 8 },
-  group: { backgroundColor: C.card, borderRadius: R.lg, overflow: 'hidden', marginBottom: 12 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 11 },
-  rowBorder: { borderBottomWidth: 1, borderBottomColor: C.borderSoft },
-  name: { flex: 1, fontSize: 15, fontWeight: '700', color: C.text },
-  unit: { fontSize: 12, color: C.muted, marginTop: 3 },
-  plus: { width: 36, height: 36, borderRadius: 18, borderWidth: 1.5, borderColor: C.primary, alignItems: 'center', justifyContent: 'center', backgroundColor: C.primarySoft },
-  plusDone: { backgroundColor: C.primary },
-  footer: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingTop: 12, backgroundColor: C.card, borderTopWidth: 1, borderTopColor: C.borderSoft },
-  footTitle: { fontSize: 15, fontWeight: '800', color: C.text },
+  section: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6, marginBottom: 10, marginLeft: 2 },
+  group: { backgroundColor: C.card, borderRadius: R.lg, overflow: 'hidden', marginBottom: 14, borderWidth: StyleSheet.hairlineWidth, borderColor: C.borderSoft, ...shadow },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 11, minHeight: 68 },
+  sep: { position: 'absolute', left: 72, right: 0, bottom: 0, height: StyleSheet.hairlineWidth * 2, backgroundColor: C.borderSoft },
+  name: { flex: 1, fontSize: 15, fontWeight: '600', color: C.text },
+  unit: { fontSize: 12, color: C.muted, marginTop: 4 },
+  kcal: { color: C.text, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  plus: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  glyph: { position: 'absolute', alignItems: 'center', justifyContent: 'center' },
+  footer: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingTop: 12, backgroundColor: C.card, borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: C.borderSoft },
+  footRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  footBadge: { minWidth: 30, height: 30, paddingHorizontal: 8, borderRadius: 15, backgroundColor: C.primarySoft, alignItems: 'center', justifyContent: 'center' },
+  footBadgeText: { fontSize: 14, fontWeight: '800', color: C.primaryDark, fontVariant: ['tabular-nums'] },
+  footTitle: { fontSize: 15, fontWeight: '700', color: C.text },
 });
