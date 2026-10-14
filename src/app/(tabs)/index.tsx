@@ -71,7 +71,8 @@ const MEAL_TINT: Record<string, { color: string; bg: string; bar: string }> = {
   eveningSnack: { color: C.steps, bg: C.stepsSoft, bar: C.steps },
   dinner: { color: C.water, bg: C.waterSoft, bar: C.water },
 };
-const TIP_W = 196;
+const TIP_W = 248;
+const TIP_TAG: Record<string, string> = { nutrition: 'Nutrition', 'pie-chart': 'Portions', walk: 'Activity', moon: 'Sleep' };
 const RIA_CHIPS: { label: string; icon: IconName }[] = [
   { label: 'Chat with Ria', icon: 'chatbubble-ellipses-outline' },
   { label: 'Meal ideas', icon: 'sparkles' },
@@ -638,21 +639,49 @@ export default function Home() {
             decelerationRate="fast"
             contentContainerStyle={{ gap: 12, paddingHorizontal: 16 }}
             style={{ marginHorizontal: -16 }}>
-            {TIPS.map((x, i) => (
-              <Card key={x.title} onPress={() => setTip(x)} style={st.tip}>
-                <IconTile icon={x.icon} size={44} color={TIP_TINT[i % TIP_TINT.length].color} bg={TIP_TINT[i % TIP_TINT.length].bg} />
-                <Text style={st.tipTitle} numberOfLines={2}>
-                  {x.title}
-                </Text>
-                <Text style={st.tipShort} numberOfLines={2}>
-                  {x.short}
-                </Text>
-                <View style={[st.link, { marginTop: 12 }]}>
-                  <Text style={st.linkText}>Read tip</Text>
-                  <Ionicons name="chevron-forward" size={14} color={C.primary} />
-                </View>
-              </Card>
-            ))}
+            {TIPS.map((x, i) => {
+              const tint = TIP_TINT[i % TIP_TINT.length];
+              return (
+                <PressableScale
+                  key={x.title}
+                  scaleTo={0.97}
+                  onPress={() => {
+                    tap();
+                    setTip(x);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Tip: ${x.title}`}
+                  style={st.tip}>
+                  <LinearGradient colors={[tint.bg, C.card]} start={{ x: 0, y: 0 }} end={{ x: 0.9, y: 1 }} style={st.tipBg}>
+                    <View pointerEvents="none" style={st.tipDecor}>
+                      <Ionicons name={x.icon} size={104} color={tint.color} />
+                    </View>
+                    <View style={st.tipHead}>
+                      <View style={[st.tipIcon, { backgroundColor: C.card }]}>
+                        <Ionicons name={x.icon} size={18} color={tint.color} />
+                      </View>
+                      <View style={[st.tipTag, { borderColor: tint.color + '33' }]}>
+                        <Text style={[st.tipTagText, { color: tint.color }]}>{TIP_TAG[x.icon] ?? 'Tip'}</Text>
+                      </View>
+                    </View>
+                    <Text style={st.tipTitle} numberOfLines={2}>
+                      {x.title}
+                    </Text>
+                    <Text style={st.tipShort} numberOfLines={1}>
+                      {x.short}
+                    </Text>
+                    <View style={st.tipFoot}>
+                      <Ionicons name="time-outline" size={13} color={C.muted} />
+                      <Text style={st.tipMeta}>1 min read</Text>
+                      <View style={{ flex: 1 }} />
+                      <View style={[st.tipGo, { backgroundColor: tint.color }]}>
+                        <Ionicons name="arrow-forward" size={15} color={C.white} />
+                      </View>
+                    </View>
+                  </LinearGradient>
+                </PressableScale>
+              );
+            })}
           </ScrollView>
         </Animated.View>
         </View>
@@ -796,8 +825,17 @@ const st = StyleSheet.create({
   premiumBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: C.gold, alignSelf: 'flex-start', paddingHorizontal: 14, height: 36, borderRadius: R.sm, marginTop: 14 },
   premiumBtnText: { fontWeight: '700', color: C.navy, fontSize: 14 },
   premiumArt: { width: 64, height: 64, borderRadius: 22, backgroundColor: 'rgba(245,196,81,0.12)', borderWidth: 1, borderColor: 'rgba(245,196,81,0.28)', alignItems: 'center', justifyContent: 'center' },
-  tip: { width: TIP_W },
-  tipTitle: { fontSize: 15, lineHeight: 20, height: 40, fontWeight: '700', color: C.text, marginTop: 12, letterSpacing: -0.2 },
-  tipShort: { fontSize: 13, lineHeight: 18, height: 36, color: C.textSoft, marginTop: 4 },
+  tip: { width: TIP_W, borderRadius: R.lg, ...shadowSm },
+  tipBg: { flex: 1, borderRadius: R.lg, padding: 16, overflow: 'hidden', borderWidth: StyleSheet.hairlineWidth * 2, borderColor: C.borderSoft },
+  tipDecor: { position: 'absolute', right: -18, bottom: -22, opacity: 0.08, transform: [{ rotate: '-12deg' }] },
+  tipHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  tipIcon: { width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center', ...shadowSm },
+  tipTag: { paddingHorizontal: 9, height: 22, borderRadius: 11, justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.7)', borderWidth: 1 },
+  tipTagText: { fontSize: 11, fontWeight: '800', letterSpacing: 0.4, textTransform: 'uppercase' },
+  tipTitle: { fontSize: 16, lineHeight: 21, fontWeight: '800', color: C.text, marginTop: 14, letterSpacing: -0.3 },
+  tipShort: { fontSize: 13, lineHeight: 18, color: C.textSoft, marginTop: 4 },
+  tipFoot: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 'auto', paddingTop: 14 },
+  tipMeta: { fontSize: 12, fontWeight: '600', color: C.muted },
+  tipGo: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
   sheetArt: { width: 84, height: 84, borderRadius: 28, backgroundColor: C.surfaceAlt, alignSelf: 'center', alignItems: 'center', justifyContent: 'center' },
 });
