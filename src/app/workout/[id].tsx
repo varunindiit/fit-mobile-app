@@ -13,6 +13,7 @@ import { workoutById, type Workout } from '@/data/fitness';
 import { pad, todayKey } from '@/lib/calc';
 import { useStore } from '@/lib/store';
 import { C, glow, MOTION, R, shadow, shadowSm } from '@/theme';
+import { Glyph } from '@/components/Glyph';
 
 type Phase = 'overview' | 'player' | 'done';
 type Run = { idx: number; left: number; elapsed: number; prep: number; finished: boolean };
@@ -158,12 +159,12 @@ function WorkoutFlow({ w }: { w: Workout }) {
         <StatusBar style="dark" />
         <ScrollView contentContainerStyle={st.doneWrap}>
           <Animated.View entering={nativeOnly(ZoomIn.springify().damping(11).stiffness(160))} style={st.doneDisc}>
-            <Text style={st.doneEmoji}>{result.completed ? '🎉' : '👏'}</Text>
+            <Glyph emoji={result.completed ? '🎉' : '👏'} size={78} color={C.primaryDark} />
           </Animated.View>
           <Animated.View entering={enter(1)} style={{ alignItems: 'center' }}>
             <Text style={[T.h1, { textAlign: 'center' }]}>{result.completed ? 'Workout complete!' : 'Good effort!'}</Text>
             <Text style={[T.body, { textAlign: 'center', marginTop: 6 }]}>
-              {w.emoji} {w.title} · {result.completed ? 'all exercises done' : 'ended early'}
+              {w.title} · {result.completed ? 'all exercises done' : 'ended early'}
             </Text>
           </Animated.View>
           <Animated.View entering={enter(2)} style={st.doneStats}>
@@ -174,7 +175,7 @@ function WorkoutFlow({ w }: { w: Workout }) {
           {rotis >= 1 && (
             <Animated.View entering={enter(3)} style={st.fact}>
               <View style={st.factTile}>
-                <Text style={{ fontSize: 22 }}>🫓</Text>
+                <Glyph emoji="🫓" size={30} />
               </View>
               <Text style={[T.small, { flex: 1, color: C.text }]}>
                 That&apos;s roughly <Text style={{ fontWeight: '800' }}>{rotis === 1 ? '1 roti' : `${rotis} rotis`}</Text> worth of energy. {result.completed ? 'Fantastic work!' : 'Every minute counts!'}
@@ -269,7 +270,7 @@ function WorkoutFlow({ w }: { w: Workout }) {
           <View style={{ flex: 1 }}>
             <Text style={st.nextKicker}>{prepping ? 'FIRST UP' : next ? 'UP NEXT' : 'LAST ONE'}</Text>
             <Text style={st.nextName} numberOfLines={1}>
-              {next ? `${next.name} · ${next.detail}` : 'Finish strong — you’ve got this! 💪'}
+              {next ? `${next.name} · ${next.detail}` : 'Finish strong — you’ve got this!'}
             </Text>
           </View>
         </View>
@@ -346,7 +347,7 @@ function WorkoutFlow({ w }: { w: Workout }) {
             </View>
           </View>
           <Animated.View entering={nativeOnly(ZoomIn.duration(MOTION.enter))} style={st.heroDisc}>
-            <Text style={st.heroEmoji}>{w.emoji}</Text>
+            <Glyph emoji={w.emoji} size={74} />
           </Animated.View>
           <Text style={st.heroTitle}>{w.title}</Text>
           <Text style={st.heroCoach}>{coachText}</Text>
@@ -467,7 +468,6 @@ const st = StyleSheet.create({
   catPill: { backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: R.pill },
   catText: { color: C.white, fontSize: 12, fontWeight: '700', letterSpacing: 0.2 },
   heroDisc: { width: 104, height: 104, borderRadius: 52, backgroundColor: 'rgba(255,255,255,0.18)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.26)', alignItems: 'center', justifyContent: 'center', marginTop: 4 },
-  heroEmoji: { fontSize: 58 },
   heroTitle: { color: C.white, fontSize: 28, fontWeight: '800', textAlign: 'center', marginTop: 12, letterSpacing: -0.7 },
   heroCoach: { color: 'rgba(255,255,255,0.9)', fontSize: 14, fontWeight: '600', marginTop: 4 },
   statsCard: { flexDirection: 'row', paddingVertical: 14, paddingHorizontal: 8 },
@@ -517,7 +517,6 @@ const st = StyleSheet.create({
 
   doneWrap: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
   doneDisc: { width: 128, height: 128, borderRadius: 64, backgroundColor: C.primarySoft, borderWidth: 6, borderColor: C.card, alignItems: 'center', justifyContent: 'center', marginBottom: 18, ...shadowSm },
-  doneEmoji: { fontSize: 64 },
   doneStats: { flexDirection: 'row', gap: 10, marginTop: 26, alignSelf: 'stretch' },
   doneStat: { flex: 1, backgroundColor: C.card, borderRadius: R.lg, paddingVertical: 16, alignItems: 'center', gap: 4, borderWidth: StyleSheet.hairlineWidth, borderColor: C.borderSoft, ...shadow },
   doneStatValue: { fontSize: 22, fontWeight: '800', color: C.text, marginTop: 6, fontVariant: ['tabular-nums'], letterSpacing: -0.4 },

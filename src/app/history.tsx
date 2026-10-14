@@ -10,6 +10,7 @@ import { Card, CountUp, EmptyState, enter, fadeEnter, Header, IconButton, IconTi
 import { pad, parseKey, relDay, todayKey } from '@/lib/calc';
 import { useStore, workoutDays, workoutStreak, type WorkoutLog } from '@/lib/store';
 import { C, R, shadow, shadowSm } from '@/theme';
+import { Glyph } from '@/components/Glyph';
 
 const firstOfMonth = (k: string) => {
   const d = parseKey(k);
@@ -166,7 +167,7 @@ function Row({ w, index }: { w: WorkoutLog; index: number }) {
   const body = (
     <>
       <View style={st.emoji}>
-        <Text style={{ fontSize: 22 }}>{w.emoji}</Text>
+        <Glyph emoji={w.emoji} size={30} />
       </View>
       <View style={{ flex: 1 }}>
         <Text style={st.rowTitle} numberOfLines={1}>

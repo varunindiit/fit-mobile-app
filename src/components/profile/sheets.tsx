@@ -106,7 +106,7 @@ export function LanguageSheet({ visible, onClose }: SheetProps) {
   );
 }
 
-const RATING_TEXT = ['', 'We can do better 😕', 'Needs work 🤔', "It's okay 🙂", 'Really good 😊', 'Love it! 😍'];
+const RATING_TEXT = ['', 'We can do better', 'Needs work', "It's okay", 'Really good', 'Love it!'];
 
 export function RateSheet({ visible, onClose }: SheetProps) {
   const toast = useToast();
@@ -141,7 +141,7 @@ export function RateSheet({ visible, onClose }: SheetProps) {
         style={{ marginTop: 18 }}
         onPress={() => {
           onClose();
-          toast(`Thanks for rating us ${'⭐'.repeat(rating)}`, 'star');
+          toast(`Thanks for rating us ${rating} star${rating === 1 ? '' : 's'}`, 'star');
         }}
       />
     </Sheet>

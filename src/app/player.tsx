@@ -237,7 +237,7 @@ function Player({ session, resume }: { session: Session; resume: boolean }) {
             </View>
           </View>
           <PressableScale scaleTo={0.98} accessibilityRole="button" accessibilityLabel={`About ${ex.name}`} onPress={() => (tap(), setInfo(idx))} style={s.preview}>
-            <ExerciseArt emoji={ex.emoji} width="100%" height={Math.round(artH * 0.62)} animated radius={R.lg} />
+            <ExerciseArt id={ex.id} emoji={ex.emoji} width="100%" height={Math.round(artH * 0.62)} animated radius={R.lg} />
             <View style={s.previewInfo}>
               <Ionicons name="information-circle" size={22} color={C.primaryDark} />
             </View>
@@ -286,7 +286,7 @@ function Player({ session, resume }: { session: Session; resume: boolean }) {
 
       <Animated.View style={[s.flex, fadeStyle]}>
         <View style={s.artFrame}>
-          <ExerciseArt emoji={ex.emoji} width="100%" height={artH} animated radius={R.xl} />
+          <ExerciseArt id={ex.id} emoji={ex.emoji} width="100%" height={artH} animated radius={R.xl} />
         </View>
 
         {phase === 'ready' ? (
@@ -331,7 +331,7 @@ function Player({ session, resume }: { session: Session; resume: boolean }) {
                 </PressableScale>
               )}
             </View>
-            {roomy && upNext && <NextUp emoji={exerciseById(upNext.exerciseId).emoji} name={exerciseById(upNext.exerciseId).name} value={itemLabel(upNext)} />}
+            {roomy && upNext && <NextUp id={upNext.exerciseId} emoji={exerciseById(upNext.exerciseId).emoji} name={exerciseById(upNext.exerciseId).name} value={itemLabel(upNext)} />}
             <View style={s.controls}>
               <PressableScale hitSlop={8} scaleTo={0.9} accessibilityRole="button" accessibilityLabel="Previous exercise" onPress={goPrev} style={[s.side, idx === 0 && { opacity: 0.45 }]}>
                 <View style={s.sideIcon}>
@@ -355,10 +355,10 @@ function Player({ session, resume }: { session: Session; resume: boolean }) {
   );
 }
 
-function NextUp({ emoji, name, value }: { emoji: string; name: string; value: string }) {
+function NextUp({ id, emoji, name, value }: { id: string; emoji: string; name: string; value: string }) {
   return (
     <View style={s.nextUp}>
-      <ExerciseArt emoji={emoji} size={40} radius={12} />
+      <ExerciseArt id={id} emoji={emoji} size={40} radius={12} />
       <View style={{ flex: 1 }}>
         <Text style={s.nextUpLabel}>NEXT UP</Text>
         <Text style={s.nextUpName} numberOfLines={1}>

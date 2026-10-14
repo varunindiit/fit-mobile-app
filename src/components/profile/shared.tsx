@@ -87,7 +87,7 @@ export function goalSummary(p: Pick<Profile, 'goal' | 'weightKg' | 'targetKg' | 
   const diff = Math.abs(p.weightKg - p.targetKg);
   if (p.goal === 'maintain') return { title: `Maintain ${fmtWeight(p.weightKg, units)}`, sub: 'Balanced intake to hold your weight steady' };
   if (p.goal === 'healthy') return { title: 'Get healthier', sub: 'Better nutrition, more energy, steady habits' };
-  if (t.weeks === 0) return { title: 'Goal weight reached 🎉', sub: `You're at ${fmtWeight(p.weightKg, units)} — set a new target` };
+  if (t.weeks === 0) return { title: 'Goal weight reached', sub: `You're at ${fmtWeight(p.weightKg, units)} — set a new target` };
   const verb = p.goal === 'lose' ? 'Lose' : 'Gain';
   return {
     title: `${verb} ${fmtWeight(diff, units)} by ${fmtFull(t.goalDate)}`,

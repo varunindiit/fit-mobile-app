@@ -34,6 +34,7 @@ import Svg, { Circle, Defs, LinearGradient as SvgGradient, Stop } from 'react-na
 
 import { C, glow, MOTION, R, shadow, shadowSm } from '@/theme';
 import { EASE_OUT, nativeOnly, PressableScale, useHeldWhileVisible, usePresence } from './motion';
+import { Glyph } from '@/components/Glyph';
 
 export { CountUp, Enter, enter, EASE_OUT, fadeEnter, layoutTransition, nativeOnly, PressableScale, Skeleton, useHeldWhileVisible, usePresence } from './motion';
 
@@ -310,7 +311,7 @@ export function OptionCard({
       style={[s.option, selected && s.optionSelected]}>
       {emoji ? (
         <View style={[s.optionEmoji, selected && { backgroundColor: C.white }]}>
-          <Text style={{ fontSize: 22 }}>{emoji}</Text>
+          <Glyph emoji={emoji} size={28} />
         </View>
       ) : icon ? (
         <View style={[s.optionEmoji, selected && { backgroundColor: C.white }]}>
@@ -516,7 +517,7 @@ export function EmptyState({ emoji, icon, title, text, action, onAction }: { emo
   return (
     <View style={s.empty}>
       <View style={s.emptyArt}>
-        {icon ? <Ionicons name={icon} size={30} color={C.primary} /> : <Text style={{ fontSize: 34 }}>{emoji}</Text>}
+        {icon ? <Ionicons name={icon} size={30} color={C.primary} /> : <Glyph emoji={emoji} size={42} />}
       </View>
       <Text style={[T.h3, { marginTop: 14, textAlign: 'center' }]}>{title}</Text>
       {text && <Text style={[T.small, { textAlign: 'center', marginTop: 6, lineHeight: 19, maxWidth: 280 }]}>{text}</Text>}
@@ -637,7 +638,7 @@ export function Dialog({ visible, title, text, icon, iconName, confirm = 'OK', c
             </View>
           ) : held.icon ? (
             <View style={s.dialogIcon}>
-              <Text style={{ fontSize: 30 }}>{held.icon}</Text>
+              <Glyph emoji={held.icon} size={38} color={held.danger ? C.danger : C.primaryDark} />
             </View>
           ) : null}
           <Text style={[T.h3, { textAlign: 'center', fontSize: 18 }]}>{held.title}</Text>

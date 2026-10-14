@@ -8,6 +8,7 @@ import Svg, { Circle } from 'react-native-svg';
 import { EASE_OUT, layoutTransition, nativeOnly, PressableScale, ProgressBar, tap } from '@/components/ui';
 import { PROGRAMS, type ProgramId } from '@/data/program';
 import { C, MOTION, R } from '@/theme';
+import { Glyph } from '@/components/Glyph';
 
 type Program = (typeof PROGRAMS)[number];
 
@@ -79,7 +80,7 @@ function PlanCard({ p, open, done, cta, onChange, onStart }: { p: Program; open:
             <Animated.View entering={bodyIn} exiting={bodyOut}>
               <View style={s.artRow}>
                 <View style={s.emojiDisc}>
-                  <Text style={s.bigEmoji}>{p.emoji}</Text>
+                  <Glyph emoji={p.emoji} size={70} />
                 </View>
                 <View style={s.users}>
                   <Ionicons name="people" size={14} color={C.white} />
@@ -129,7 +130,6 @@ const s = StyleSheet.create({
   arrow: { width: 30, height: 30, borderRadius: 15, backgroundColor: C.white, alignItems: 'center', justifyContent: 'center' },
   artRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 },
   emojiDisc: { width: 96, height: 96, borderRadius: 48, backgroundColor: 'rgba(255,255,255,0.16)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center' },
-  bigEmoji: { fontSize: 54 },
   users: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(255,255,255,0.18)', paddingHorizontal: 10, paddingVertical: 6, borderRadius: R.pill, alignSelf: 'flex-start' },
   usersText: { color: C.white, fontWeight: '700', fontSize: 12, fontVariant: ['tabular-nums'] },
   desc: { color: 'rgba(255,255,255,0.9)', fontSize: 14, marginTop: 14, lineHeight: 20 },

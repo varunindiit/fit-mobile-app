@@ -148,7 +148,7 @@ export default function StreakScreen() {
             {away === 0 ? (
               <>
                 <Text style={s.rewardStrong}>Amazing! </Text>
-                {"You've unlocked this week's reward 🎉"}
+                {"You've unlocked this week's reward"}
               </>
             ) : (
               <>

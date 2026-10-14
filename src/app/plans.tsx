@@ -25,6 +25,7 @@ import { COACHES, formatINR, PLAN_TIERS, TESTIMONIALS, type PlanTier } from '@/d
 import { fmtDate, todayKey } from '@/lib/calc';
 import { useStore } from '@/lib/store';
 import { C, G, glow, MOTION, R } from '@/theme';
+import { Glyph } from '@/components/Glyph';
 
 const COUPON = { code: 'FIT40', off: 400 };
 const METHODS: { id: string; title: string; sub: string; icon: IconName }[] = [
@@ -253,7 +254,7 @@ export default function PlansScreen() {
                       {COACHES.map((c) => (
                         <View key={c.name} style={st.coach}>
                           <View style={st.coachAvatar}>
-                            <Text style={{ fontSize: 30 }}>{c.emoji}</Text>
+                            <Glyph emoji={c.emoji} size={56} />
                           </View>
                           <View style={st.coachNameRow}>
                             <Text style={st.coachName} numberOfLines={1}>
@@ -603,7 +604,7 @@ function Success({ tier, months }: { tier: PlanTier; months: number }) {
         {tier === 'pro' && (
           <Animated.View entering={enter(6)} style={st.coachNote}>
             <View style={st.coachNoteAvatar}>
-              <Text style={{ fontSize: 24 }}>{COACHES[0].emoji}</Text>
+              <Glyph emoji={COACHES[0].emoji} size={44} />
             </View>
             <Text style={st.coachNoteText}>
               {COACHES[0].name}, your nutritionist, will message you within 24 hours to book your first video check-in.

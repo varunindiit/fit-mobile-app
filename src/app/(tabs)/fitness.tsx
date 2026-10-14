@@ -15,6 +15,7 @@ import { BODY_PARTS, FOCUS_SESSIONS, programById, programDay, PROGRAM_DAYS, sess
 import { kcalFromSteps, kmFromSteps, todayKey } from '@/lib/calc';
 import { burnedOn, useStore, weekProgress, workoutStreak, type WorkoutLog } from '@/lib/store';
 import { C, MOTION, R, shadowSm } from '@/theme';
+import { Glyph } from '@/components/Glyph';
 
 const SOURCE = Platform.OS === 'ios' ? 'Apple Health' : 'Google Fit';
 type Focus = (typeof FOCUS_SESSIONS)[number];
@@ -55,7 +56,7 @@ export default function TrainingScreen() {
   const goal = state.profile.weeklyGoal || 3;
   const [goalOpen, setGoalOpen] = useState(false);
   const [goalDraft, setGoalDraft] = useState(goal);
-  const nudge = wp.done >= goal ? 'Weekly goal smashed! 🎉 Keep the momentum going.' : wp.done === 0 ? "Haven't exercised yet this week? Let's wake up those muscles!" : `${goal - wp.done} more workout${goal - wp.done === 1 ? '' : 's'} to hit your weekly goal 💪`;
+  const nudge = wp.done >= goal ? 'Weekly goal smashed! Keep the momentum going.' : wp.done === 0 ? "Haven't exercised yet this week? Let's wake up those muscles!" : `${goal - wp.done} more workout${goal - wp.done === 1 ? '' : 's'} to hit your weekly goal 💪`;
 
   // Steps + today
   const steps = state.steps[today] ?? 0;
@@ -194,7 +195,7 @@ export default function TrainingScreen() {
                   <Text style={st.dayMeta}>{finished ? 'You finished all 30 days!' : session.restDay ? 'Rest day · recover & stretch' : `${stats.exercises} exercises · ${stats.minutes} min · ${stats.kcal} kcal`}</Text>
                 </View>
                 <View style={st.heroDisc}>
-                  <Text style={st.challengeEmoji}>{finished ? '🏆' : session.emoji}</Text>
+                  <Glyph emoji={finished ? '🏆' : session.emoji} size={64} />
                 </View>
               </View>
               <View style={st.daysRow}>
@@ -246,7 +247,7 @@ export default function TrainingScreen() {
                   <Animated.View key={w.id} entering={rowIn} exiting={rowOut} layout={listLayout}>
                     <Pressable onPress={() => linked && openLogged(w)} style={({ pressed }) => [st.actRow, i > 0 && st.actBorder, pressed && linked && st.rowPressed]}>
                       <View style={st.actEmoji}>
-                        <Text style={{ fontSize: 22 }}>{w.emoji}</Text>
+                        <Glyph emoji={w.emoji} size={30} />
                       </View>
                       <View style={{ flex: 1 }}>
                         <Text style={st.actTitle} numberOfLines={1}>
@@ -298,7 +299,7 @@ export default function TrainingScreen() {
                   }}
                   style={({ pressed }) => [st.focusRow, i > 0 && st.actBorder, pressed && st.rowPressed]}>
                   <LinearGradient colors={s.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.focusTile}>
-                    <Text style={{ fontSize: 26 }}>{s.emoji}</Text>
+                    <Glyph emoji={s.emoji} size={34} />
                   </LinearGradient>
                   <View style={{ flex: 1 }}>
                     <Text style={st.actTitle} numberOfLines={1}>
@@ -343,7 +344,7 @@ export default function TrainingScreen() {
                   }}
                   style={st.wCard}>
                   <View style={[st.wHead, { backgroundColor: w.color + '17' }]}>
-                    <Text style={{ fontSize: 40 }}>{w.emoji}</Text>
+                    <Glyph emoji={w.emoji} size={54} />
                     <View style={st.wTime}>
                       <Ionicons name="time-outline" size={11} color={C.text} />
                       <Text style={st.wTimeText}>{w.minutes} min</Text>
@@ -429,7 +430,7 @@ export default function TrainingScreen() {
                 }}
                 style={st.actItem}>
                 <View style={[st.actTile, on && st.actTileOn]}>
-                  <Text style={{ fontSize: 26 }}>{a.emoji}</Text>
+                  <Glyph emoji={a.emoji} size={34} />
                 </View>
                 <Text style={[st.actLabel, on && { color: C.primaryDark }]} numberOfLines={1}>
                   {a.label}
@@ -447,7 +448,7 @@ export default function TrainingScreen() {
         </View>
         <View style={st.kcalBox}>
           <View style={st.kcalEmoji}>
-            <Text style={{ fontSize: 24 }}>{act.emoji}</Text>
+            <Glyph emoji={act.emoji} size={32} />
           </View>
           <View style={{ flex: 1 }}>
             <CountUp value={actKcal} style={st.kcalBig}>
@@ -526,7 +527,7 @@ function Carousel({ items }: { items: Focus[] }) {
           style={[st.cShell, { backgroundColor: s.colors[1] }]}>
           <LinearGradient colors={s.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.cCard}>
             <Deco size={180} style={{ right: -50, bottom: -70 }} />
-            <Text style={st.cEmoji}>{s.emoji}</Text>
+            <Glyph emoji={s.emoji} size={72} style={st.cEmoji} />
             <Text style={st.cTitle} numberOfLines={2}>
               {s.title}
             </Text>
@@ -574,7 +575,6 @@ const st = StyleSheet.create({
   dayBig: { color: C.white, fontSize: 40, fontWeight: '800', letterSpacing: -1.2, fontVariant: ['tabular-nums'] },
   dayMeta: { color: 'rgba(255,255,255,0.9)', fontSize: 13, fontWeight: '600', marginTop: 2 },
   heroDisc: { width: 92, height: 92, borderRadius: 46, backgroundColor: 'rgba(255,255,255,0.16)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.24)', alignItems: 'center', justifyContent: 'center' },
-  challengeEmoji: { fontSize: 50 },
   daysRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 18 },
   daysText: { color: C.white, fontSize: 12, fontWeight: '700', fontVariant: ['tabular-nums'] },
   startPill: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', backgroundColor: C.white, borderRadius: R.pill, paddingHorizontal: 24, height: 44, marginTop: 18, ...shadowSm },
@@ -595,7 +595,7 @@ const st = StyleSheet.create({
   carousel: { gap: 12, paddingHorizontal: 16, paddingBottom: 4 },
   cShell: { borderRadius: R.lg, overflow: 'hidden' },
   cCard: { width: 240, height: 150, borderRadius: R.lg, padding: 16, overflow: 'hidden' },
-  cEmoji: { position: 'absolute', right: 14, bottom: 10, fontSize: 58 },
+  cEmoji: { position: 'absolute', right: 12, bottom: 8 },
   cTitle: { color: C.white, fontSize: 18, fontWeight: '700', maxWidth: 160, lineHeight: 22, letterSpacing: -0.3 },
   cSub: { color: 'rgba(255,255,255,0.9)', fontSize: 12, fontWeight: '600', marginTop: 4 },
   cStart: { position: 'absolute', left: 16, bottom: 14, flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: C.white, borderRadius: R.pill, paddingHorizontal: 12, height: 28 },

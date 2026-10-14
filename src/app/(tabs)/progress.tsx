@@ -248,7 +248,7 @@ function WeightSection({ onLog }: { onLog: () => void }) {
   if (maintain) headline = onTrack ? `On track · within ${Math.abs(offBy).toFixed(1)} kg of your ${target} kg target` : `${Math.abs(offBy).toFixed(1)} kg ${offBy > 0 ? 'above' : 'below'} your ${target} kg target`;
   else {
     const movedTxt = moved >= 0 ? `${moved.toFixed(1)} kg ${dir < 0 ? 'lost' : 'gained'}` : `${Math.abs(moved).toFixed(1)} kg ${dir < 0 ? 'gained' : 'lost'}`;
-    headline = `${movedTxt} · ${remaining > 0 ? `${remaining.toFixed(1)} kg to go` : 'Goal reached 🎉'}`;
+    headline = `${movedTxt} · ${remaining > 0 ? `${remaining.toFixed(1)} kg to go` : 'Goal reached'}`;
   }
 
   const b = bmi(current, p.heightCm);

@@ -7,6 +7,7 @@ import Animated, { ZoomIn } from 'react-native-reanimated';
 import { Chip, nativeOnly, Ring, type IconName } from '@/components/ui';
 import { MEALS, type Food, type MealKey } from '@/data/foods';
 import { C, MOTION, R } from '@/theme';
+import { Glyph } from '@/components/Glyph';
 
 export const isMeal = (m?: string | string[]): m is MealKey => typeof m === 'string' && MEALS.some((x) => x.key === m);
 export const isDateKey = (d?: string | string[]): d is string => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d);
@@ -64,7 +65,7 @@ export function VegDot({ type, size = 12, style }: { type: Food['type']; size?: 
 export function EmojiTile({ food, size = 46 }: { food: Food; size?: number }) {
   return (
     <View style={[st.tile, { width: size, height: size, borderRadius: size * 0.3, backgroundColor: foodBg(food) }]}>
-      <Text style={{ fontSize: size * 0.5 }}>{food.emoji}</Text>
+      <Glyph emoji={food.emoji} size={Math.round(size * 0.7)} />
     </View>
   );
 }

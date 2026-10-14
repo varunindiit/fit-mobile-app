@@ -78,7 +78,7 @@ type Ctx = ReturnType<typeof ctxOf>;
 function greeting(c: Ctx): string {
   const status = c.left >= 0 ? `${fmtNum(c.left)} kcal left` : `${fmtNum(-c.left)} kcal over`;
   const protein = c.protein < c.proteinT ? ` You still need ${c.proteinT - c.protein} g protein.` : ' Protein goal done — great job!';
-  return `Hi ${c.name} 👋 I'm Ria, your AI nutrition coach.\n\nToday you've eaten ${fmtNum(c.eaten)} of ${fmtNum(c.budget)} kcal — ${status}.${protein}\n\nAsk me anything about food, workouts or your goal!`;
+  return `Hi ${c.name}! I'm Ria, your AI nutrition coach.\n\nToday you've eaten ${fmtNum(c.eaten)} of ${fmtNum(c.budget)} kcal — ${status}.${protein}\n\nAsk me anything about food, workouts or your goal!`;
 }
 
 /* ---------- Canned, state-aware replies ---------- */
@@ -117,17 +117,17 @@ const LIGHT: Record<DietKind, Plate> = {
   nonveg: [['fish-curry', 1], ['green-salad', 1]],
 };
 const plateStats = (pl: Plate) => pl.reduce((a, [id, q]) => ({ kcal: a.kcal + food(id).kcal * q, protein: a.protein + food(id).protein * q }), { kcal: 0, protein: 0 });
-const plateLines = (pl: Plate) => pl.map(([id, q]) => `• ${food(id).emoji} ${q !== 1 ? `${q} × ` : ''}${food(id).name}`).join('\n');
+const plateLines = (pl: Plate) => pl.map(([id, q]) => `• ${q !== 1 ? `${q} × ` : ''}${food(id).name}`).join('\n');
 
 function reply(raw: string, c: Ctx): Reply {
   const q = raw.toLowerCase();
   const has = (...k: string[]) => k.some((x) => q.includes(x));
 
   if (/^(hi|hey|hello|namaste|hii+|yo)\b/.test(q.trim()) && q.length < 20)
-    return { text: `Namaste ${c.name}! 🙏 How can I help today? You can ask me what to eat, how you're doing, or for a quick workout.` };
+    return { text: `Namaste ${c.name}! How can I help today? You can ask me what to eat, how you're doing, or for a quick workout.` };
 
   if (has('thank'))
-    return { text: `Anytime, ${c.name}! 💚 Small, consistent steps win. I'm here 24×7 whenever you need me.` };
+    return { text: `Anytime, ${c.name}! Small, consistent steps win. I'm here 24×7 whenever you need me.` };
 
   if (has('biryani', 'pizza', 'burger', 'samosa', 'sweet', 'mithai', 'gulab', 'cheat', 'junk', 'dessert')) {
     if (has('biryani')) {
@@ -136,13 +136,13 @@ function reply(raw: string, c: Ctx): Reply {
       const kcal = nonveg ? b.kcal : b.kcal * 2;
       const fits = c.left >= kcal;
       return {
-        text: `Yes — in moderation! ${nonveg ? 'A plate of chicken biryani' : 'A 2-katori serving of veg biryani'} is ~${fmtNum(kcal)} kcal, mostly carbs.\n\nYou have ${fmtNum(Math.max(0, c.left))} kcal left today, so ${fits ? 'it fits — enjoy it guilt-free 🙌' : `a half portion (~${fmtNum(kcal / 2)} kcal) is the smarter choice today.`}\n\nMake it lighter:\n• Pair with raita & a big salad\n• ${nonveg ? 'Pick chicken over mutton' : 'Ask for extra veggies'}\n• Skip extra fried onions & ghee\n• Take a 20-min walk afterwards`,
+        text: `Yes — in moderation! ${nonveg ? 'A plate of chicken biryani' : 'A 2-katori serving of veg biryani'} is ~${fmtNum(kcal)} kcal, mostly carbs.\n\nYou have ${fmtNum(Math.max(0, c.left))} kcal left today, so ${fits ? 'it fits — enjoy it guilt-free' : `a half portion (~${fmtNum(kcal / 2)} kcal) is the smarter choice today.`}\n\nMake it lighter:\n• Pair with raita & a big salad\n• ${nonveg ? 'Pick chicken over mutton' : 'Ask for extra veggies'}\n• Skip extra fried onions & ghee\n• Take a 20-min walk afterwards`,
         action: { label: `Log ${b.name}`, icon: 'add-circle', href: { pathname: '/food/[id]', params: { id: b.id, meal: mealNow() } } },
       };
     }
     const s = food('makhana');
     return {
-      text: `Treats are totally okay — I follow the 80/20 rule: eat well 80% of the time and enjoy the rest mindfully. 😊\n\nKeep the portion small, have it earlier in the day, and balance with a lighter next meal. Craving something crunchy? ${s.emoji} ${s.name} is just ${s.kcal} kcal a cup.`,
+      text: `Treats are totally okay — I follow the 80/20 rule: eat well 80% of the time and enjoy the rest mindfully.\n\nKeep the portion small, have it earlier in the day, and balance with a lighter next meal. Craving something crunchy? ${s.emoji} ${s.name} is just ${s.kcal} kcal a cup.`,
       action: { label: `Log ${s.name}`, icon: 'add-circle', href: { pathname: '/food/[id]', params: { id: s.id, meal: snackMeal() } } },
     };
   }
@@ -152,7 +152,7 @@ function reply(raw: string, c: Ctx): Reply {
     const top = items[0];
     const gap = Math.max(0, c.proteinT - c.protein);
     return {
-      text: `Here are high-protein snacks for your ${c.diet} diet 💪\n\n${items.map((x) => `• ${x.emoji} ${x.name} — ${round1(x.protein)} g protein, ${x.kcal} kcal`).join('\n')}\n\n${gap > 0 ? `You're ${gap} g short of today's ${c.proteinT} g protein goal, so ${top.name} is a smart pick.` : "You've already hit today's protein goal — keep snacks light!"}`,
+      text: `Here are high-protein snacks for your ${c.diet} diet\n\n${items.map((x) => `• ${x.name} — ${round1(x.protein)} g protein, ${x.kcal} kcal`).join('\n')}\n\n${gap > 0 ? `You're ${gap} g short of today's ${c.proteinT} g protein goal, so ${top.name} is a smart pick.` : "You've already hit today's protein goal — keep snacks light!"}`,
       action: { label: `Log ${top.name}`, icon: 'add-circle', href: { pathname: '/food/[id]', params: { id: top.id, meal: snackMeal() } } },
     };
   }
@@ -171,7 +171,7 @@ function reply(raw: string, c: Ctx): Reply {
           : `You've used today's budget, but don't skip ${meal}. Keep it very light (~${fmtNum(s.kcal)} kcal):`;
     }
     return {
-      text: `${intro}\n\n${plateLines(plate)}\n\nTip: start with the salad — the fibre keeps you full longer. 🥗`,
+      text: `${intro}\n\n${plateLines(plate)}\n\nTip: start with the salad — the fibre keeps you full longer.`,
       action: { label: `Log ${meal}`, icon: 'add-circle', href: { pathname: '/food-search', params: { meal } } },
     };
   }
@@ -180,14 +180,14 @@ function reply(raw: string, c: Ctx): Reply {
     const pr = c.program;
     if (c.programDone >= PROGRAM_DAYS)
       return {
-        text: `You've completed all ${PROGRAM_DAYS} days of ${pr.emoji} ${pr.title}! 🏆 Time to level up — try the next program on the Training tab.`,
+        text: `You've completed all ${PROGRAM_DAYS} days of ${pr.title}! Time to level up — try the next program on the Training tab.`,
         action: { label: 'Browse programs', icon: 'barbell', href: '/fitness' },
       };
     const day = c.programDone + 1;
     const s = programDay(pr.id, day);
     if (s.restDay)
       return {
-        text: `Day ${day} of ${pr.emoji} ${pr.title} is a rest day 😴\n\nRecovery is when your core actually gets stronger. Go for a gentle walk, stretch, and aim for 7–8 hours of sleep tonight.`,
+        text: `Day ${day} of ${pr.title} is a rest day\n\nRecovery is when your core actually gets stronger. Go for a gentle walk, stretch, and aim for 7–8 hours of sleep tonight.`,
         action: { label: 'Open Training', icon: 'barbell', href: '/fitness' },
       };
     const stats = sessionStats(s, c.rest);
@@ -195,11 +195,11 @@ function reply(raw: string, c: Ctx): Reply {
       .slice(0, 4)
       .map((it) => {
         const ex = exerciseById(it.exerciseId);
-        return `• ${ex.emoji} ${ex.name} — ${it.reps ? `×${it.reps}` : `${it.seconds}s`}`;
+        return `• ${ex.name} — ${it.reps ? `×${it.reps}` : `${it.seconds}s`}`;
       })
       .join('\n');
     return {
-      text: `You're on ${pr.emoji} ${pr.title} (${pr.level}) — ${c.programDone}/${PROGRAM_DAYS} days done.\n\nNext up: Day ${day} · ${stats.exercises} exercises · ~${stats.minutes} min · ~${stats.kcal} kcal\n\n${list}${s.items.length > 4 ? `\n• +${s.items.length - 4} more` : ''}\n\nAbs are made in the kitchen too — ${c.left > 0 ? `you have ${fmtNum(c.left)} kcal left today.` : "you've reached today's calorie budget."}`,
+      text: `You're on ${pr.title} (${pr.level}) — ${c.programDone}/${PROGRAM_DAYS} days done.\n\nNext up: Day ${day} · ${stats.exercises} exercises · ~${stats.minutes} min · ~${stats.kcal} kcal\n\n${list}${s.items.length > 4 ? `\n• +${s.items.length - 4} more` : ''}\n\nAbs are made in the kitchen too — ${c.left > 0 ? `you have ${fmtNum(c.left)} kcal left today.` : "you've reached today's calorie budget."}`,
       action: { label: `Start Day ${day}`, icon: 'play-circle', href: { pathname: '/program-day', params: { key: s.key } } },
     };
   }
@@ -219,7 +219,7 @@ function reply(raw: string, c: Ctx): Reply {
     const w = workoutById(id)!;
     const stepsLeft = c.stepT - c.steps;
     return {
-      text: `Here's a ${w.minutes}-min ${w.title} ${w.emoji} — ~${w.kcal} kcal, ${w.level.toLowerCase()}, ${w.equipment.toLowerCase()}:\n\n${w.exercises.map((e) => `• ${e.name} — ${e.detail}`).join('\n')}\n\n${stepsLeft > 0 ? `You're also ${fmtNum(stepsLeft)} steps from your daily goal — a short walk later will close it.` : "You've already hit your step goal today. Amazing!"}`,
+      text: `Here's a ${w.minutes}-min ${w.title} — ~${w.kcal} kcal, ${w.level.toLowerCase()}, ${w.equipment.toLowerCase()}:\n\n${w.exercises.map((e) => `• ${e.name} — ${e.detail}`).join('\n')}\n\n${stepsLeft > 0 ? `You're also ${fmtNum(stepsLeft)} steps from your daily goal — a short walk later will close it.` : "You've already hit your step goal today. Amazing!"}`,
       action: { label: `Start ${w.title}`, icon: 'play-circle', href: `/workout/${w.id}` },
     };
   }
@@ -227,7 +227,7 @@ function reply(raw: string, c: Ctx): Reply {
   if (has('water', 'hydrat', 'drink')) {
     const done = c.water >= c.waterT;
     return {
-      text: `You've had ${c.water} of ${c.waterT} glasses of water today 💧\n\n${done ? 'Goal done — brilliant!' : `${c.waterT - c.water} more to go. Keep a bottle at your desk and have a glass before every meal — it also helps control hunger.`}`,
+      text: `You've had ${c.water} of ${c.waterT} glasses of water today\n\n${done ? 'Goal done — brilliant!' : `${c.waterT - c.water} more to go. Keep a bottle at your desk and have a glass before every meal — it also helps control hunger.`}`,
       action: { label: 'Add a glass of water', icon: 'water', water: true },
     };
   }
@@ -245,10 +245,10 @@ function reply(raw: string, c: Ctx): Reply {
         ? `You're ${fmtNum(-c.left)} kcal over — a 30-min brisk walk burns ~140 kcal.`
         : c.eaten < c.budget * 0.35 && new Date().getHours() >= 15
           ? "You're well under budget — don't skip meals, it leads to overeating at night."
-          : "You're right on track 👏";
+          : "You're right on track";
     const water = c.water < c.waterT / 2 ? ` Also, drink ${c.waterT - c.water} more glasses of water.` : '';
     return {
-      text: `Here's your day so far, ${c.name}:\n\n🍽️ Eaten: ${fmtNum(c.eaten)} / ${fmtNum(c.budget)} kcal\n🔥 Burned: ${fmtNum(c.burned)} kcal\n💪 Protein: ${c.protein} / ${c.proteinT} g\n💧 Water: ${c.water} / ${c.waterT} glasses\n👟 Steps: ${fmtNum(c.steps)} / ${fmtNum(c.stepT)}\n\n${verdict}${water}`,
+      text: `Here's your day so far, ${c.name}:\n\n• Eaten: ${fmtNum(c.eaten)} / ${fmtNum(c.budget)} kcal\n• Burned: ${fmtNum(c.burned)} kcal\n• Protein: ${c.protein} / ${c.proteinT} g\n• Water: ${c.water} / ${c.waterT} glasses\n• Steps: ${fmtNum(c.steps)} / ${fmtNum(c.stepT)}\n\n${verdict}${water}`,
       action: { label: 'Open my diary', icon: 'book', href: '/diary' },
     };
   }
@@ -266,7 +266,7 @@ function reply(raw: string, c: Ctx): Reply {
   if (has('premium', 'plan', 'price', 'subscription', 'upgrade', 'smart') || /\bpro\b/.test(q)) {
     return {
       text: c.premium
-        ? `You're already on Fitora ${c.premium.tier === 'pro' ? 'Pro' : 'Smart'} 👑 — enjoy unlimited chats with me!`
+        ? `You're already on Fitora ${c.premium.tier === 'pro' ? 'Pro' : 'Smart'} — enjoy unlimited chats with me!`
         : `Fitora Smart starts at ₹1,799 for 3 months and unlocks unlimited Ria chats, Snap scans and personalised plans. Pro adds your own nutritionist and trainer.`,
       action: { label: 'See plans', icon: 'diamond', href: '/plans' },
     };
@@ -274,13 +274,13 @@ function reply(raw: string, c: Ctx): Reply {
 
   if (has('sleep', 'tired', 'stress', 'energy')) {
     return {
-      text: `Sleep and stress affect weight more than most people think 😴\n\n• Aim for 7–8 hours, same time daily\n• No screens 30 min before bed\n• Finish dinner 2–3 hours before sleeping\n• Try 5 minutes of pranayama to unwind`,
+      text: `Sleep and stress affect weight more than most people think\n\n• Aim for 7–8 hours, same time daily\n• No screens 30 min before bed\n• Finish dinner 2–3 hours before sleeping\n• Try 5 minutes of pranayama to unwind`,
       action: { label: 'Start Morning Yoga Flow', icon: 'play-circle', href: '/workout/morning-yoga' },
     };
   }
 
   return {
-    text: `Hmm, I'm still learning about that one 🤔\n\nI can help with your calories, meals, high-protein snacks, workouts, water and weight goal. For anything medical, a Fitora Pro nutritionist is the best person to ask.`,
+    text: `Hmm, I'm still learning about that one\n\nI can help with your calories, meals, high-protein snacks, workouts, water and weight goal. For anything medical, a Fitora Pro nutritionist is the best person to ask.`,
     action: { label: 'Talk to a human coach', icon: 'people', href: { pathname: '/plans', params: { tier: 'pro' } } },
   };
 }

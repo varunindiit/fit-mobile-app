@@ -490,7 +490,7 @@ export default function Home() {
                 color={C.white}
                 onPress={() => {
                   setWater(water + 1);
-                  if (water + 1 === targets.water) toast('Water goal reached! 💧', 'trophy');
+                  if (water + 1 === targets.water) toast('Water goal reached!', 'trophy');
                 }}
               />
             </View>

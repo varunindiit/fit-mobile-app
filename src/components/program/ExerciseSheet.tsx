@@ -9,6 +9,7 @@ import { exerciseById, type SessionItem } from '@/data/program';
 import { C, MOTION, R } from '@/theme';
 import { ExerciseArt } from './ExerciseArt';
 import { fmtClock, focusColor } from './session';
+import { Glyph } from '@/components/Glyph';
 
 type Tab = 'animation' | 'muscle' | 'how';
 const TABS: { value: Tab; label: string }[] = [
@@ -76,14 +77,14 @@ export function ExerciseSheet({ visible, onClose, items, index }: { visible: boo
 
           <ScrollView key={i} style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 24 }} showsVerticalScrollIndicator={false}>
             <Animated.View key={tab} entering={nativeOnly(FadeIn.duration(MOTION.base))}>
-              {tab === 'animation' && <ExerciseArt key={ex.id} emoji={ex.emoji} width="100%" height={ART_H} animated radius={R.lg} />}
+              {tab === 'animation' && <ExerciseArt key={ex.id} id={ex.id} emoji={ex.emoji} width="100%" height={ART_H} animated radius={R.lg} />}
               {tab === 'muscle' && (
                 <View style={[s.box, { flexDirection: 'row', alignItems: 'center' }]}>
                   <View style={s.body}>
                     {ex.focus.map((f, k) => (
                       <View key={f} style={[s.glow, { backgroundColor: focusColor(f) + '33', top: 40 + k * 34, left: 18 + (k % 2) * 26 }]} />
                     ))}
-                    <Text style={{ fontSize: 120, lineHeight: 140 }}>🧍</Text>
+                    <Glyph emoji="🧍" size={150} />
                   </View>
                   <View style={{ flex: 1, gap: 8, paddingRight: 12 }}>
                     <Text style={T.label}>Target muscles</Text>

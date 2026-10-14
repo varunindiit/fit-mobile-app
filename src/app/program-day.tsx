@@ -31,6 +31,7 @@ import { Button, Card, EmptyState, enter, Header, IconTile, layoutTransition, na
 import { exerciseById, sessionStats, type Session, type SessionItem } from '@/data/program';
 import { useStore } from '@/lib/store';
 import { C, MOTION, R, shadowLg, shadowSm } from '@/theme';
+import { Glyph } from '@/components/Glyph';
 
 const goBack = () => (router.canGoBack() ? router.back() : router.replace('/fitness'));
 const REST_TIPS: { icon: IconName; color: string; bg: string; t: string }[] = [
@@ -216,7 +217,7 @@ function DayPlan({ session }: { session: Session }) {
               )}
             </View>
             <Animated.View style={[s.heroDisc, heroArt]}>
-              <Text style={s.heroEmoji}>{session.emoji}</Text>
+              <Glyph emoji={session.emoji} size={74} />
             </Animated.View>
           </Animated.View>
         </LinearGradient>
@@ -293,7 +294,7 @@ function DayPlan({ session }: { session: Session }) {
                             </Pressable>
                           </Animated.View>
                         )}
-                        <ExerciseArt emoji={ex.emoji} size={60} radius={R.sm} />
+                        <ExerciseArt id={ex.id} emoji={ex.emoji} size={60} radius={R.sm} />
                         <View style={{ flex: 1 }}>
                           <Text style={s.rowName} numberOfLines={2}>
                             {ex.name}
@@ -449,7 +450,7 @@ function RestDay({ done }: { done: boolean }) {
       <Animated.View entering={enter(0)}>
         <Card style={{ alignItems: 'center', paddingVertical: 24, paddingHorizontal: 20 }}>
           <View style={s.restArt}>
-            <Text style={{ fontSize: 52 }}>😴</Text>
+            <Glyph emoji="😴" size={66} />
           </View>
           <Text style={[T.h2, { textAlign: 'center', marginTop: 14 }]}>Recovery is part of training</Text>
           <Text style={[T.body, { textAlign: 'center', marginTop: 8 }]}>
@@ -484,7 +485,6 @@ const s = StyleSheet.create({
   doneBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', marginTop: 10, backgroundColor: 'rgba(255,255,255,0.22)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: R.pill },
   doneBadgeText: { color: C.white, fontSize: 12, fontWeight: '700' },
   heroDisc: { position: 'absolute', right: 0, top: 4, width: 104, height: 104, borderRadius: 52, backgroundColor: 'rgba(255,255,255,0.16)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.24)', alignItems: 'center', justifyContent: 'center' },
-  heroEmoji: { fontSize: 58 },
   body: { marginTop: -28, backgroundColor: C.bg, borderTopLeftRadius: R.xl, borderTopRightRadius: R.xl, paddingHorizontal: 16, paddingTop: 18 },
   stats: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14 },
   statDiv: { width: StyleSheet.hairlineWidth * 2, height: 44, backgroundColor: C.borderSoft },

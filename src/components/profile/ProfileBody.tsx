@@ -62,6 +62,7 @@ import {
   tint,
 } from './shared';
 import { LanguageSheet, RateSheet, WorkoutSettingsSheet } from './sheets';
+import { Glyph } from '@/components/Glyph';
 
 type SheetKind = null | 'diet' | 'medical' | 'help' | 'about' | 'workout' | 'language' | 'rate';
 type DialogKind = null | 'restart' | 'reset' | 'logout';
@@ -200,7 +201,7 @@ export function ProfileBody({ mode }: { mode: 'tab' | 'stack' }) {
               }}
               style={st.program}>
               <LinearGradient colors={program.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.progIcon}>
-                <Text style={{ fontSize: 22 }}>{program.emoji}</Text>
+                <Glyph emoji={program.emoji} size={30} />
               </LinearGradient>
               <View style={{ flex: 1 }}>
                 <Text style={st.progTitle}>{program.title}</Text>
