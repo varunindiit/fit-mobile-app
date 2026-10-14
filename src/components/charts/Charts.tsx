@@ -229,8 +229,13 @@ function LinePlot({
   const tipText = tooltip ? tooltip(sp) : `${format(sp.value)} · ${sp.label}`;
   const tipW = Math.max(72, tipText.length * 6.4 + 20);
   const tipX = Math.max(2, Math.min(w - tipW - 2, X(idx) - tipW / 2));
-  const tipYRaw = Y(sp.value) - 38;
-  const tipY = tipYRaw < 2 ? Y(sp.value) + 14 : tipYRaw;
+  // Prefer above the point; drop below when the box would cover a neighbouring point (or clip at the top).
+  const covers = (ty: number) =>
+    [idx - 2, idx - 1, idx + 1, idx + 2].some((j) => j >= 0 && j < n && X(j) >= tipX - 6 && X(j) <= tipX + tipW + 6 && Y(data[j].value) >= ty - 6 && Y(data[j].value) <= ty + 32);
+  const above = Y(sp.value) - 38;
+  const below = Y(sp.value) + 14;
+  const fitsBelow = below + 26 <= height - 22;
+  const tipY = above < 2 || (covers(above) && fitsBelow && !covers(below)) ? below : above;
   const step = n > 1 ? plotW / (n - 1) : plotW;
   const xLabels = n > 4 ? [0, Math.floor((n - 1) / 2), n - 1] : data.map((_, i) => i);
   const yLabels = [dMax, dMin].filter((v, i, a) => a.indexOf(v) === i && (target == null || Math.abs(Y(v) - tY) > 12));
