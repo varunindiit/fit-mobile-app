@@ -56,7 +56,7 @@ export default function TrainingScreen() {
   const goal = state.profile.weeklyGoal || 3;
   const [goalOpen, setGoalOpen] = useState(false);
   const [goalDraft, setGoalDraft] = useState(goal);
-  const nudge = wp.done >= goal ? 'Weekly goal smashed! Keep the momentum going.' : wp.done === 0 ? "Haven't exercised yet this week? Let's wake up those muscles!" : `${goal - wp.done} more workout${goal - wp.done === 1 ? '' : 's'} to hit your weekly goal 💪`;
+  const nudge = wp.done >= goal ? 'Weekly goal smashed! Keep the momentum going.' : wp.done === 0 ? "Haven't exercised yet this week? Let's wake up those muscles!" : `${goal - wp.done} more workout${goal - wp.done === 1 ? '' : 's'} to hit your weekly goal`;
 
   // Steps + today
   const steps = state.steps[today] ?? 0;
