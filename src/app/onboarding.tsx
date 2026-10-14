@@ -136,6 +136,12 @@ const MEAL_META: Record<keyof typeof MEAL_SLOTS, { label: string; icon: IconName
   lunch: { label: 'Lunch', icon: 'sunny-outline' },
   dinner: { label: 'Dinner', icon: 'moon-outline' },
 };
+const NEXT_UP: [IconName, string, string, string][] = [
+  ['flag', C.accent, C.accentSoft, 'Your goal'],
+  ['body', C.steps, C.stepsSoft, 'Your body'],
+  ['restaurant', C.workout, C.workoutSoft, 'Your food'],
+  ['sparkles', C.ai, C.aiSoft, 'Your plan'],
+];
 const PACES = [
   { v: 0.25, t: 'Slow & steady', s: 'Easiest to sustain' },
   { v: 0.5, t: 'Recommended', s: 'Best balance of speed and comfort', badge: 'BEST' },
@@ -279,24 +285,62 @@ export default function Onboarding() {
     switch (step) {
       case 'name':
         return (
-          <Q title="What should we call you?" sub="We'll use this to personalise your plan.">
+          <Q title="What should we call you?" sub="We'll use this to personalise your plan." fill>
+            <Text style={st.fieldLabel}>First name</Text>
             <Field
               value={p.name}
               onChangeText={(name) => set({ name })}
-              placeholder="Your first name"
+              placeholder="e.g. Priya"
               autoFocus
               autoCapitalize="words"
+              autoCorrect={false}
+              textContentType="givenName"
+              autoComplete="name-given"
               returnKeyType="next"
               onSubmitEditing={() => canNext && next()}
               maxLength={30}
-              left={<Ionicons name="person-outline" size={20} color={C.muted} />}
+              accessibilityLabel="First name"
+              left={<Ionicons name="person-outline" size={20} color={p.name ? C.primaryDark : C.muted} />}
+              right={
+                p.name.length > 0 ? (
+                  <Pressable onPress={() => set({ name: '' })} hitSlop={10} accessibilityRole="button" accessibilityLabel="Clear name">
+                    <Ionicons name="close-circle" size={20} color={C.muted} />
+                  </Pressable>
+                ) : null
+              }
             />
+            <View style={st.helper}>
+              <Ionicons name="create-outline" size={14} color={C.muted} />
+              <Text style={st.helperText}>You can change this anytime in your profile.</Text>
+            </View>
             {p.name.trim().length >= 2 && (
               <Animated.View entering={nativeOnly(FadeInDown.duration(MOTION.base).easing(EASE_OUT))} exiting={nativeOnly(FadeOut.duration(MOTION.fast))} style={st.greet}>
-                <IconTile icon="happy-outline" size={34} />
-                <Text style={st.greetText}>Nice to meet you, {firstName(p.name)}!</Text>
+                <View style={[st.avatar, glow(C.primary)]}>
+                  <Text style={st.avatarText}>{firstName(p.name)[0].toUpperCase()}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={st.greetText} numberOfLines={1}>
+                    Nice to meet you, {firstName(p.name)}!
+                  </Text>
+                  <Text style={[T.small, { marginTop: 2 }]}>Let&apos;s build a plan that fits your life.</Text>
+                </View>
               </Animated.View>
             )}
+            <View style={{ flex: 1, minHeight: 28 }} />
+            <Enter index={1} style={st.nextCard}>
+              <View style={st.nextHead}>
+                <Ionicons name="time-outline" size={15} color={C.primaryDark} />
+                <Text style={st.nextTitle}>Up next · takes about 2 minutes</Text>
+              </View>
+              <View style={st.nextRow}>
+                {NEXT_UP.map(([icon, color, bg, label]) => (
+                  <View key={label} style={st.nextItem}>
+                    <IconTile icon={icon} color={color} bg={bg} size={40} />
+                    <Text style={st.nextLabel}>{label}</Text>
+                  </View>
+                ))}
+              </View>
+            </Enter>
           </Q>
         );
       case 'goal':
@@ -564,16 +608,17 @@ export default function Onboarding() {
 
 const GUTTER = 16;
 
-function Q({ title, sub, children, scroll = true }: { title: string; sub?: string; children: React.ReactNode; scroll?: boolean }) {
+/** `fill` stretches the body to the viewport so a flex spacer can pin trailing content above the CTA. */
+function Q({ title, sub, children, scroll = true, fill }: { title: string; sub?: string; children: React.ReactNode; scroll?: boolean; fill?: boolean }) {
   const inner = (
     <>
       <Text style={st.qTitle}>{title}</Text>
       {sub && <Text style={st.qSub}>{sub}</Text>}
-      <View style={{ marginTop: 24 }}>{children}</View>
+      <View style={[{ marginTop: 24 }, fill && { flex: 1 }]}>{children}</View>
     </>
   );
   return scroll ? (
-    <ScrollView contentContainerStyle={st.qBody} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+    <ScrollView contentContainerStyle={[st.qBody, fill && { flexGrow: 1 }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
       {inner}
     </ScrollView>
   ) : (
@@ -588,12 +633,12 @@ function CtaBar({ children, dark }: { children: React.ReactNode; dark?: boolean 
 }
 
 /** Text input with a focus ring and optional leading/trailing adornments. */
-function Field({ left, right, onFocus, onBlur, ...props }: TextInputProps & { left?: React.ReactNode; right?: React.ReactNode }) {
+function Field({ left, right, error, onFocus, onBlur, ...props }: TextInputProps & { left?: React.ReactNode; right?: React.ReactNode; error?: boolean }) {
   const [focused, setFocused] = useState(false);
   const inputRef = useRef<TextInput>(null);
   // Tapping anywhere on the field (flag, prefix, padding) focuses the input.
   return (
-    <Pressable onPress={() => inputRef.current?.focus()} style={[st.field, focused && st.fieldFocus]}>
+    <Pressable onPress={() => inputRef.current?.focus()} style={[st.field, focused && st.fieldFocus, error && st.fieldError]}>
       {left}
       <TextInput
         ref={inputRef}
@@ -958,6 +1003,49 @@ function NotifyStep({ onBack, onDone }: { onBack: () => void; onDone: (allow: bo
   );
 }
 
+const TRUST: [IconName, string][] = [
+  ['lock-closed', 'Secure login'],
+  ['notifications-off', 'No spam'],
+  ['flash', 'Takes 30 sec'],
+];
+
+/** Google's four-colour "G" mark (brand guidelines require the full-colour logo on sign-in buttons). */
+function GoogleG({ size = 19 }: { size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 48 48">
+      <Path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+      <Path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
+      <Path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
+      <Path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
+    </Svg>
+  );
+}
+
+function SocialButton({ label, icon, loading, disabled, onPress }: { label: string; icon: React.ReactNode; loading?: boolean; disabled?: boolean; onPress: () => void }) {
+  return (
+    <PressableScale
+      scaleTo={0.97}
+      disabled={disabled}
+      accessibilityRole="button"
+      accessibilityLabel={`Continue with ${label}`}
+      accessibilityState={{ disabled: !!disabled, busy: !!loading }}
+      onPress={() => {
+        tap();
+        onPress();
+      }}
+      style={[st.social, disabled && !loading && { opacity: 0.55 }]}>
+      {loading ? (
+        <ActivityIndicator color={C.text} />
+      ) : (
+        <>
+          {icon}
+          <Text style={st.socialText}>{label}</Text>
+        </>
+      )}
+    </PressableScale>
+  );
+}
+
 /** Blinking text caret for the active OTP box (static when reduced motion is on). */
 function Caret() {
   const reduce = useReducedMotion();
@@ -974,11 +1062,14 @@ function SignIn({ onBack, onDone }: { onBack: () => void; onDone: (phone: string
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
   const [sent, setSent] = useState(false);
-  const [loading, setLoading] = useState<null | 'otp' | 'verify' | 'google'>(null);
+  const [loading, setLoading] = useState<null | 'otp' | 'verify' | 'google' | 'email'>(null);
   const toast = useToast();
   const otpRef = useRef<TextInput>(null);
+  // Indian mobile numbers are 10 digits starting 6–9; flag a wrong prefix as soon as it's typed.
+  const badPrefix = /^[0-5]/.test(phone);
+  const validPhone = phone.length === 10 && !badPrefix;
 
-  const run = (kind: 'otp' | 'verify' | 'google', then: () => void) => {
+  const run = (kind: 'otp' | 'verify' | 'google' | 'email', then: () => void) => {
     setLoading(kind);
     setTimeout(() => {
       setLoading(null);
@@ -988,6 +1079,7 @@ function SignIn({ onBack, onDone }: { onBack: () => void; onDone: (phone: string
 
   return (
     <SafeAreaView style={st.screen} edges={['top', 'bottom']}>
+      <LinearGradient colors={G.glow} style={st.signGlow} />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <StatusBar style="dark" />
         <View style={st.topBar}>
@@ -997,21 +1089,28 @@ function SignIn({ onBack, onDone }: { onBack: () => void; onDone: (phone: string
             <Text style={st.skipText}>Skip</Text>
           </Pressable>
         </View>
-        <ScrollView contentContainerStyle={st.qBody} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={[st.qBody, { flexGrow: 1 }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           {!sent ? (
-            <Animated.View key="phone" entering={fadeEnter()}>
+            <Animated.View key="phone" entering={fadeEnter()} style={{ flex: 1 }}>
               <Enter index={0}>
-                <IconTile icon="phone-portrait-outline" size={52} />
-                <Text style={[st.qTitle, { marginTop: 18 }]}>Sign up or log in</Text>
-                <Text style={st.qSub}>Enter your mobile number. We&apos;ll send you a one-time password.</Text>
+                <View style={[st.signMark, glow(C.primary)]}>
+                  <Ionicons name="leaf" size={26} color={C.white} />
+                </View>
+                <Text style={[st.qTitle, { marginTop: 20 }]}>Sign up or log in</Text>
+                <Text style={st.qSub}>One number, one OTP. No passwords to remember.</Text>
               </Enter>
-              <Enter index={1} style={{ marginTop: 26 }}>
+              <Enter index={1} style={{ marginTop: 28 }}>
+                <Text style={st.fieldLabel}>Mobile number</Text>
                 <Field
-                  value={phone}
+                  value={phone.length > 5 ? `${phone.slice(0, 5)} ${phone.slice(5)}` : phone}
                   onChangeText={(v) => setPhone(v.replace(/\D/g, '').slice(0, 10))}
                   placeholder="98765 43210"
                   keyboardType="phone-pad"
-                  maxLength={10}
+                  textContentType="telephoneNumber"
+                  autoComplete="tel"
+                  maxLength={11}
+                  error={badPrefix}
+                  accessibilityLabel="Mobile number"
                   left={
                     <View style={st.cc}>
                       <IndiaFlag width={24} />
@@ -1020,17 +1119,23 @@ function SignIn({ onBack, onDone }: { onBack: () => void; onDone: (phone: string
                     </View>
                   }
                   right={
-                    phone.length === 10 ? (
+                    validPhone ? (
                       <Animated.View entering={nativeOnly(ZoomIn.duration(MOTION.base))}>
                         <Ionicons name="checkmark-circle" size={22} color={C.primary} />
                       </Animated.View>
                     ) : null
                   }
                 />
+                <View style={st.helper}>
+                  <Ionicons name={badPrefix ? 'alert-circle' : 'shield-checkmark'} size={14} color={badPrefix ? C.danger : C.primary} />
+                  <Text style={[st.helperText, badPrefix && { color: C.danger }]}>
+                    {badPrefix ? 'Indian mobile numbers start with 6, 7, 8 or 9' : "We'll text a 4-digit code to verify it's you"}
+                  </Text>
+                </View>
                 <Button
                   title="Get OTP"
-                  style={{ marginTop: 16 }}
-                  disabled={phone.length !== 10}
+                  style={{ marginTop: 20 }}
+                  disabled={!validPhone}
                   loading={loading === 'otp'}
                   onPress={() =>
                     run('otp', () => {
@@ -1047,9 +1152,30 @@ function SignIn({ onBack, onDone }: { onBack: () => void; onDone: (phone: string
                   <Text style={st.orText}>or continue with</Text>
                   <View style={st.orLine} />
                 </View>
-                <Button title="Continue with Google" variant="outline" icon="logo-google" loading={loading === 'google'} onPress={() => run('google', () => onDone(''))} />
-                <Button title="Continue with Email" variant="outline" icon="mail-outline" style={{ marginTop: 10 }} onPress={() => run('google', () => onDone(''))} />
-                <Text style={[T.tiny, { textAlign: 'center', marginTop: 22, lineHeight: 16 }]}>By continuing you agree to our Terms of Service and Privacy Policy.</Text>
+                <View style={st.socialRow}>
+                  <SocialButton label="Google" icon={<GoogleG />} loading={loading === 'google'} disabled={!!loading} onPress={() => run('google', () => onDone(''))} />
+                  <SocialButton
+                    label="Email"
+                    icon={<Ionicons name="mail" size={19} color={C.text} />}
+                    loading={loading === 'email'}
+                    disabled={!!loading}
+                    onPress={() => run('email', () => onDone(''))}
+                  />
+                </View>
+              </Enter>
+              <View style={{ flex: 1, minHeight: 28 }} />
+              <Enter index={3}>
+                <View style={st.trustRow}>
+                  {TRUST.map(([icon, label]) => (
+                    <View key={label} style={st.trustItem}>
+                      <Ionicons name={icon} size={14} color={C.primaryDark} />
+                      <Text style={st.trustText}>{label}</Text>
+                    </View>
+                  ))}
+                </View>
+                <Text style={st.legal}>
+                  By continuing you agree to our <Text style={st.legalLink}>Terms of Service</Text> and <Text style={st.legalLink}>Privacy Policy</Text>.
+                </Text>
               </Enter>
             </Animated.View>
           ) : (
@@ -1387,8 +1513,16 @@ const st = StyleSheet.create({
   field: { flexDirection: 'row', alignItems: 'center', gap: 10, height: 56, borderRadius: R.md, borderWidth: 1, borderColor: C.border, backgroundColor: C.card, paddingHorizontal: 16 },
   fieldFocus: { borderColor: C.primary, ...focusRing },
   fieldInput: { flex: 1, height: '100%', fontSize: 18, fontWeight: '600', color: C.text, letterSpacing: 0.2 },
-  greet: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 18 },
-  greetText: { fontSize: 16, fontWeight: '600', color: C.text, flex: 1 },
+  greet: { flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 20, padding: 14, borderRadius: R.lg, backgroundColor: C.card, borderWidth: StyleSheet.hairlineWidth, borderColor: C.borderSoft, ...shadow },
+  greetText: { fontSize: 16, fontWeight: '700', color: C.text, letterSpacing: -0.2 },
+  avatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center' },
+  avatarText: { fontSize: 21, fontWeight: '800', color: C.white },
+  nextCard: { padding: 16, borderRadius: R.lg, backgroundColor: C.surfaceAlt, borderWidth: StyleSheet.hairlineWidth * 2, borderColor: C.border },
+  nextHead: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  nextTitle: { fontSize: 13, fontWeight: '700', color: C.primaryDark },
+  nextRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 14 },
+  nextItem: { flex: 1, alignItems: 'center', gap: 8 },
+  nextLabel: { fontSize: 12, fontWeight: '600', color: C.textSoft },
 
   infoCard: { backgroundColor: C.card, borderRadius: R.lg, padding: 16, borderWidth: StyleSheet.hairlineWidth, borderColor: C.borderSoft, ...shadow },
   infoRow: { flexDirection: 'row', gap: 12, alignItems: 'center' },
@@ -1461,6 +1595,20 @@ const st = StyleSheet.create({
   orRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginVertical: 24 },
   orLine: { flex: 1, height: StyleSheet.hairlineWidth * 2, backgroundColor: C.border },
   orText: { fontSize: 12, fontWeight: '600', color: C.muted },
+  signGlow: { position: 'absolute', top: 0, left: 0, right: 0, height: 360 },
+  signMark: { width: 56, height: 56, borderRadius: 18, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center' },
+  fieldLabel: { fontSize: 13, fontWeight: '700', color: C.textSoft, marginBottom: 8, marginLeft: 2 },
+  fieldError: { borderColor: C.danger, shadowColor: C.danger },
+  helper: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10, marginLeft: 2 },
+  helperText: { flex: 1, fontSize: 13, color: C.textSoft, lineHeight: 18 },
+  socialRow: { flexDirection: 'row', gap: 10 },
+  social: { flex: 1, height: 54, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, borderRadius: R.md, borderWidth: 1, borderColor: C.border, backgroundColor: C.card, ...shadowSm },
+  socialText: { fontSize: 16, fontWeight: '700', color: C.text },
+  trustRow: { flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: 8 },
+  trustItem: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 6, borderRadius: R.pill, backgroundColor: C.primarySoft },
+  trustText: { fontSize: 12, fontWeight: '700', color: C.primaryDark },
+  legal: { fontSize: 12, color: C.muted, textAlign: 'center', lineHeight: 18, marginTop: 14, paddingHorizontal: 12 },
+  legalLink: { color: C.textSoft, fontWeight: '700', textDecorationLine: 'underline' },
   otpRow: { flexDirection: 'row', gap: 12, marginTop: 28, justifyContent: 'center' },
   otpBox: { width: 62, height: 68, borderRadius: R.md, borderWidth: 1, borderColor: C.border, backgroundColor: C.card, alignItems: 'center', justifyContent: 'center' },
   otpFilled: { backgroundColor: C.primarySoft, borderColor: C.primaryTint },
