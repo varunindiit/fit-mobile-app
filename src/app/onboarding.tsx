@@ -117,7 +117,8 @@ export default function Onboarding() {
   const { state, completeOnboarding, subscribe, updateSettings } = useStore();
   const toast = useToast();
   const [p, setP] = useState<Profile>(() => resume?.p ?? { ...DEFAULT_PROFILE, ...state.profile });
-  const set = (patch: Partial<Profile>) => setP((d) => ({ ...d, ...patch }));
+  // Updater form reads the latest answers, so rapid taps on multi-selects never drop a choice.
+  const set = (patch: Partial<Profile> | ((d: Profile) => Partial<Profile>)) => setP((d) => ({ ...d, ...(typeof patch === 'function' ? patch(d) : patch) }));
   const [step, setStep] = useState<StepId>(() => (resume?.step === 'analysis' ? 'result' : resume?.step) ?? 'welcome');
   const [dir, setDir] = useState<1 | -1>(1);
   const units: WeightUnit = state.settings.units;
@@ -469,7 +470,7 @@ export default function Onboarding() {
           <Body>
             <QTitle text="What's your activity level?" />
             <Rise i={1} style={{ alignItems: 'center', marginTop: 16 }}>
-              <Photo source={IMG.activity} style={st.activityArt} />
+              <Image source={IMG.activity} style={st.activityArt} contentFit="contain" />
             </Rise>
             <View style={st.list}>
               {ACTIVITY.map((a, i) => (
@@ -489,7 +490,7 @@ export default function Onboarding() {
             />
             <Rise i={1} style={st.dayGrid}>
               {DAYS.map((d) => (
-                <DayChip key={d} label={d} on={p.restDays.includes(d)} onPress={() => set({ restDays: p.restDays.includes(d) || p.restDays.length < 5 ? toggleIn(p.restDays, d) : p.restDays })} />
+                <DayChip key={d} label={d} on={p.restDays.includes(d)} onPress={() => set((x) => ({ restDays: x.restDays.includes(d) || x.restDays.length < 5 ? toggleIn(x.restDays, d) : x.restDays }))} />
               ))}
             </Rise>
           </Body>
@@ -536,7 +537,7 @@ export default function Onboarding() {
             <View style={st.rewardGrid}>
               {REWARDS.map((r, i) => (
                 <Rise key={r.t} i={i + 1} style={st.rewardCell}>
-                  <RewardCard label={r.t} img={r.img} on={p.rewards.includes(r.t)} onPress={() => set({ rewards: toggleIn(p.rewards, r.t) })} />
+                  <RewardCard label={r.t} img={r.img} on={p.rewards.includes(r.t)} onPress={() => set((x) => ({ rewards: toggleIn(x.rewards, r.t) }))} />
                 </Rise>
               ))}
             </View>
@@ -781,7 +782,7 @@ const st = StyleSheet.create({
   benefitStripSub: { color: 'rgba(255,255,255,0.85)', fontSize: 10.5, fontWeight: '600', marginTop: 1 },
   benefitCardText: { color: C.white, fontSize: 12.5, fontWeight: '700', flex: 1 },
 
-  activityArt: { width: 170, height: 170, borderRadius: R.xl },
+  activityArt: { width: 180, height: 160 },
 
   dayGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 10, paddingHorizontal: GUTTER, marginTop: 26 },
   dayCell: { width: '30%' },

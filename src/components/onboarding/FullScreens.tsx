@@ -91,7 +91,7 @@ export function Motivation({ male, onNext }: { male: boolean; onNext: () => void
         <View style={{ flex: 1 }} />
         <Animated.View entering={nativeOnly(FadeInUp.duration(MOTION.enter).delay(500).easing(EASE_OUT))} style={{ gap: 6, paddingBottom: 8 }}>
           <Button title="Yes, I'm ready" onPress={onNext} style={{ backgroundColor: C.white, borderColor: C.white }} textStyle={{ color: C.text }} />
-          <Pressable onPress={() => { tap(); onNext(); }} style={({ pressed }) => [st.textBtn, pressed && { opacity: 0.6 }]}>
+          <Pressable accessibilityRole="button" onPress={() => { tap(); onNext(); }} style={({ pressed }) => [st.textBtn, pressed && { opacity: 0.6 }]}>
             <Text style={[st.textBtnLabel, { color: C.white }]}>Not now</Text>
           </Pressable>
         </Animated.View>
