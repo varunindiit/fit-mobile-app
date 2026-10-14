@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -20,7 +21,6 @@ import {
   type TextInputProps,
 } from 'react-native';
 import Animated, {
-  Easing,
   FadeInDown,
   FadeInRight,
   FadeOut,
@@ -39,6 +39,7 @@ import Animated, {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Defs, Line, LinearGradient as SvgGrad, Path, Stop } from 'react-native-svg';
 
+import { IndiaFlag } from '@/components/IndiaFlag';
 import { WheelPicker, range } from '@/components/WheelPicker';
 import { PlanAccordion } from '@/components/program/PlanAccordion';
 import {
@@ -74,56 +75,56 @@ import { BRAND, C, G, MOTION, R, glow, shadow, shadowSm } from '@/theme';
 /* ---------------- Options ---------------- */
 
 const GOALS = [
-  { v: 'lose', t: 'Lose weight', s: 'Burn fat and get leaner', e: '🔥' },
-  { v: 'maintain', t: 'Maintain weight', s: 'Stay fit at your current weight', e: '⚖️' },
-  { v: 'gain', t: 'Gain weight', s: 'Healthy weight gain with the right food', e: '🍽️' },
-  { v: 'muscle', t: 'Build muscle', s: 'Get stronger with high-protein eating', e: '💪' },
-  { v: 'healthy', t: 'Manage a health condition', s: 'Diabetes, PCOS, thyroid, BP & more', e: '❤️' },
+  { v: 'lose', t: 'Lose weight', s: 'Burn fat and get leaner', i: 'flame-outline' },
+  { v: 'maintain', t: 'Maintain weight', s: 'Stay fit at your current weight', i: 'scale-outline' },
+  { v: 'gain', t: 'Gain weight', s: 'Healthy weight gain with the right food', i: 'restaurant-outline' },
+  { v: 'muscle', t: 'Build muscle', s: 'Get stronger with high-protein eating', i: 'barbell-outline' },
+  { v: 'healthy', t: 'Manage a health condition', s: 'Diabetes, PCOS, thyroid, BP & more', i: 'heart-outline' },
 ] as const;
-const MOTIVATIONS = [
-  ['😎', 'Feel more confident'],
-  ['⚡', 'Have more energy'],
-  ['🩺', 'Improve my health reports'],
-  ['👖', 'Fit into my old clothes'],
-  ['💍', 'Upcoming wedding or event'],
-  ['👨‍⚕️', "Doctor's advice"],
+const MOTIVATIONS: [IconName, string][] = [
+  ['happy-outline', 'Feel more confident'],
+  ['flash-outline', 'Have more energy'],
+  ['document-text-outline', 'Improve my health reports'],
+  ['shirt-outline', 'Fit into my old clothes'],
+  ['calendar-outline', 'Upcoming wedding or event'],
+  ['medkit-outline', "Doctor's advice"],
 ];
 const GENDERS = [
-  { v: 'male', t: 'Male', e: '👨' },
-  { v: 'female', t: 'Female', e: '👩' },
-  { v: 'other', t: 'Other', e: '🧑' },
+  { v: 'male', t: 'Male', i: 'male' },
+  { v: 'female', t: 'Female', i: 'female' },
+  { v: 'other', t: 'Other', i: 'male-female' },
 ] as const;
 const ACTIVITY = [
-  { v: 'sedentary', t: 'Sedentary', s: 'Mostly sitting: desk job, little movement', e: '🪑' },
-  { v: 'light', t: 'Lightly active', s: 'On your feet sometimes: light walks, chores', e: '🚶' },
-  { v: 'moderate', t: 'Moderately active', s: 'Exercise 3–5 days a week or an active job', e: '🏃' },
-  { v: 'very', t: 'Very active', s: 'Intense exercise daily or physical work', e: '🏋️' },
+  { v: 'sedentary', t: 'Sedentary', s: 'Mostly sitting: desk job, little movement', i: 'desktop-outline' },
+  { v: 'light', t: 'Lightly active', s: 'On your feet sometimes: light walks, chores', i: 'walk-outline' },
+  { v: 'moderate', t: 'Moderately active', s: 'Exercise 3–5 days a week or an active job', i: 'bicycle-outline' },
+  { v: 'very', t: 'Very active', s: 'Intense exercise daily or physical work', i: 'barbell-outline' },
 ] as const;
-const EXERCISE = [
-  ['🛋️', "I don't exercise right now"],
-  ['🚶', '1–2 days a week'],
-  ['🏃', '3–4 days a week'],
-  ['🔥', '5+ days a week'],
+const EXERCISE: [IconName, string][] = [
+  ['bed-outline', "I don't exercise right now"],
+  ['walk-outline', '1–2 days a week'],
+  ['fitness-outline', '3–4 days a week'],
+  ['flame-outline', '5+ days a week'],
 ];
-const DIETS = [
-  ['🥦', 'Vegetarian', 'Plant foods plus dairy'],
-  ['🍗', 'Non-vegetarian', 'Includes chicken, fish, meat and eggs'],
-  ['🥚', 'Eggetarian', 'Vegetarian plus eggs'],
-  ['🌱', 'Vegan', 'No animal products at all'],
-  ['🙏', 'Jain', 'No root vegetables, onion or garlic'],
+const DIETS: [IconName, string, string][] = [
+  ['leaf-outline', 'Vegetarian', 'Plant foods plus dairy'],
+  ['fish-outline', 'Non-vegetarian', 'Includes chicken, fish, meat and eggs'],
+  ['egg-outline', 'Eggetarian', 'Vegetarian plus eggs'],
+  ['nutrition-outline', 'Vegan', 'No animal products at all'],
+  ['flower-outline', 'Jain', 'No root vegetables, onion or garlic'],
 ];
 const CUISINES = ['North Indian', 'South Indian', 'Gujarati', 'Maharashtrian', 'Bengali', 'Punjabi', 'Rajasthani', 'Continental', 'Chinese', 'Mediterranean'];
 const RESTRICTIONS = ['No restrictions', 'Lactose intolerant', 'Gluten-free', 'Nut allergy', 'No onion & garlic', 'Low sugar', 'Seafood allergy'];
 const CONDITIONS = ['None', 'Diabetes / Pre-diabetes', 'PCOS / PCOD', 'Thyroid', 'Hypertension (BP)', 'High cholesterol', 'Fatty liver'];
 const SLEEP = ['Under 5 hrs', '5–6 hrs', '7–8 hrs', 'Over 8 hrs'];
 const WATER = ['Under 4 glasses', '4–6 glasses', '7–9 glasses', '10+ glasses'];
-const CHALLENGES = [
-  ['⏰', 'Lack of time'],
-  ['🍫', 'Cravings & late-night snacking'],
-  ['😣', 'Stress eating'],
-  ['🕐', 'Irregular meal times'],
-  ['🍕', 'Eating out often'],
-  ['📉', 'Staying motivated'],
+const CHALLENGES: [IconName, string][] = [
+  ['time-outline', 'Lack of time'],
+  ['ice-cream-outline', 'Cravings & late-night snacking'],
+  ['sad-outline', 'Stress eating'],
+  ['alarm-outline', 'Irregular meal times'],
+  ['restaurant-outline', 'Eating out often'],
+  ['trending-down-outline', 'Staying motivated'],
 ];
 const MEAL_SLOTS = {
   breakfast: ['6:30 AM', '7:30 AM', '8:00 AM', '8:30 AM', '9:30 AM', '10:30 AM'],
@@ -156,6 +157,8 @@ const NO_CHROME: StepId[] = ['welcome', 'signin', 'notify', 'generating', 'plan'
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const fmtGoalDate = (d: Date) => `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+/** First word of the name, ignoring stray leading/trailing spaces. */
+const firstName = (name: string) => name.trim().split(/\s+/)[0];
 
 const toggleIn = (list: string[], v: string, exclusive?: string) => {
   if (v === exclusive) return list.includes(v) ? [] : [v];
@@ -218,10 +221,10 @@ export default function Onboarding() {
 
   const finish = (premiumMonths?: number) => {
     resume = null;
-    completeOnboarding(p);
+    completeOnboarding({ ...p, name: p.name.trim() });
     if (premiumMonths) subscribe('smart', premiumMonths);
     router.replace('/(tabs)');
-    setTimeout(() => toast(`Welcome to ${BRAND}, ${p.name.split(' ')[0] || 'friend'}! 🎉`, 'sparkles'), 400);
+    setTimeout(() => toast(`Welcome to ${BRAND}, ${firstName(p.name) || 'friend'}! 🎉`, 'sparkles'), 400);
   };
 
   const canNext = (() => {
@@ -291,17 +294,17 @@ export default function Onboarding() {
             {p.name.trim().length >= 2 && (
               <Animated.View entering={nativeOnly(FadeInDown.duration(MOTION.base).easing(EASE_OUT))} exiting={nativeOnly(FadeOut.duration(MOTION.fast))} style={st.greet}>
                 <IconTile icon="happy-outline" size={34} />
-                <Text style={st.greetText}>Nice to meet you, {p.name.trim().split(' ')[0]}!</Text>
+                <Text style={st.greetText}>Nice to meet you, {firstName(p.name)}!</Text>
               </Animated.View>
             )}
           </Q>
         );
       case 'goal':
         return (
-          <Q title={`What's your main goal, ${p.name.split(' ')[0]}?`} sub="Your calorie budget and plan are built around this.">
+          <Q title={`What's your main goal, ${firstName(p.name)}?`} sub="Your calorie budget and plan are built around this.">
             {GOALS.map((g, i) => (
               <Enter key={g.v} index={i}>
-                <OptionCard emoji={g.e} title={g.t} subtitle={g.s} selected={p.goal === g.v} onPress={() => set({ goal: g.v, targetKg: g.v === 'lose' ? Math.min(p.targetKg, p.weightKg - 1) : g.v === 'gain' || g.v === 'muscle' ? Math.max(p.targetKg, p.weightKg + 1) : p.weightKg })} />
+                <OptionCard icon={g.i} title={g.t} subtitle={g.s} selected={p.goal === g.v} onPress={() => set({ goal: g.v, targetKg: g.v === 'lose' ? Math.min(p.targetKg, p.weightKg - 1) : g.v === 'gain' || g.v === 'muscle' ? Math.max(p.targetKg, p.weightKg + 1) : p.weightKg })} />
               </Enter>
             ))}
           </Q>
@@ -309,9 +312,9 @@ export default function Onboarding() {
       case 'motivation':
         return (
           <Q title="What's motivating you?" sub="Pick all that apply. Knowing your 'why' helps us keep you going.">
-            {MOTIVATIONS.map(([e, label], i) => (
+            {MOTIVATIONS.map(([icon, label], i) => (
               <Enter key={label} index={i}>
-                <OptionCard multi emoji={e} title={label} selected={p.motivations.includes(label)} onPress={() => set({ motivations: toggleIn(p.motivations, label) })} />
+                <OptionCard multi icon={icon} title={label} selected={p.motivations.includes(label)} onPress={() => set({ motivations: toggleIn(p.motivations, label) })} />
               </Enter>
             ))}
           </Q>
@@ -330,7 +333,7 @@ export default function Onboarding() {
                       onPress={() => { tap(); set({ gender: g.v }); }}
                       style={[st.genderCard, on && st.genderOn]}>
                       <View style={[st.genderArt, on && { backgroundColor: C.card }]}>
-                        <Text style={{ fontSize: 34 }}>{g.e}</Text>
+                        <Ionicons name={g.i} size={30} color={C.primaryDark} />
                       </View>
                       <Text style={[T.h3, { marginTop: 12 }]}>{g.t}</Text>
                       <View style={[st.radio, on && st.radioOn]}>{on && <View style={st.radioDot} />}</View>
@@ -409,7 +412,7 @@ export default function Onboarding() {
         );
       case 'projection':
         return (
-          <Q title={`${p.name.split(' ')[0]}, you can reach ${p.targetKg} kg by ${fmtGoalDate(t.goalDate)}`} sub="Based on your profile and chosen pace.">
+          <Q title={`${firstName(p.name)}, you can reach ${p.targetKg} kg by ${fmtGoalDate(t.goalDate)}`} sub="Based on your profile and chosen pace.">
             <Enter index={0}>
               <ProjectionChart from={p.weightKg} to={p.targetKg} weeks={t.weeks} />
             </Enter>
@@ -426,7 +429,7 @@ export default function Onboarding() {
           <Q title="How active are you in a typical day?" sub="Not counting workouts.">
             {ACTIVITY.map((a, i) => (
               <Enter key={a.v} index={i}>
-                <OptionCard emoji={a.e} title={a.t} subtitle={a.s} selected={p.activity === a.v} onPress={() => set({ activity: a.v })} />
+                <OptionCard icon={a.i} title={a.t} subtitle={a.s} selected={p.activity === a.v} onPress={() => set({ activity: a.v })} />
               </Enter>
             ))}
           </Q>
@@ -434,10 +437,10 @@ export default function Onboarding() {
       case 'exercise':
         return (
           <Q title="How often do you work out?" sub="Walking, yoga, gym, sports — everything counts.">
-            {EXERCISE.map(([e, label], i) => (
+            {EXERCISE.map(([icon, label], i) => (
               <Enter key={label} index={i}>
                 <OptionCard
-                  emoji={e}
+                  icon={icon}
                   title={label}
                   selected={p.exercise === label}
                   onPress={() => {
@@ -460,9 +463,9 @@ export default function Onboarding() {
       case 'diet':
         return (
           <Q title="What's your diet preference?" sub="We'll only suggest foods that fit how you eat.">
-            {DIETS.map(([e, label, sub], i) => (
+            {DIETS.map(([icon, label, sub], i) => (
               <Enter key={label} index={i}>
-                <OptionCard emoji={e} title={label} subtitle={sub} selected={p.diet === label} onPress={() => set({ diet: label })} />
+                <OptionCard icon={icon} title={label} subtitle={sub} selected={p.diet === label} onPress={() => set({ diet: label })} />
               </Enter>
             ))}
           </Q>
@@ -527,9 +530,9 @@ export default function Onboarding() {
       case 'challenges':
         return (
           <Q title="What gets in the way of eating healthy?" sub="Pick your biggest challenges — we'll plan around them.">
-            {CHALLENGES.map(([e, label], i) => (
+            {CHALLENGES.map(([icon, label], i) => (
               <Enter key={label} index={i}>
-                <OptionCard multi emoji={e} title={label} selected={p.challenges.includes(label)} onPress={() => set({ challenges: toggleIn(p.challenges, label) })} />
+                <OptionCard multi icon={icon} title={label} selected={p.challenges.includes(label)} onPress={() => set({ challenges: toggleIn(p.challenges, label) })} />
               </Enter>
             ))}
           </Q>
@@ -587,10 +590,13 @@ function CtaBar({ children, dark }: { children: React.ReactNode; dark?: boolean 
 /** Text input with a focus ring and optional leading/trailing adornments. */
 function Field({ left, right, onFocus, onBlur, ...props }: TextInputProps & { left?: React.ReactNode; right?: React.ReactNode }) {
   const [focused, setFocused] = useState(false);
+  const inputRef = useRef<TextInput>(null);
+  // Tapping anywhere on the field (flag, prefix, padding) focuses the input.
   return (
-    <View style={[st.field, focused && st.fieldFocus]}>
+    <Pressable onPress={() => inputRef.current?.focus()} style={[st.field, focused && st.fieldFocus]}>
       {left}
       <TextInput
+        ref={inputRef}
         {...props}
         placeholderTextColor={C.muted}
         onFocus={(e) => {
@@ -604,7 +610,7 @@ function Field({ left, right, onFocus, onBlur, ...props }: TextInputProps & { le
         style={st.fieldInput}
       />
       {right}
-    </View>
+    </Pressable>
   );
 }
 
@@ -786,50 +792,22 @@ function ProjectionChart({ from, to, weeks }: { from: number; to: number; weeks:
 
 /* ---------------- Full-screen steps ---------------- */
 
+const WELCOME_IMAGE = require('@/assets/images/welcome-bg.jpg');
+
 const SLIDES: { icon: IconName; color: string; bg: string; title: string; text: string }[] = [
   { icon: 'camera', color: C.accent, bg: C.accentSoft, title: 'Track calories with a snap', text: 'Photo-log your meals and get calories & macros instantly. Built for Indian food — from roti to rajma.' },
   { icon: 'barbell', color: C.workout, bg: C.workoutSoft, title: '30-day home workout plans', text: 'Short daily routines for every level — lose belly fat, build rock-hard abs, no equipment needed.' },
   { icon: 'sparkles', color: C.ai, bg: C.aiSoft, title: 'Experts & AI in your pocket', text: 'Personal plans from certified coaches, plus Ria — your 24×7 AI nutrition coach.' },
 ];
 
-/** App mark (matches the loading screen) with soft concentric rings and a slow halo pulse. */
-function BrandMark() {
-  const reduce = useReducedMotion();
-  const pulse = useSharedValue(0);
-  useEffect(() => {
-    if (reduce) return;
-    pulse.set(withRepeat(withTiming(1, { duration: 2600, easing: Easing.out(Easing.quad) }), -1, false));
-  }, [pulse, reduce]);
-  const halo = useAnimatedStyle(() => ({
-    opacity: interpolate(pulse.get(), [0, 1], [0.28, 0]),
-    transform: [{ scale: interpolate(pulse.get(), [0, 1], [1, 1.7]) }],
-  }));
-  return (
-    <View style={st.markWrap}>
-      <View style={st.rings}>
-        <Svg width={RINGS} height={RINGS}>
-          {[60, 98, 136, 172].map((r, n) => (
-            <Circle key={r} cx={RINGS / 2} cy={RINGS / 2} r={r} stroke={C.primary} strokeWidth={1} fill="none" opacity={[0.18, 0.12, 0.08, 0.05][n]} />
-          ))}
-        </Svg>
-      </View>
-      <Animated.View style={[st.halo, halo]} />
-      <View style={[st.mark, glow(C.primaryDark)]}>
-        <Ionicons name="leaf" size={34} color={C.white} />
-      </View>
-    </View>
-  );
-}
-const RINGS = 360;
-
-function Dot({ on }: { on: boolean }) {
+function Dot({ on, light }: { on: boolean; light?: boolean }) {
   const p = useSharedValue(on ? 1 : 0);
   useEffect(() => {
     p.set(withTiming(on ? 1 : 0, { duration: MOTION.base, easing: EASE_OUT }));
   }, [on, p]);
   const style = useAnimatedStyle(() => ({
     width: interpolate(p.get(), [0, 1], [7, 22]),
-    backgroundColor: interpolateColor(p.get(), [0, 1], ['#D6D3D1', C.primary]),
+    backgroundColor: interpolateColor(p.get(), [0, 1], light ? ['rgba(255,255,255,0.35)', '#FFFFFF'] : ['#D6D3D1', C.primary]),
   }));
   return <Animated.View style={[st.dot, style]} />;
 }
@@ -850,35 +828,56 @@ function Welcome({ onStart, onLogin }: { onStart: () => void; onLogin: () => voi
     return () => clearInterval(id);
   }, [width]);
   return (
-    <View style={st.screen}>
-      <StatusBar style="dark" />
-      <LinearGradient colors={G.glow} style={st.welcomeGlow} />
+    <View style={st.welcome}>
+      <StatusBar style="light" />
+      {/* Full-bleed photo with a brand-tinted scrim that deepens towards the copy */}
+      {/* Portrait photo fills the top ~70% and melts into the dark base where the copy and CTAs sit */}
+      <View style={st.welcomePhoto}>
+        <Image source={WELCOME_IMAGE} style={StyleSheet.absoluteFill} contentFit="cover" contentPosition="center" transition={300} />
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(21,94,80,0.14)' }]} />
+        <LinearGradient colors={['rgba(11,26,23,0.6)', 'rgba(11,26,23,0)', 'rgba(11,26,23,0)', '#0B1A17']} locations={[0, 0.2, 0.5, 0.94]} style={StyleSheet.absoluteFill} />
+      </View>
+
       <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
-        <View style={st.welcomeTop}>
-          <Enter index={0} style={{ alignItems: 'center' }}>
-            <BrandMark />
-            <Text style={st.wordmark}>{BRAND}</Text>
-            <Text style={st.eyebrow}>NUTRITION + FITNESS</Text>
-          </Enter>
+        <Enter index={0} style={st.brandRow}>
+          <View style={[st.brandMark, glow(C.primary)]}>
+            <Ionicons name="leaf" size={20} color={C.white} />
+          </View>
+          <View>
+            <Text style={st.brandName}>{BRAND}</Text>
+            <Text style={st.brandTag}>NUTRITION + FITNESS</Text>
+          </View>
+        </Enter>
+
+        <View style={{ flex: 1 }} />
+
+        <View style={st.welcomeCopy}>
           <Enter index={1}>
-            <Text style={st.headline}>
-              <Text style={{ color: C.primary }}>Eat right.</Text>
+            <Text style={st.welcomeHead}>
+              <Text style={{ color: '#3BE3A6' }}>Eat right.</Text>
               {'\n'}Train hard.
             </Text>
           </Enter>
           <Enter index={2}>
-            <Text style={st.welcomeSub}>A personalised 30-day plan for your food, fitness and goals.</Text>
+            <Text style={st.welcomeLead}>A personalised 30-day plan for your food, fitness and goals.</Text>
           </Enter>
         </View>
+
         <Enter index={3}>
           <ScrollView ref={ref} horizontal pagingEnabled showsHorizontalScrollIndicator={false} onScroll={onScroll} scrollEventThrottle={32} style={{ flexGrow: 0 }}>
             {SLIDES.map((s) => (
               <View key={s.title} style={[st.slidePage, { width }]}>
-                <View style={st.slideCard}>
-                  <IconTile icon={s.icon} color={s.color} bg={s.bg} size={48} />
+                <View style={st.glassCard}>
+                  <View style={[st.glassIcon, { backgroundColor: s.bg }]}>
+                    <Ionicons name={s.icon} size={22} color={s.color} />
+                  </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={T.h3}>{s.title}</Text>
-                    <Text style={[T.small, { marginTop: 4 }]}>{s.text}</Text>
+                    <Text style={st.glassTitle} numberOfLines={1}>
+                      {s.title}
+                    </Text>
+                    <Text style={st.glassText} numberOfLines={2}>
+                      {s.text}
+                    </Text>
                   </View>
                 </View>
               </View>
@@ -886,13 +885,14 @@ function Welcome({ onStart, onLogin }: { onStart: () => void; onLogin: () => voi
           </ScrollView>
           <View style={st.dots}>
             {SLIDES.map((_, n) => (
-              <Dot key={n} on={n === i} />
+              <Dot key={n} on={n === i} light />
             ))}
           </View>
         </Enter>
+
         <Enter index={4} style={st.welcomeCtas}>
-          <Button title="Get started" onPress={onStart} />
-          <Button title="I already have an account" variant="outline" onPress={onLogin} />
+          <Button title="Get started" onPress={onStart} style={st.ctaLight} textStyle={{ color: C.primaryDark }} />
+          <Button title="I already have an account" variant="outline" onPress={onLogin} style={st.ctaGlass} textStyle={{ color: C.white }} />
         </Enter>
       </SafeAreaView>
     </View>
@@ -1014,7 +1014,7 @@ function SignIn({ onBack, onDone }: { onBack: () => void; onDone: (phone: string
                   maxLength={10}
                   left={
                     <View style={st.cc}>
-                      <Text style={{ fontSize: 17 }}>🇮🇳</Text>
+                      <IndiaFlag width={24} />
                       <Text style={st.ccText}>+91</Text>
                       <View style={st.ccDivider} />
                     </View>
@@ -1131,7 +1131,7 @@ function Generating({ name, onDone }: { name: string; onDone: () => void }) {
           </Ring>
         </Enter>
         <Enter index={1}>
-          <Text style={[T.h2, { marginTop: 28, textAlign: 'center' }]}>Creating your plan, {name.split(' ')[0]}</Text>
+          <Text style={[T.h2, { marginTop: 28, textAlign: 'center' }]}>Creating your plan, {firstName(name)}</Text>
         </Enter>
         <Enter index={2} style={st.genCard}>
           {GEN_STEPS.map((g, n) => {
@@ -1181,7 +1181,7 @@ function PlanReady({ p, onBack, onNext }: { p: Profile; onBack: () => void; onNe
       <ScrollView contentContainerStyle={{ paddingHorizontal: GUTTER, paddingTop: 4, paddingBottom: 24 }} showsVerticalScrollIndicator={false}>
         <Enter index={0}>
           <Pill text="PLAN READY" icon="checkmark-circle" />
-          <Text style={[st.qTitle, { marginTop: 10 }]}>Your plan is ready, {p.name.split(' ')[0]}!</Text>
+          <Text style={[st.qTitle, { marginTop: 10 }]}>Your plan is ready, {firstName(p.name)}!</Text>
           <Text style={[T.body, { marginTop: 6 }]}>{goalLine}</Text>
         </Enter>
 
@@ -1431,17 +1431,22 @@ const st = StyleSheet.create({
   chartVal: { fontSize: 18, fontWeight: '800', letterSpacing: -0.3, marginTop: 3, fontVariant: ['tabular-nums'] },
 
   welcomeGlow: { position: 'absolute', top: 0, left: 0, right: 0, height: '62%' },
-  welcomeTop: { flex: 1, justifyContent: 'center', paddingHorizontal: 24 },
-  markWrap: { width: 72, height: 72, alignItems: 'center', justifyContent: 'center' },
-  rings: { position: 'absolute', width: RINGS, height: RINGS, left: (72 - RINGS) / 2, top: (72 - RINGS) / 2, pointerEvents: 'none' },
-  halo: { position: 'absolute', width: 72, height: 72, borderRadius: 24, backgroundColor: C.primary },
-  mark: { width: 72, height: 72, borderRadius: 24, backgroundColor: C.primaryDark, alignItems: 'center', justifyContent: 'center' },
-  wordmark: { fontSize: 24, fontWeight: '800', color: C.text, letterSpacing: -0.6, marginTop: 16 },
-  eyebrow: { fontSize: 11, fontWeight: '700', color: C.primaryDark, letterSpacing: 1.6, marginTop: 4 },
-  headline: { fontSize: 38, fontWeight: '800', color: C.text, letterSpacing: -1.2, lineHeight: 44, textAlign: 'center', marginTop: 34 },
-  welcomeSub: { fontSize: 15, color: C.textSoft, lineHeight: 22, textAlign: 'center', marginTop: 12, paddingHorizontal: 12 },
-  slidePage: { paddingHorizontal: GUTTER, paddingVertical: 8 },
-  slideCard: { flex: 1, flexDirection: 'row', gap: 14, alignItems: 'flex-start', backgroundColor: C.card, borderRadius: R.lg, padding: 16, borderWidth: StyleSheet.hairlineWidth, borderColor: C.borderSoft, ...shadow },
+  welcome: { flex: 1, backgroundColor: '#0B1A17' },
+  welcomePhoto: { position: 'absolute', top: 0, left: 0, right: 0, height: '72%' },
+  brandRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: GUTTER, paddingTop: 10 },
+  brandMark: { width: 40, height: 40, borderRadius: 13, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center' },
+  brandName: { fontSize: 20, fontWeight: '800', color: C.white, letterSpacing: -0.4 },
+  brandTag: { fontSize: 10, fontWeight: '700', color: 'rgba(255,255,255,0.7)', letterSpacing: 1.4, marginTop: 1 },
+  welcomeCopy: { paddingHorizontal: GUTTER, marginBottom: 18 },
+  welcomeHead: { fontSize: 44, lineHeight: 48, fontWeight: '800', color: C.white, letterSpacing: -1.6 },
+  welcomeLead: { fontSize: 16, lineHeight: 23, color: 'rgba(255,255,255,0.82)', marginTop: 12, maxWidth: 320 },
+  slidePage: { paddingHorizontal: GUTTER, paddingVertical: 4 },
+  glassCard: { height: 92, flexDirection: 'row', alignItems: 'center', gap: 14, borderRadius: R.lg, paddingHorizontal: 16, backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: StyleSheet.hairlineWidth * 2, borderColor: 'rgba(255,255,255,0.18)' },
+  glassIcon: { width: 46, height: 46, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
+  glassTitle: { fontSize: 16, fontWeight: '800', color: C.white, letterSpacing: -0.2 },
+  glassText: { fontSize: 13, lineHeight: 18, color: 'rgba(255,255,255,0.72)', marginTop: 3 },
+  ctaLight: { backgroundColor: C.white, borderColor: C.white },
+  ctaGlass: { backgroundColor: 'rgba(255,255,255,0.1)', borderColor: 'rgba(255,255,255,0.32)' },
   dots: { flexDirection: 'row', justifyContent: 'center', gap: 6, paddingTop: 10, paddingBottom: 18 },
   dot: { height: 7, borderRadius: 4 },
   welcomeCtas: { paddingHorizontal: GUTTER, paddingBottom: 8, gap: 10 },
@@ -1450,7 +1455,7 @@ const st = StyleSheet.create({
   textBtnLabel: { color: C.textSoft, fontWeight: '700', fontSize: 15 },
   skip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: R.pill, backgroundColor: C.card, borderWidth: StyleSheet.hairlineWidth * 2, borderColor: C.border },
   skipText: { color: C.textSoft, fontWeight: '700', fontSize: 14 },
-  cc: { flexDirection: 'row', alignItems: 'center', gap: 6, height: '100%' },
+  cc: { flexDirection: 'row', alignItems: 'center', gap: 8, height: '100%' },
   ccText: { fontWeight: '700', fontSize: 17, color: C.text, fontVariant: ['tabular-nums'] },
   ccDivider: { width: 1, height: 24, backgroundColor: C.border, marginLeft: 6 },
   orRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginVertical: 24 },

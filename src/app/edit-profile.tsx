@@ -6,6 +6,7 @@ import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput
 import Animated, { FadeInDown, FadeOutUp, interpolateColor, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { IndiaFlag } from '@/components/IndiaFlag';
 import { ACTIVITY, ACTIVITY_ICON, Decor, fmtFull, fmtNum, fmtWeight, GOAL_ICON, goalSummary, GOALS, GroupLabel, useKeyboardShown } from '@/components/profile/shared';
 import { Button, Card, CountUp, enter, Header, IconTile, layoutTransition, nativeOnly, OptionCard, PressableScale, Screen, Segmented, Stepper, T, tap, useToast, type IconName } from '@/components/ui';
 import { cmToFtIn, round1, targets as calcTargets } from '@/lib/calc';
@@ -94,7 +95,8 @@ export default function EditProfile() {
         </Field>
         <Field label="Mobile number" focused={focus === 'phone'} style={{ marginTop: 16 }}>
           <View style={st.prefixBox}>
-            <Text style={st.prefix}>🇮🇳 +91</Text>
+            <IndiaFlag width={22} />
+            <Text style={st.prefix}>+91</Text>
           </View>
           <TextInput
             value={d.phone}
@@ -258,7 +260,7 @@ const st = StyleSheet.create({
   fieldLabel: { fontSize: 13, fontWeight: '600', color: C.textSoft, marginBottom: 8, marginLeft: 2 },
   input: { flexDirection: 'row', alignItems: 'center', height: 52, borderRadius: R.md, borderWidth: 1, borderColor: C.border, backgroundColor: C.card, overflow: 'hidden' },
   textInput: { flex: 1, height: '100%', paddingHorizontal: 14, fontSize: 16, color: C.text },
-  prefixBox: { height: '100%', justifyContent: 'center', paddingHorizontal: 12, backgroundColor: C.surfaceAlt, borderRightWidth: 1, borderRightColor: C.borderSoft },
+  prefixBox: { height: '100%', flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, backgroundColor: C.surfaceAlt, borderRightWidth: 1, borderRightColor: C.borderSoft },
   prefix: { fontSize: 15, fontWeight: '600', color: C.text },
   stepRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 16, paddingTop: 16, borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: C.borderSoft },
   stepRow0: { flexDirection: 'row', alignItems: 'center', gap: 12 },
