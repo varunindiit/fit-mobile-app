@@ -10,6 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
 import Svg, { Circle } from 'react-native-svg';
 
+import { CalorieCard } from '@/components/home/CalorieCard';
 import { ProgramBadge } from '@/components/home/ProgramBadge';
 import { SnapPlateArt } from '@/components/home/SnapPlateArt';
 import { WaterBottle } from '@/components/home/WaterBottle';
@@ -20,14 +21,11 @@ import {
   Button,
   Card,
   CountUp,
-  Divider,
   EASE_OUT,
   enter,
   IconButton,
   IconTile,
-  MacroBar,
   PressableScale,
-  Pill,
   ProgressBar,
   Ring,
   Screen,
@@ -48,7 +46,9 @@ import { C, G, MOTION, R, shadow, shadowSm } from '@/theme';
 
 const HERO_IMAGE = require('@/assets/images/home-hero.jpg');
 /** Visible photo height below the status bar (the sheet overlaps its last ~28 px). */
-const HERO_BODY = 268;
+const HERO_BODY = 300;
+/** How far the photo runs under the first card, which floats over its bottom edge. */
+const HERO_OVERLAP = 76;
 const GLASS = 'rgba(255,255,255,0.2)';
 
 const TIPS: { icon: IconName; title: string; short: string; body: string }[] = [
@@ -135,7 +135,7 @@ export default function Home() {
   // Photo hero: parallax + fade as you scroll, stretches on pull-down; a compact bar takes over once it's gone.
   // Photo height follows where the content sheet actually starts (safe area, font scale, title length).
   const [sheetY, setSheetY] = useState(0);
-  const heroH = sheetY > 0 ? sheetY + 34 : insets.top + HERO_BODY;
+  const heroH = sheetY > 0 ? sheetY + HERO_OVERLAP : insets.top + HERO_BODY;
   const barAt = heroH - insets.top - 70;
   const scrollY = useSharedValue(0);
   const solidSV = useSharedValue(false);
@@ -189,12 +189,15 @@ export default function Home() {
     <Screen edges={[]}>
       {/* Photo hero (behind the scroll content) */}
       <Animated.View pointerEvents="none" style={[st.photoHero, { height: heroH }, heroStyle]}>
-        <Image source={HERO_IMAGE} style={StyleSheet.absoluteFill} contentFit="cover" contentPosition="center" transition={250} />
-        {/* Brand-tinted scrims: deep green-ink top & bottom, darker on the left where the copy sits */}
-        <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(21,94,80,0.16)' }]} />
-        <LinearGradient colors={['rgba(8,22,19,0.72)', 'rgba(8,22,19,0.28)', 'rgba(8,22,19,0.82)']} locations={[0, 0.42, 1]} style={StyleSheet.absoluteFill} />
-        <LinearGradient colors={['rgba(8,22,19,0.55)', 'rgba(8,22,19,0)']} start={{ x: 0, y: 0.5 }} end={{ x: 0.85, y: 0.5 }} style={StyleSheet.absoluteFill} />
-        <LinearGradient colors={['rgba(245,245,244,0)', C.bg]} style={st.heroFade} />
+        {/* Photo + scrims stop short of the bottom edge so only the solid fade touches it (no seam line) */}
+        <View style={st.photoLayer}>
+          <Image source={HERO_IMAGE} style={StyleSheet.absoluteFill} contentFit="cover" contentPosition="center" transition={250} />
+          {/* Brand-tinted scrims: deep green-ink top & bottom, darker on the left where the copy sits */}
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(21,94,80,0.16)' }]} />
+          <LinearGradient colors={['rgba(8,22,19,0.72)', 'rgba(8,22,19,0.28)', 'rgba(8,22,19,0.82)']} locations={[0, 0.42, 1]} style={StyleSheet.absoluteFill} />
+          <LinearGradient colors={['rgba(8,22,19,0.55)', 'rgba(8,22,19,0)']} start={{ x: 0, y: 0.5 }} end={{ x: 0.85, y: 0.5 }} style={StyleSheet.absoluteFill} />
+        </View>
+        <LinearGradient colors={['rgba(245,245,244,0)', C.bg, C.bg]} locations={[0, 0.82, 1]} style={st.heroFade} />
       </Animated.View>
 
       <Animated.ScrollView
@@ -230,7 +233,7 @@ export default function Home() {
             <View style={st.greetRow}>
               <Ionicons name={timeIcon.name} size={14} color={C.gold} />
               <Text style={st.greet} numberOfLines={1}>
-                {greet} · {fmtDate(today)}
+                {greet}
               </Text>
             </View>
             <Text style={st.hello} numberOfLines={1}>
@@ -285,50 +288,21 @@ export default function Home() {
           </View>
         </Animated.View>
 
-        {/* Content sheet slides over the photo */}
-        <View style={st.sheet} onLayout={(e) => setSheetY(e.nativeEvent.layout.y)}>
-          <View style={st.sheetGrabber} />
+        {/* Content: the first card floats over the photo's faded bottom edge */}
+        <View onLayout={(e) => setSheetY(e.nativeEvent.layout.y)}>
 
         {/* Calorie budget (hero) */}
         <Animated.View entering={enter(1)}>
-          <Card onPress={() => router.push('/diary')} style={st.hero}>
-            <View style={st.rowBetween}>
-              <View style={st.heroTitle}>
-                <Text style={T.h3} numberOfLines={1}>
-                  Calorie budget
-                </Text>
-                <Pill text={status.text} icon={status.icon} color={status.color} bg={status.bg} />
-              </View>
-              <View style={st.link}>
-                <Text style={st.linkText}>Diary</Text>
-                <Ionicons name="chevron-forward" size={15} color={C.primary} />
-              </View>
-            </View>
-            <View style={st.heroBody}>
-              <Ring
-                size={140}
-                stroke={13}
-                value={eaten / (targets.budget + burned.total)}
-                color={over ? C.danger : C.primary}
-                track={over ? C.dangerSoft : C.borderSoft}
-                gradient={over ? undefined : G.brand}>
-                <CountUp value={Math.abs(left)} fromZero style={[st.ringNum, over && { color: C.danger }]} />
-                <Text style={[st.ringLbl, over && { color: C.danger }]}>{over ? 'KCAL OVER' : 'KCAL LEFT'}</Text>
-              </Ring>
-              <View style={st.statCol}>
-                <Stat icon="restaurant" color={C.primaryDark} bg={C.primarySoft} label="Eaten" value={eaten} />
-                <Stat icon="flame" color={C.accent} bg={C.accentSoft} label="Burned" value={burned.total} />
-                <Stat icon="flag" color={C.textSoft} bg={C.surfaceAlt} label="Budget" value={targets.budget} />
-              </View>
-            </View>
-            <Divider style={{ marginTop: 18, marginBottom: 16 }} />
-            <View style={{ flexDirection: 'row', gap: 12 }}>
-              <MacroBar label="Carbs" value={total.carbs} target={targets.carbs} color={C.carbs} />
-              <MacroBar label="Protein" value={total.protein} target={targets.protein} color={C.protein} />
-              <MacroBar label="Fat" value={total.fat} target={targets.fat} color={C.fat} />
-              <MacroBar label="Fiber" value={total.fiber} target={targets.fiber} color={C.fiber} />
-            </View>
-          </Card>
+          <CalorieCard
+            eaten={eaten}
+            burned={burned.total}
+            budget={targets.budget}
+            left={left}
+            over={over}
+            status={status}
+            macros={{ carbs: [total.carbs, targets.carbs], protein: [total.protein, targets.protein], fat: [total.fat, targets.fat], fiber: [total.fiber, targets.fiber] }}
+            onPress={() => router.push('/diary')}
+          />
         </Animated.View>
 
         {/* Ria insight (AI) */}
@@ -714,20 +688,6 @@ export default function Home() {
   );
 }
 
-function Stat({ icon, color, bg, label, value }: { icon: IconName; color: string; bg: string; label: string; value: number }) {
-  return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-      <IconTile icon={icon} color={color} bg={bg} size={36} />
-      <View>
-        <Text style={T.tiny}>{label.toUpperCase()}</Text>
-        <CountUp value={Math.round(value)} style={st.statVal}>
-          <Text style={st.unit}> kcal</Text>
-        </CountUp>
-      </View>
-    </View>
-  );
-}
-
 /** One glass in the water tracker; the fill rises/falls when toggled. */
 function Glass({ index, filled, onPress }: { index: number; filled: boolean; onPress: () => void }) {
   const level = useSharedValue(0);
@@ -750,9 +710,10 @@ function Glass({ index, filled, onPress }: { index: number; filled: boolean; onP
 }
 
 const st = StyleSheet.create({
-  photoHero: { position: 'absolute', top: 0, left: 0, right: 0, overflow: 'hidden', backgroundColor: C.navy },
-  heroFade: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 56 },
-  heroCopy: { marginTop: 22, paddingBottom: 34 },
+  photoHero: { position: 'absolute', top: 0, left: 0, right: 0, overflow: 'hidden', backgroundColor: C.bg },
+  photoLayer: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 14 },
+  heroFade: { position: 'absolute', left: 0, right: 0, bottom: -2, height: HERO_OVERLAP + 26 },
+  heroCopy: { marginTop: 22, paddingBottom: 26 },
   heroPill: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', backgroundColor: GLASS, borderColor: 'rgba(255,255,255,0.28)', borderWidth: StyleSheet.hairlineWidth * 2, paddingHorizontal: 10, height: 26, borderRadius: 13, maxWidth: '100%' },
   heroPillText: { color: C.white, fontSize: 12, fontWeight: '700', letterSpacing: 0.2 },
   photoTitle: { color: C.white, fontSize: 28, lineHeight: 34, fontWeight: '800', letterSpacing: -0.6, marginTop: 10, textShadowColor: 'rgba(0,0,0,0.25)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 6 },
@@ -760,8 +721,6 @@ const st = StyleSheet.create({
   heroSub: { flex: 1, color: 'rgba(255,255,255,0.9)', fontSize: 13, fontWeight: '600' },
   heroCta: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: C.white, paddingHorizontal: 14, height: 34, borderRadius: 17, ...shadowSm },
   heroCtaText: { color: C.primaryDark, fontSize: 13, fontWeight: '800', letterSpacing: 0.2 },
-  sheet: { backgroundColor: C.bg, borderTopLeftRadius: R.xl, borderTopRightRadius: R.xl, marginHorizontal: -16, paddingHorizontal: 16, marginTop: -2 },
-  sheetGrabber: { alignSelf: 'center', width: 40, height: 5, borderRadius: 3, backgroundColor: C.border, marginTop: 10, marginBottom: 6 },
   glassBtn: { borderWidth: StyleSheet.hairlineWidth * 2, borderColor: 'rgba(255,255,255,0.28)' },
   bar: { position: 'absolute', top: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, backgroundColor: C.bg, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.border },
   barTitle: { flex: 1, fontSize: 17, fontWeight: '700', color: C.text, letterSpacing: -0.3 },
@@ -781,12 +740,6 @@ const st = StyleSheet.create({
   rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   link: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   linkText: { color: C.primary, fontWeight: '600', fontSize: 13 },
-  hero: { padding: 16 },
-  heroTitle: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1 },
-  heroBody: { flexDirection: 'row', alignItems: 'center', marginTop: 16 },
-  statCol: { flex: 1, marginLeft: 16, gap: 14, alignSelf: 'stretch', justifyContent: 'center' },
-  ringNum: { fontSize: 30, fontWeight: '800', color: C.text, letterSpacing: -1, fontVariant: ['tabular-nums'] },
-  ringLbl: { fontSize: 10, fontWeight: '700', color: C.muted, letterSpacing: 0.8, marginTop: 1 },
   statVal: { fontSize: 17, fontWeight: '700', color: C.text, fontVariant: ['tabular-nums'], letterSpacing: -0.2 },
   unit: { fontSize: 12, color: C.muted, fontWeight: '500' },
   unitLg: { fontSize: 14, color: C.muted, fontWeight: '500', letterSpacing: 0 },
