@@ -75,11 +75,11 @@ const DIETS: { t: string; img: number; hero: number; diet: string }[] = [
   { t: 'Vegan', img: IMG.dietVegan, hero: IMG.dietHeroVegan, diet: 'Vegan' },
   { t: 'Other', img: IMG.dietOther, hero: IMG.dietHeroOther, diet: '' },
 ];
-const REWARDS: { t: string; img: number }[] = [
-  { t: 'Treat myself to a nice meal', img: IMG.rewardMeal },
-  { t: 'Buy new gym clothes', img: IMG.rewardClothes },
-  { t: 'Take a trip somewhere', img: IMG.rewardTrip },
-  { t: 'Get a makeover', img: IMG.rewardMakeover },
+const REWARDS: { t: string; img: number; imgMale: number }[] = [
+  { t: 'Treat myself to a nice meal', img: IMG.rewardMeal, imgMale: IMG.rewardMealMale },
+  { t: 'Buy new gym clothes', img: IMG.rewardClothes, imgMale: IMG.rewardClothesMale },
+  { t: 'Take a trip somewhere', img: IMG.rewardTrip, imgMale: IMG.rewardTripMale },
+  { t: 'Get a makeover', img: IMG.rewardMakeover, imgMale: IMG.rewardMakeoverMale },
 ];
 /** Goal pace, kg per week, Easy → Master. */
 const PACES: { v: number; icon: IconName; note: string }[] = [
@@ -600,7 +600,7 @@ export default function Onboarding() {
             <View style={st.rewardGrid}>
               {REWARDS.map((r, i) => (
                 <Rise key={r.t} i={i + 1} style={st.rewardCell}>
-                  <RewardCard label={r.t} img={r.img} on={p.rewards.includes(r.t)} onPress={() => set((x) => ({ rewards: toggleIn(x.rewards, r.t) }))} />
+                  <RewardCard label={r.t} img={p.gender === 'male' ? r.imgMale : r.img} on={p.rewards.includes(r.t)} onPress={() => set((x) => ({ rewards: toggleIn(x.rewards, r.t) }))} />
                 </Rise>
               ))}
             </View>
