@@ -18,7 +18,7 @@ import { YearWheel } from '@/components/onboarding/YearWheel';
 import { Button, Dialog, EASE_OUT, nativeOnly, PressableScale, tap, useToast, type IconName } from '@/components/ui';
 import { bmi, bmiLabel, cmToFtIn, targets } from '@/lib/calc';
 import { DEFAULT_PROFILE, useStore, type Goal, type Profile } from '@/lib/store';
-import { BRAND, C, MOTION, R, shadowSm } from '@/theme';
+import { BRAND, C, G, MOTION, R, glow, shadowLg, shadowSm } from '@/theme';
 
 /* ---------------- Flow ---------------- */
 
@@ -88,8 +88,8 @@ const PACES: { v: number; icon: IconName; note: string }[] = [
   { v: 0.75, icon: 'flash-outline', note: 'Faster results. Needs consistent effort every week.' },
   { v: 1, icon: 'flame-outline', note: 'Aggressive pace. Best for experienced, disciplined people.' },
 ];
-const BENEFITS_LEFT = ['Personalized workout plan', 'Custom meal plan', 'Expert guidance'];
-const BENEFITS_RIGHT = ['Start up faster', 'Get a toned body', 'Build healthy habits', 'Long-term results'];
+const BENEFITS_LEFT = ['Slow transformation', 'Lack of personalization', 'Missing expertise', 'Limited progress'];
+const BENEFITS_RIGHT = ['Faster results', 'Tailored for you', 'Expert guidance', 'Boosted progress'];
 
 const toggleIn = (list: string[], v: string) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
 const yearNow = new Date().getFullYear();
@@ -436,28 +436,41 @@ export default function Onboarding() {
             <QTitle text={`Discover the benefits of ${BRAND}'s program`} />
             <View style={st.benefitRow}>
               <Rise i={1} style={st.benefitLeft}>
-                <View style={st.benefitItem}>
-                  <Image source={IMG.benefitsStatue} style={st.statue} contentFit="contain" />
-                  <Text style={st.benefitText}>{BENEFITS_LEFT[0]}</Text>
+                <Image source={p.gender === 'male' ? IMG.benefitsBeforeMale : IMG.benefitsBefore} style={st.beforePhoto} contentFit="cover" contentPosition="top" />
+                <View style={st.ribbon}>
+                  <View style={[StyleSheet.absoluteFill, st.ribbonBg, { backgroundColor: '#DCDCE2' }]} />
+                  <Text style={st.ribbonGrey}>Regular{'\n'}Workout Apps</Text>
+                  <View style={[st.ribbonFold, { borderTopColor: '#B9B9C2' }]} />
                 </View>
-                {BENEFITS_LEFT.slice(1).map((label) => (
-                  <View key={label} style={[st.benefitItem, st.benefitItemRow]}>
-                    <Ionicons name="checkmark" size={15} color={C.muted} />
-                    <Text style={[st.benefitText, { flex: 1 }]}>{label}</Text>
-                  </View>
-                ))}
+                <View style={st.benefitList}>
+                  {BENEFITS_LEFT.map((label, i) => (
+                    <View key={label} style={[st.benefitLine, i === BENEFITS_LEFT.length - 1 && { opacity: 0.45 }]}>
+                      <Ionicons name="close-circle" size={17} color="#CFCFD6" />
+                      <Text style={st.benefitText}>{label}</Text>
+                    </View>
+                  ))}
+                </View>
               </Rise>
               <Rise i={2} style={st.benefitCard}>
-                <LinearGradient colors={[C.primary, C.primaryDark]} style={[StyleSheet.absoluteFill, { top: 56, borderRadius: R.lg }]} />
+                <LinearGradient colors={G.brand} style={[StyleSheet.absoluteFill, st.benefitCardBg]} />
                 <Image source={p.gender === 'male' ? IMG.benefitsMale : IMG.benefits} style={st.benefitPhoto} contentFit="contain" contentPosition="bottom" />
-                <LinearGradient colors={[C.accent, C.workout]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={st.benefitStrip}>
-                  <Text style={st.benefitStripTitle}>Your {BRAND} plan</Text>
-                  <Text style={st.benefitStripSub}>Built from your answers</Text>
-                </LinearGradient>
-                <View style={{ paddingHorizontal: 12, paddingTop: 12, paddingBottom: 14, gap: 9 }}>
-                  {BENEFITS_RIGHT.map((b) => (
-                    <View key={b} style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
-                      <Ionicons name="checkmark-circle" size={16} color={C.white} />
+                <View style={[st.ribbon, st.ribbonRight]}>
+                  <LinearGradient colors={[C.accent, C.workout]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={[StyleSheet.absoluteFill, st.ribbonBg]} />
+                  <Text style={st.ribbonTitle}>Our Program</Text>
+                  <Text style={st.ribbonSub}>Personalized Plan</Text>
+                  <View style={[st.ribbonFold, { borderTopColor: '#A8461F' }]} />
+                  <View style={st.sparkle} pointerEvents="none">
+                    {[5, 45, 85].map((deg) => (
+                      <View key={deg} style={[st.sparkleBar, { transform: [{ rotate: `${deg}deg` }, { translateY: -9 }] }]} />
+                    ))}
+                  </View>
+                </View>
+                <View style={[st.benefitList, { paddingHorizontal: 14, paddingBottom: 18 }]}>
+                  {BENEFITS_RIGHT.map((b, i) => (
+                    <View key={b} style={[st.benefitLine, i === BENEFITS_RIGHT.length - 1 && { opacity: 0.5 }]}>
+                      <View style={st.checkDot}>
+                        <Ionicons name="checkmark" size={12} color={C.primaryDark} />
+                      </View>
                       <Text style={st.benefitCardText}>{b}</Text>
                     </View>
                   ))}
@@ -797,17 +810,25 @@ const st = StyleSheet.create({
   paceKg: { fontSize: 13, fontWeight: '600', color: C.muted, marginTop: 2 },
 
   benefitRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingHorizontal: GUTTER, marginTop: 22 },
-  benefitLeft: { flex: 0.85, gap: 8, marginTop: 56 },
-  benefitItem: { backgroundColor: C.surfaceAlt, borderRadius: R.md, padding: 12, borderWidth: 1, borderColor: C.borderSoft, gap: 6 },
-  benefitItemRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  statue: { height: 92, alignSelf: 'stretch' },
-  benefitText: { fontSize: 12.5, fontWeight: '600', color: C.textSoft, lineHeight: 17 },
-  benefitCard: { flex: 1.15 },
+  benefitLeft: { flex: 0.9, marginTop: 74, backgroundColor: '#EFEFF3', borderRadius: R.lg, paddingBottom: 16 },
+  beforePhoto: { height: 108, borderTopLeftRadius: R.lg, borderTopRightRadius: R.lg },
+  ribbon: { marginLeft: -10, marginRight: 8, paddingHorizontal: 12, paddingVertical: 9, marginBottom: 6 },
+  ribbonRight: { marginLeft: -12, marginRight: -4, ...glow(C.workout) },
+  ribbonBg: { borderTopLeftRadius: 10, borderTopRightRadius: 12, borderBottomRightRadius: 12, transform: [{ skewX: '-6deg' }] },
+  ribbonFold: { position: 'absolute', left: 0, bottom: -9, width: 0, height: 0, borderTopWidth: 9, borderLeftWidth: 10, borderLeftColor: 'transparent' },
+  ribbonGrey: { fontSize: 14, fontWeight: '800', color: '#77777F', lineHeight: 18 },
+  ribbonTitle: { color: C.white, fontSize: 16, fontWeight: '900', fontStyle: 'italic', letterSpacing: -0.2 },
+  ribbonSub: { color: 'rgba(255,255,255,0.92)', fontSize: 11.5, fontWeight: '600', marginTop: 1 },
+  sparkle: { position: 'absolute', right: 2, top: -2, width: 0, height: 0 },
+  sparkleBar: { position: 'absolute', left: -2, top: -14, width: 4, height: 11, borderRadius: 2, backgroundColor: C.gold },
+  benefitList: { paddingHorizontal: 12, paddingTop: 10, gap: 13 },
+  benefitLine: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  benefitText: { flex: 1, fontSize: 12.5, fontWeight: '600', color: C.textSoft, lineHeight: 16 },
+  benefitCard: { flex: 1.1 },
+  benefitCardBg: { top: 56, borderRadius: R.lg, ...shadowLg },
   benefitPhoto: { height: 190, marginBottom: -6 },
-  benefitStrip: { marginHorizontal: -6, borderRadius: R.sm, paddingHorizontal: 12, paddingVertical: 8 },
-  benefitStripTitle: { color: C.white, fontSize: 13, fontWeight: '800' },
-  benefitStripSub: { color: 'rgba(255,255,255,0.85)', fontSize: 10.5, fontWeight: '600', marginTop: 1 },
-  benefitCardText: { color: C.white, fontSize: 12.5, fontWeight: '700', flex: 1 },
+  checkDot: { width: 18, height: 18, borderRadius: 9, backgroundColor: C.white, alignItems: 'center', justifyContent: 'center' },
+  benefitCardText: { color: C.white, fontSize: 13.5, fontWeight: '700', flex: 1, lineHeight: 18 },
 
   activityArt: { width: 180, height: 160 },
 
