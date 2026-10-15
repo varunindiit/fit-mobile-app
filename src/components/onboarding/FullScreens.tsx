@@ -7,12 +7,12 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, FadeIn, FadeInDown, FadeInUp, ZoomIn, useAnimatedStyle, useReducedMotion, useSharedValue, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Button, CountUp, Dialog, EASE_OUT, nativeOnly, Ring, tap, type IconName } from '@/components/ui';
+import { Button, CountUp, Dialog, EASE_OUT, nativeOnly, Ring, Sheet, tap, type IconName } from '@/components/ui';
 import { DEFAULT_MONTHS, pctOff, PlanPicker, planFor } from '@/components/plans/PlanPicker';
 import { formatINR, type PlanTier } from '@/data/plans';
 import { bmi, targets } from '@/lib/calc';
 import type { Profile } from '@/lib/store';
-import { C, MOTION, R, shadow, shadowSm } from '@/theme';
+import { BRAND, C, MOTION, R, shadow, shadowSm } from '@/theme';
 import { IMG } from './assets';
 import { GoalCurve } from './GoalCurve';
 import { GUTTER, fmtWeight, toUnit, type WeightUnit } from './kit';
@@ -36,49 +36,110 @@ const rise = (delay: number) => nativeOnly(FadeInDown.duration(MOTION.enter + 80
 /* ---------------- 0 · Intro ---------------- */
 
 const INTRO_STATS: { label: string; value: number; format: (n: number) => string }[] = [
-  { label: 'Total Workouts Completed', value: 300, format: (n) => `${Math.round(n)} Million+` },
-  { label: 'Total Calories Burned', value: 15, format: (n) => `${Math.round(n)} Billion+` },
-  { label: 'App Store Rating', value: 4.9, format: (n) => `${n.toFixed(1)} Stars` },
+  { label: 'workouts logged', value: 300, format: (n) => `${Math.round(n)}M+` },
+  { label: 'kcal torched', value: 15, format: (n) => `${Math.round(n)}B+` },
+  { label: 'user rating', value: 4.9, format: (n) => `${n.toFixed(1)}★` },
 ];
 
-/** First screen: full-bleed group photo melting into the brand colour, headline, counting stats and the CTA. */
+const LOGO = require('@/assets/images/splash-icon.png');
+
+/** First screen: full-bleed group photo under a deep scrim, brand bar, left-aligned headline, glass stat strip and the CTA. */
 export function Intro({ onStart, onLogin }: { onStart: () => void; onLogin: () => void }) {
   const reduce = useReducedMotion();
-  const zoom = useSharedValue(reduce ? 1 : 1.1);
+  const zoom = useSharedValue(reduce ? 1 : 1.12);
   useEffect(() => {
-    if (!reduce) zoom.set(withTiming(1, { duration: 5000, easing: Easing.out(Easing.cubic) }));
+    if (!reduce) zoom.set(withTiming(1, { duration: 6000, easing: Easing.out(Easing.cubic) }));
   }, [zoom, reduce]);
   const photo = useAnimatedStyle(() => ({ transform: [{ scale: zoom.get() }] }));
   return (
-    <View style={{ flex: 1, backgroundColor: C.primaryDark }}>
+    <View style={{ flex: 1, backgroundColor: C.navy }}>
       <StatusBar style="light" />
-      <Animated.View style={[st.introPhoto, photo]}>
+      <Animated.View style={[StyleSheet.absoluteFill, photo]}>
         <Image source={IMG.intro} style={StyleSheet.absoluteFill} contentFit="cover" contentPosition="top" transition={300} />
       </Animated.View>
-      <LinearGradient colors={['rgba(21,94,80,0)', 'rgba(21,94,80,0.45)', C.primaryDark]} locations={[0.3, 0.47, 0.62]} style={StyleSheet.absoluteFill} />
-      <SafeAreaView style={{ flex: 1, paddingHorizontal: 24 }} edges={['top', 'bottom']}>
-        <View style={{ flex: 1 }} />
-        <Animated.Text entering={rise(200)} style={st.introTitle}>
-          EVERY WORKOUT{'\n'}REDEFINES WHO YOU ARE!
-        </Animated.Text>
-        <View style={{ gap: 14, marginTop: 26 }}>
-          {INTRO_STATS.map((s, i) => (
-            <Animated.View key={s.label} entering={rise(380 + i * 140)} style={{ alignItems: 'center' }}>
-              <Text style={st.introLabel}>{s.label}</Text>
-              <CountUp value={s.value} format={s.format} fromZero duration={1200} style={st.introValue} />
-            </Animated.View>
-          ))}
-        </View>
-        <Animated.View entering={nativeOnly(FadeInUp.duration(MOTION.enter).delay(900).easing(EASE_OUT))} style={{ marginTop: 32, paddingBottom: 4 }}>
-          <Button title="Get My Plan" onPress={onStart} style={{ backgroundColor: C.white, borderColor: C.white }} textStyle={{ color: C.primaryDark }} />
-          <Pressable accessibilityRole="button" onPress={() => { tap(); onLogin(); }} hitSlop={8} style={({ pressed }) => [st.textBtn, pressed && { opacity: 0.6 }]}>
-            <Text style={st.introLogin}>
-              Already our user? <Text style={st.introLoginLink}>Log in</Text>
-            </Text>
+      <LinearGradient colors={['rgba(19,35,31,0.55)', 'rgba(19,35,31,0)']} style={st.introTopScrim} />
+      <LinearGradient colors={['rgba(19,35,31,0)', 'rgba(19,35,31,0.6)', 'rgba(19,35,31,0.94)', C.navy]} locations={[0.28, 0.48, 0.66, 1]} style={StyleSheet.absoluteFill} />
+      <SafeAreaView style={{ flex: 1, paddingHorizontal: GUTTER + 4 }} edges={['top', 'bottom']}>
+        <Animated.View entering={nativeOnly(FadeIn.duration(MOTION.enter).delay(100))} style={st.introBar}>
+          <View style={st.introBrand} accessible accessibilityRole="header" accessibilityLabel={BRAND}>
+            <View style={st.introLogo}>
+              <Image source={LOGO} style={{ width: 22, height: 22 }} contentFit="contain" />
+            </View>
+            <Text style={st.introBrandText}>{BRAND}</Text>
+          </View>
+          <Pressable accessibilityRole="button" accessibilityLabel="Log in" onPress={() => { tap(); onLogin(); }} hitSlop={8} style={({ pressed }) => [st.introLoginPill, pressed && { opacity: 0.7 }]}>
+            <Text style={st.introLoginText}>Log in</Text>
           </Pressable>
+        </Animated.View>
+
+        <View style={{ flex: 1 }} />
+
+        <Animated.View entering={rise(200)} style={st.introEyebrow}>
+          <View style={st.introDot} />
+          <Text style={st.introEyebrowText}>BUILT JUST FOR YOU</Text>
+        </Animated.View>
+        <Animated.Text entering={rise(300)} style={st.introTitle} accessibilityRole="header">
+          Sweat today.{'\n'}
+          Shine <Text style={{ color: C.gold }}>tomorrow.</Text>
+        </Animated.Text>
+        <Animated.Text entering={rise(420)} style={st.introSub}>
+          Custom workouts, smart meal plans and daily coaching, all in one app.
+        </Animated.Text>
+
+        <Animated.View entering={rise(560)} style={st.introStats}>
+          {INTRO_STATS.map((s, i) => (
+            <View key={s.label} style={[st.introStat, i > 0 && st.introStatDivider]}>
+              <CountUp value={s.value} format={s.format} fromZero duration={1300} style={st.introValue} />
+              <Text style={st.introLabel}>{s.label}</Text>
+            </View>
+          ))}
+        </Animated.View>
+
+        <Animated.View entering={nativeOnly(FadeInUp.duration(MOTION.enter).delay(800).easing(EASE_OUT))} style={{ marginTop: 22, paddingBottom: 8 }}>
+          <Button title="Get My Plan" onPress={onStart} style={{ backgroundColor: C.white, borderColor: C.white }} textStyle={{ color: C.primaryDark }} />
+          <Text style={st.introFoot}>Answer a few questions · Get your plan instantly</Text>
         </Animated.View>
       </SafeAreaView>
     </View>
+  );
+}
+
+const RESTORE: [IconName, string][] = [
+  ['barbell', 'Your plan'],
+  ['stats-chart', 'Progress'],
+  ['flame', 'Streak'],
+];
+
+/** "Log in" bottom sheet on the Intro screen: what comes back with the account, the confirm action and the demo note. */
+export function LoginSheet({ visible, onClose, onLogin }: { visible: boolean; onClose: () => void; onLogin: () => void }) {
+  return (
+    <Sheet visible={visible} onClose={onClose}>
+      <View style={{ paddingHorizontal: GUTTER + 4, paddingTop: 4 }}>
+        <View style={st.loginMark}>
+          <Image source={LOGO} style={{ width: 30, height: 30 }} contentFit="contain" />
+        </View>
+        <Text style={st.loginTitle}>Welcome back!</Text>
+        <Text style={st.loginSub}>Log in to pick up right where you left off with your saved {BRAND} plan.</Text>
+        <View style={st.loginRestore}>
+          {RESTORE.map(([icon, label]) => (
+            <View key={label} style={st.loginItem}>
+              <View style={st.loginItemIcon}>
+                <Ionicons name={icon} size={18} color={C.primaryDark} />
+              </View>
+              <Text style={st.loginItemText}>{label}</Text>
+            </View>
+          ))}
+        </View>
+        <Button title="Log in" icon="log-in-outline" onPress={onLogin} style={{ marginTop: 24 }} />
+        <Pressable accessibilityRole="button" onPress={() => { tap(); onClose(); }} hitSlop={8} style={({ pressed }) => [st.textBtn, pressed && { opacity: 0.6 }]}>
+          <Text style={st.textBtnLabel}>Not now</Text>
+        </Pressable>
+        <View style={st.loginNote}>
+          <Ionicons name="information-circle" size={15} color={C.muted} />
+          <Text style={st.loginNoteText}>Demo mode: no account is needed.</Text>
+        </View>
+      </View>
+    </Sheet>
   );
 }
 
@@ -407,12 +468,33 @@ export function Paywall({ male, gaining, onSkip, onPaid, onDone }: { male: boole
 
 const st = StyleSheet.create({
   white: { flex: 1, backgroundColor: C.white },
-  introPhoto: { position: 'absolute', top: 0, left: 0, right: 0, height: '62%' },
-  introTitle: { fontSize: 23, lineHeight: 29, fontWeight: '900', fontStyle: 'italic', color: C.white, textAlign: 'center', letterSpacing: -0.3 },
-  introLabel: { fontSize: 15, fontWeight: '600', color: 'rgba(255,255,255,0.92)' },
-  introValue: { fontSize: 34, fontWeight: '900', color: C.gold, marginTop: 2, letterSpacing: -0.5, fontVariant: ['tabular-nums'] },
-  introLogin: { fontSize: 14, color: 'rgba(255,255,255,0.7)' },
-  introLoginLink: { color: C.white, fontWeight: '700', textDecorationLine: 'underline' },
+  introTopScrim: { position: 'absolute', top: 0, left: 0, right: 0, height: 160 },
+  introBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 6 },
+  introBrand: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  introLogo: { width: 32, height: 32, borderRadius: 10, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center' },
+  introBrandText: { fontSize: 20, fontWeight: '900', color: C.white, letterSpacing: -0.4 },
+  introLoginPill: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: R.pill, backgroundColor: 'rgba(255,255,255,0.16)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.28)' },
+  introLoginText: { fontSize: 14, fontWeight: '700', color: C.white },
+  introEyebrow: { flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 6, borderRadius: R.pill, backgroundColor: 'rgba(18,168,125,0.22)', borderWidth: 1, borderColor: 'rgba(18,168,125,0.5)' },
+  introDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: C.primary },
+  introEyebrowText: { fontSize: 11, fontWeight: '800', color: C.primaryTint, letterSpacing: 1.2 },
+  introTitle: { fontSize: 40, lineHeight: 44, fontWeight: '900', color: C.white, letterSpacing: -1.2, marginTop: 14 },
+  introSub: { fontSize: 15.5, lineHeight: 22, color: 'rgba(255,255,255,0.78)', marginTop: 12, maxWidth: 330 },
+  introStats: { flexDirection: 'row', marginTop: 24, paddingVertical: 14, borderRadius: R.lg, backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.14)' },
+  introStat: { flex: 1, alignItems: 'center' },
+  introStatDivider: { borderLeftWidth: 1, borderLeftColor: 'rgba(255,255,255,0.14)' },
+  introValue: { fontSize: 22, fontWeight: '900', color: C.gold, letterSpacing: -0.4, fontVariant: ['tabular-nums'] },
+  introLabel: { fontSize: 12, fontWeight: '600', color: 'rgba(255,255,255,0.68)', marginTop: 2 },
+  loginMark: { width: 56, height: 56, borderRadius: 18, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center', alignSelf: 'center' },
+  loginTitle: { fontSize: 24, fontWeight: '900', color: C.text, letterSpacing: -0.5, textAlign: 'center', marginTop: 16 },
+  loginSub: { fontSize: 14.5, lineHeight: 21, color: C.textSoft, textAlign: 'center', marginTop: 6, paddingHorizontal: 8 },
+  loginRestore: { flexDirection: 'row', gap: 10, marginTop: 22 },
+  loginItem: { flex: 1, alignItems: 'center', gap: 8, paddingVertical: 14, borderRadius: R.md, backgroundColor: C.surfaceAlt, borderWidth: 1, borderColor: C.borderSoft },
+  loginItemIcon: { width: 36, height: 36, borderRadius: 18, backgroundColor: C.primarySoft, alignItems: 'center', justifyContent: 'center' },
+  loginItemText: { fontSize: 12.5, fontWeight: '700', color: C.text },
+  loginNote: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 },
+  loginNoteText: { fontSize: 12, color: C.muted, fontWeight: '600' },
+  introFoot: { fontSize: 12.5, color: 'rgba(255,255,255,0.55)', textAlign: 'center', marginTop: 14, fontWeight: '600' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   halo: { position: 'absolute', width: 132, height: 132, borderRadius: 66, backgroundColor: C.primary },
   coach: { width: 132, height: 132, borderRadius: 66, overflow: 'hidden', backgroundColor: C.skeleton, borderWidth: 4, borderColor: C.white },

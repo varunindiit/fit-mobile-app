@@ -11,12 +11,12 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Glyph } from '@/components/Glyph';
 import { BodyShape, SHAPES, bodyFat } from '@/components/onboarding/BodyShape';
 import { IMG } from '@/components/onboarding/assets';
-import { Analysis, Intro, Motivation, Paywall, PlanResult, Welcome } from '@/components/onboarding/FullScreens';
+import { Analysis, Intro, LoginSheet, Motivation, Paywall, PlanResult, Welcome } from '@/components/onboarding/FullScreens';
 import { GoalCurve } from '@/components/onboarding/GoalCurve';
 import { ChoiceRow, GUTTER, OnbHeader, PACES, Photo, QTitle, StepSlider, TipCard, UnitToggle, fromUnit, stepIn, toUnit, useOn, type WeightUnit } from '@/components/onboarding/kit';
 import { RulerPicker } from '@/components/onboarding/RulerPicker';
 import { YearWheel } from '@/components/onboarding/YearWheel';
-import { Button, Dialog, EASE_OUT, nativeOnly, PressableScale, tap, useToast, type IconName } from '@/components/ui';
+import { Button, EASE_OUT, nativeOnly, PressableScale, tap, useToast, type IconName } from '@/components/ui';
 import { bmi, bmiLabel, cmToFtIn, targets } from '@/lib/calc';
 import { DEFAULT_PROFILE, isPremiumActive, useStore, type Goal, type Profile } from '@/lib/store';
 import { BRAND, C, G, MOTION, R, glow, shadowLg, shadowSm } from '@/theme';
@@ -192,15 +192,10 @@ export default function Onboarding() {
     return (
       <>
         <Intro onStart={next} onLogin={() => setLogin(true)} />
-        <Dialog
+        <LoginSheet
           visible={login}
-          iconName="person-circle"
-          title="Welcome back!"
-          text={`Log in to continue with your saved ${BRAND} plan. Demo mode: no account is needed.`}
-          cancel="Cancel"
-          confirm="Log in"
-          onCancel={() => setLogin(false)}
-          onConfirm={() => {
+          onClose={() => setLogin(false)}
+          onLogin={() => {
             setLogin(false);
             // A returning user on this device goes straight back in with their saved logs and profile.
             if (state.weights.length || state.entries.length) logIn();
