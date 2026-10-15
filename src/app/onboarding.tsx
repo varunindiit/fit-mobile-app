@@ -5,19 +5,20 @@ import { Redirect, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo, useState } from 'react';
 import { BackHandler, ScrollView, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
-import Animated, { FadeInDown, ZoomIn, interpolateColor, useAnimatedStyle } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeInDown, ZoomIn, interpolateColor, useAnimatedStyle } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Glyph } from '@/components/Glyph';
 import { BodyShape, SHAPES, bodyFat } from '@/components/onboarding/BodyShape';
 import { IMG } from '@/components/onboarding/assets';
 import { Analysis, Intro, LoginSheet, Motivation, Paywall, PlanResult, Welcome } from '@/components/onboarding/FullScreens';
+import { BmiGauge } from '@/components/onboarding/BmiGauge';
 import { GoalCurve } from '@/components/onboarding/GoalCurve';
+import { HeightStage } from '@/components/onboarding/HeightStage';
 import { ChoiceRow, GUTTER, OnbHeader, PACES, Photo, QTitle, StepSlider, TipCard, UnitToggle, fromUnit, stepIn, toUnit, useOn, type WeightUnit } from '@/components/onboarding/kit';
 import { RulerPicker } from '@/components/onboarding/RulerPicker';
 import { YearWheel } from '@/components/onboarding/YearWheel';
 import { Button, EASE_OUT, nativeOnly, PressableScale, tap, useToast, type IconName } from '@/components/ui';
-import { bmi, bmiLabel, cmToFtIn, targets } from '@/lib/calc';
+import { bmi, bmiLabel, targets } from '@/lib/calc';
 import { DEFAULT_PROFILE, isPremiumActive, useStore, type Goal, type Profile } from '@/lib/store';
 import { BRAND, C, G, MOTION, R, glow, shadowLg, shadowSm } from '@/theme';
 
@@ -86,6 +87,18 @@ const GENDERS: { v: 'male' | 'female'; label: string; icon: IconName; img: numbe
 ];
 const BENEFITS_LEFT =['Slow transformation', 'Lack of personalization', 'Missing expertise', 'Limited progress'];
 const BENEFITS_RIGHT = ['Faster results', 'Tailored for you', 'Expert guidance', 'Boosted progress'];
+
+/** Age bracket for the birth step: how the plan adapts. */
+const ageGroup = (age: number): { title: string; icon: IconName; note: string } =>
+  age < 18
+    ? { title: 'Strong foundations', icon: 'school', note: 'Form-first, bodyweight-led sessions that build safe, lasting habits.' }
+    : age < 30
+      ? { title: 'Peak recovery', icon: 'flash', note: "You bounce back fast, so we'll push volume and intensity." }
+      : age < 40
+        ? { title: 'Strength builder', icon: 'barbell', note: 'Balanced strength and cardio, with smart recovery days.' }
+        : age < 50
+          ? { title: 'Smart & steady', icon: 'fitness', note: 'Joint-friendly progressions that keep you strong and mobile.' }
+          : { title: 'Active longevity', icon: 'leaf', note: 'Low-impact strength, balance and mobility to keep you moving well.' };
 
 const toggleIn = (list: string[], v: string) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
 const yearNow = new Date().getFullYear();
@@ -274,92 +287,150 @@ export default function Onboarding() {
         const bf = bodyFat(level, p.gender);
         // On the desired step the verdict reflects how far the target is from the current shape.
         const drop = p.bodyShape - p.targetShape;
-        const goal =
-          drop >= 3
-            ? { verdict: 'Sweaty Choice!', tone: 'high' as const, note: "Get ready to break a sweat! This target is not easy but we're sure you are ready!" }
+        const info: { verdict: string; tone: 'good' | 'ok' | 'high'; icon: IconName; note: string } = desired
+          ? drop >= 3
+            ? { verdict: 'Bold goal', tone: 'high', icon: 'flame', note: "Ambitious and absolutely doable. Expect to sweat; we'll pace it so you stay on track." }
             : drop >= 1
-              ? { verdict: 'Realistic Goal', tone: 'good' as const, note: "You're on the right track! Keep it up for a healthier, more confident you!" }
+              ? { verdict: 'Smart target', tone: 'good', icon: 'checkmark-circle', note: 'A realistic, sustainable goal. Steady progress, real results.' }
               : drop === 0
-                ? { verdict: 'Maintain', tone: 'good' as const, note: "We'll help you keep your shape while building strength and definition." }
-                : { verdict: 'Bulk Up', tone: 'ok' as const, note: "Building size? We'll pair strength training with the right fuel." };
-        const verdict = desired ? goal.verdict : bf.verdict;
-        const tone = desired ? goal.tone : bf.tone;
-        const toneColor = tone === 'good' ? C.primary : tone === 'ok' ? C.warning : C.accent;
-        const note = desired
-          ? goal.note
+                ? { verdict: 'Hold & refine', tone: 'good', icon: 'shield-checkmark', note: "We'll keep your shape while building strength and definition." }
+                : { verdict: 'Size up', tone: 'ok', icon: 'barbell', note: "Building size? We'll pair strength training with the right fuel." }
           : bf.tone === 'high'
-            ? 'You may have a slow metabolism, and face some potential health problems.'
+            ? { verdict: bf.verdict, tone: 'high', icon: 'flame', note: 'Extra body fat can slow your metabolism. The good news: it responds fast to the right plan.' }
             : bf.tone === 'ok'
-              ? 'A solid starting point. A little focus will reveal real definition.'
-              : "Great shape already! We'll help you sharpen it even further.";
+              ? { verdict: bf.verdict, tone: 'ok', icon: 'trending-up', note: 'A solid base. A little focus will bring out real definition.' }
+              : { verdict: bf.verdict, tone: 'good', icon: 'sparkles', note: "You're already in great shape. We'll help you sharpen it further." };
+        const toneColor = info.tone === 'good' ? C.primary : info.tone === 'ok' ? C.warning : C.accent;
+        const toneSoft = info.tone === 'good' ? C.primarySoft : info.tone === 'ok' ? C.warningSoft : C.accentSoft;
         return (
           <Body>
-            <QTitle text={desired ? "What's your *desired* body shape?" : "What's your *current* body shape?"} />
-            <Rise i={1} style={{ alignItems: 'center', marginTop: 18 }}>
-              <BodyShape level={level} gender={p.gender} style={st.shapePhoto} />
+            <QTitle
+              text={desired ? 'Picture your *goal* body' : 'Where are you *starting* from?'}
+              sub={desired ? "Slide to the shape you're working toward." : 'Slide until the photo looks most like you today.'}
+            />
+            <Rise i={1} style={st.shapeWrap}>
+              <View style={st.shapeStage}>
+                <BodyShape level={level} gender={p.gender} style={StyleSheet.absoluteFill} />
+                <LinearGradient colors={['rgba(19,35,31,0)', 'rgba(19,35,31,0.78)']} locations={[0.5, 1]} style={StyleSheet.absoluteFill} pointerEvents="none" />
+                <View style={st.shapeBadge}>
+                  <Ionicons name={desired ? 'flag' : 'body'} size={12} color={C.primaryDark} />
+                  <Text style={st.shapeBadgeText}>{desired ? 'Your goal' : 'You today'}</Text>
+                </View>
+                {desired && (
+                  <Animated.View entering={nativeOnly(ZoomIn.duration(MOTION.enter).delay(360))} style={st.shapeNow}>
+                    <BodyShape level={p.bodyShape} gender={p.gender} style={st.shapeNowImg} />
+                    <Text style={st.shapeNowText}>Now</Text>
+                  </Animated.View>
+                )}
+                <View style={st.shapeReadout}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={st.shapeKey}>{desired ? 'Target body fat' : 'Estimated body fat'}</Text>
+                    <Animated.Text key={level} entering={nativeOnly(FadeInDown.duration(MOTION.base))} style={st.shapeRange}>
+                      {bf.range}
+                    </Animated.Text>
+                  </View>
+                  <Animated.View key={info.verdict} entering={nativeOnly(ZoomIn.duration(MOTION.base))} style={[st.shapeVerdict, { backgroundColor: toneColor }]}>
+                    <Text style={st.shapeVerdictText}>{info.verdict}</Text>
+                  </Animated.View>
+                </View>
+              </View>
             </Rise>
-            <Rise i={2} style={{ marginTop: 14 }}>
+            <Rise i={2} style={{ marginTop: 16 }}>
               <StepSlider
                 variant="pill"
                 count={SHAPES}
                 value={level}
                 anchor={desired ? p.bodyShape : undefined}
-                label={desired ? 'Desired' : 'Current'}
+                label={desired ? 'Goal' : 'You'}
                 onChange={(v) => set(desired ? { targetShape: v } : { bodyShape: v, targetShape: Math.min(p.targetShape, v) })}
-                left="Cut"
-                right="Extra"
+                left="Leaner"
+                right="Fuller"
               />
             </Rise>
-            <Rise i={3} style={{ paddingHorizontal: GUTTER, marginTop: 16 }}>
-              <View style={st.fatCard}>
-                <View style={st.fatHead}>
-                  <Text style={st.fatTitle}>{desired ? 'Your Target Body Fat' : 'Your Estimated Body Fat'}</Text>
+            <Rise i={3} style={{ paddingHorizontal: GUTTER, marginTop: 14 }}>
+              <View style={st.insight}>
+                <View style={[st.insightIcon, { backgroundColor: toneSoft }]}>
+                  <Ionicons name={info.icon} size={18} color={toneColor} />
                 </View>
-                <View style={st.fatBody}>
-                  <Animated.Text key={`${level}-${verdict}`} entering={nativeOnly(FadeInDown.duration(MOTION.base))} style={[st.fatValue, { color: toneColor }]}>
-                    {bf.range} <Text style={st.fatVerdict}>({verdict})</Text>
-                  </Animated.Text>
-                  <Text style={st.fatNote}>{note}</Text>
-                </View>
+                <Animated.Text key={info.note} entering={nativeOnly(FadeIn.duration(MOTION.base))} style={st.insightText}>
+                  {info.note}
+                </Animated.Text>
               </View>
             </Rise>
           </Body>
         );
       }
-      case 'birth':
+      case 'birth': {
+        const age = yearNow - p.birthYear;
+        const group = ageGroup(age);
         return (
           <Body>
-            <QTitle text="What's your *birth* year?" />
-            <Rise i={1} style={{ paddingHorizontal: GUTTER, marginTop: 22 }}>
-              <TipCard art={<Glyph emoji="🎂" size={40} />}>
-                <Text style={st.tipText}>It will help us to adjust the workout that best suits your age group.</Text>
-              </TipCard>
+            <QTitle text="When were you *born*?" sub="Age shapes your recovery time and how hard we push." />
+            <Rise i={1} style={st.wheelCard}>
+              <YearWheel
+                values={YEARS}
+                value={p.birthYear}
+                onChange={(birthYear) => set({ birthYear })}
+                left={<Text style={st.wheelCaption}>BORN</Text>}
+                right={
+                  <View style={st.agePill}>
+                    <Text style={st.agePillKey}>Age</Text>
+                    <Text style={st.agePillVal}>{age}</Text>
+                  </View>
+                }
+              />
             </Rise>
-            <Rise i={2} style={{ marginTop: 28 }}>
-              <YearWheel values={YEARS} value={p.birthYear} onChange={(birthYear) => set({ birthYear })} />
+            <Rise i={2} style={{ paddingHorizontal: GUTTER, marginTop: 14 }}>
+              <View style={st.insight}>
+                <View style={[st.insightIcon, { backgroundColor: C.primarySoft }]}>
+                  <Ionicons name={group.icon} size={18} color={C.primaryDark} />
+                </View>
+                <Animated.View key={group.title} entering={nativeOnly(FadeInDown.duration(MOTION.base))} style={{ flex: 1 }}>
+                  <Text style={st.tipTitle}>{group.title}</Text>
+                  <Text style={[st.insightText, { marginTop: 2 }]}>{group.note}</Text>
+                </Animated.View>
+              </View>
             </Rise>
           </Body>
         );
+      }
       case 'height': {
         const inches = Math.round(p.heightCm / 2.54);
+        const cmMode = heightUnit === 'cm';
+        // ± nudges by one ruler tick in the active unit (1 cm or 1 inch), within the ruler's range.
+        // Updater form so rapid taps each count.
+        const nudge = (d: 1 | -1) =>
+          set((x) =>
+            cmMode
+              ? { heightCm: Math.min(220, Math.max(120, x.heightCm + d)) }
+              : { heightCm: Math.round(Math.min(86, Math.max(48, Math.round(x.heightCm / 2.54) + d)) * 2.54) },
+          );
         return (
           <Body>
-            <QTitle text="What's your *height*?" />
+            <QTitle text="What's your *height*?" sub="Helps us calculate your BMI and daily calorie burn." />
             <Rise i={1} style={{ marginTop: 18 }}>
               <UnitToggle options={['cm', 'ft']} value={heightUnit} onChange={setHeightUnit} />
             </Rise>
-            <Rise i={2} style={st.bigValueWrap}>
-              <Text style={st.bigValue}>
-                {heightUnit === 'cm' ? p.heightCm : cmToFtIn(p.heightCm)}
-                {heightUnit === 'cm' && <Text style={st.bigUnit}> cm</Text>}
-              </Text>
+            <Rise i={2} style={{ paddingHorizontal: GUTTER, marginTop: 20 }}>
+              <HeightStage
+                cm={p.heightCm}
+                unit={heightUnit}
+                gender={p.gender}
+                onStep={nudge}
+                canDown={cmMode ? p.heightCm > 120 : inches > 48}
+                canUp={cmMode ? p.heightCm < 220 : inches < 86}
+              />
             </Rise>
-            <Rise i={3}>
-              {heightUnit === 'cm' ? (
+            <Rise i={3} style={{ marginTop: 22 }}>
+              {cmMode ? (
                 <RulerPicker key="cm" min={120} max={220} step={1} major={10} value={p.heightCm} onChange={(heightCm) => set({ heightCm })} />
               ) : (
                 <RulerPicker key="in" min={48} max={86} step={1} major={12} value={inches} onChange={(v) => set({ heightCm: Math.round(v * 2.54) })} label={(v) => `${Math.round(v / 12)}′`} />
               )}
+            </Rise>
+            <Rise i={4} style={st.privacy}>
+              <Ionicons name="hand-left-outline" size={12} color={C.muted} />
+              <Text style={st.privacyText}>Slide the ruler or tap − / + to fine-tune</Text>
             </Rise>
           </Body>
         );
@@ -370,28 +441,27 @@ export default function Onboarding() {
         const kg = isTarget ? p.targetKg : p.weightKg;
         const v = toUnit(kg, units);
         const b = bmi(kg, p.heightCm);
-        const l = bmiLabel(b);
         const onChange = (nv: number) => {
           const nk = fromUnit(nv, units);
           set(isTarget ? { targetKg: nk } : { weightKg: nk });
         };
         return (
           <Body>
-            <QTitle text={isTarget ? "What's your *target* weight?" : "What's your *current* weight?"} />
+            <QTitle
+              text={isTarget ? "What's your *target* weight?" : "What's your *current* weight?"}
+              sub={isTarget ? 'Slide from where you are to where you want to be.' : 'Your starting point. We track every win from here.'}
+            />
             <Rise i={1} style={{ marginTop: 18 }}>
               <UnitToggle options={['kg', 'lb']} value={units} onChange={setUnits} />
             </Rise>
-            <Rise i={2} style={st.bigValueWrap}>
-              <Text style={st.bigValue}>
-                {v.toFixed(1)}
-                <Text style={st.bigUnit}> {units}</Text>
-              </Text>
+            <Rise i={2} style={{ paddingHorizontal: GUTTER, marginTop: 20, marginBottom: 18 }}>
+              <BmiGauge value={v.toFixed(1)} unit={units} bmi={b} from={isTarget ? bmi(p.weightKg, p.heightCm) : undefined} badge={isTarget ? goalBadge(p, units) : undefined} />
             </Rise>
             <Rise i={3}>
               <RulerPicker key={units} min={units === 'kg' ? 30 : 66} max={units === 'kg' ? 200 : 440} step={0.1} major={10} value={v} onChange={onChange} />
             </Rise>
             <Rise i={4} style={{ paddingHorizontal: GUTTER, marginTop: 20 }}>
-              {isTarget ? <TargetNote p={p} units={units} /> : <BmiCard value={b} label={l.label} color={l.color} />}
+              {isTarget ? <TargetNote p={p} units={units} /> : <BmiInsight value={b} heightCm={p.heightCm} units={units} />}
             </Rise>
           </Body>
         );
@@ -736,7 +806,9 @@ function RewardCard({ label, img, on, onPress }: { label: string; img: number; o
   );
 }
 
-function BmiCard({ value, label, color }: { value: number; label: string; color: string }) {
+/** Verdict note under the BMI dial, with the weight range that counts as healthy at this height. */
+function BmiInsight({ value, heightCm, units }: { value: number; heightCm: number; units: WeightUnit }) {
+  const { color } = bmiLabel(value);
   const msg =
     value < 18.5
       ? 'You have a great potential to build a better shape. Move now!'
@@ -745,15 +817,22 @@ function BmiCard({ value, label, color }: { value: number; label: string; color:
         : value < 27.5
           ? 'A few smart changes will make a big difference. You can do it!'
           : "Let's start with small, steady steps toward a healthier you.";
+  const icon: IconName = value < 18.5 ? 'barbell' : value < 23 ? 'sparkles' : value < 27.5 ? 'trending-down' : 'footsteps';
+  // Same 18.5–23 band `bmiLabel` calls Healthy, expressed as weight at this height.
+  const m2 = Math.pow(heightCm / 100, 2);
+  const range = `${toUnit(18.5 * m2, units).toFixed(1)} – ${toUnit(23 * m2, units).toFixed(1)} ${units}`;
   return (
-    <View style={st.bmiCard}>
-      <Text style={st.bmiKey}>Current BMI</Text>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 4 }}>
-        <Text style={[st.bmiVal, { color }]}>{value.toFixed(1)}</Text>
-        <View style={{ flex: 1 }}>
-          <Text style={[st.bmiLabel, { color }]}>{label}</Text>
-          <Text style={st.bmiMsg}>{msg}</Text>
-        </View>
+    <View style={st.insight}>
+      <View style={[st.insightIcon, { backgroundColor: color + '1F' }]}>
+        <Ionicons name={icon} size={18} color={color} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Animated.Text key={msg} entering={nativeOnly(FadeIn.duration(MOTION.base))} style={st.insightText}>
+          {msg}
+        </Animated.Text>
+        <Text style={st.rangeText}>
+          Healthy for your height: <Text style={st.bold}>{range}</Text>
+        </Text>
       </View>
     </View>
   );
@@ -785,12 +864,25 @@ function TargetNote({ p, units }: { p: Profile; units: WeightUnit }) {
     title = `Realistic target: ${diff < 0 ? 'lose' : 'gain'} ${amount}`;
     text = `${pct.toFixed(0)}% of your body weight. A healthy, achievable goal for you.`;
   }
+  const color = tone === 'warn' ? C.warning : C.primary;
   return (
-    <TipCard icon={icon} tone={tone}>
-      <Text style={st.tipTitle}>{title}</Text>
-      <Text style={[st.tipText, { marginTop: 2 }]}>{text}</Text>
-    </TipCard>
+    <View style={st.insight}>
+      <View style={[st.insightIcon, { backgroundColor: tone === 'warn' ? C.warningSoft : C.primarySoft }]}>
+        <Ionicons name={icon} size={18} color={color} />
+      </View>
+      <Animated.View key={title} entering={nativeOnly(FadeIn.duration(MOTION.base))} style={{ flex: 1 }}>
+        <Text style={st.tipTitle}>{title}</Text>
+        <Text style={[st.insightText, { marginTop: 2 }]}>{text}</Text>
+      </Animated.View>
+    </View>
   );
+}
+
+/** Direction and size of the change from current to target weight, shown above the goal value. */
+function goalBadge(p: Profile, units: WeightUnit) {
+  const d = toUnit(p.targetKg, units) - toUnit(p.weightKg, units);
+  if (Math.abs(d) < 0.05) return 'Maintain';
+  return `${d < 0 ? '↓' : '↑'} ${Math.abs(d).toFixed(1)} ${units} to ${d < 0 ? 'lose' : 'gain'}`;
 }
 
 /* ---------------- Styles ---------------- */
@@ -822,23 +914,30 @@ const st = StyleSheet.create({
   privacy: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 18 },
   privacyText: { fontSize: 12, fontWeight: '500', color: C.muted },
 
-  shapePhoto: { alignSelf: 'stretch', marginHorizontal: GUTTER + 8, aspectRatio: 4 / 3, borderRadius: R.lg },
-  fatCard: { backgroundColor: C.card, borderRadius: R.md, borderWidth: 1, borderColor: C.borderSoft, overflow: 'hidden' },
-  fatHead: { backgroundColor: C.primarySoft, paddingHorizontal: 16, paddingVertical: 11 },
-  fatBody: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 16 },
-  fatTitle: { fontSize: 13.5, fontWeight: '700', color: C.primaryDark },
-  fatValue: { fontSize: 19, fontWeight: '800', fontVariant: ['tabular-nums'] },
-  fatVerdict: { fontSize: 14, fontWeight: '700' },
-  fatNote: { fontSize: 12.5, color: C.textSoft, lineHeight: 17, marginTop: 4 },
+  shapeWrap: { alignSelf: 'stretch', paddingHorizontal: GUTTER, marginTop: 20 },
+  // Percentage width resolves against the wrapper, so the photo spans exactly the slider track; height follows.
+  shapeStage: { width: '100%', aspectRatio: 1.05, borderRadius: R.xl, overflow: 'hidden', backgroundColor: C.skeleton },
+  shapeBadge: { position: 'absolute', top: 14, left: 14, flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 6, borderRadius: R.pill, backgroundColor: 'rgba(255,255,255,0.92)' },
+  shapeBadgeText: { fontSize: 12, fontWeight: '800', color: C.primaryDark, letterSpacing: 0.2 },
+  shapeNow: { position: 'absolute', top: 12, right: 12, alignItems: 'center', gap: 4 },
+  shapeNowImg: { width: 56, height: 56, borderRadius: R.sm, borderWidth: 2, borderColor: C.white },
+  shapeNowText: { fontSize: 11, fontWeight: '800', color: C.white, textShadowColor: 'rgba(0,0,0,0.35)', textShadowRadius: 4 },
+  shapeReadout: { position: 'absolute', left: 16, right: 16, bottom: 14, flexDirection: 'row', alignItems: 'flex-end', gap: 10 },
+  shapeKey: { fontSize: 11.5, fontWeight: '700', color: 'rgba(255,255,255,0.8)', letterSpacing: 0.6, textTransform: 'uppercase' },
+  shapeRange: { fontSize: 30, fontWeight: '900', color: C.white, letterSpacing: -0.8, fontVariant: ['tabular-nums'], marginTop: 1 },
+  shapeVerdict: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: R.pill, marginBottom: 4 },
+  shapeVerdictText: { fontSize: 12.5, fontWeight: '800', color: C.white },
+  insight: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: R.lg, backgroundColor: C.card, borderWidth: 1, borderColor: C.borderSoft, ...shadowSm },
+  insightIcon: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  insightText: { flex: 1, fontSize: 13.5, lineHeight: 19, color: C.textSoft },
 
-  bigValueWrap: { alignItems: 'center', marginTop: 26, marginBottom: 14 },
-  bigValue: { fontSize: 52, fontWeight: '800', color: C.text, letterSpacing: -1.5, fontVariant: ['tabular-nums'] },
-  bigUnit: { fontSize: 18, fontWeight: '700', color: C.textSoft, letterSpacing: 0 },
-  bmiCard: { backgroundColor: C.card, borderRadius: R.md, padding: 16, borderWidth: 1, borderColor: C.borderSoft },
-  bmiKey: { fontSize: 13, fontWeight: '700', color: C.text },
-  bmiVal: { fontSize: 30, fontWeight: '900', fontVariant: ['tabular-nums'], letterSpacing: -0.5 },
-  bmiLabel: { fontSize: 13, fontWeight: '800' },
-  bmiMsg: { fontSize: 12.5, color: C.textSoft, lineHeight: 17, marginTop: 1 },
+  wheelCard: { marginHorizontal: GUTTER, marginTop: 22, paddingVertical: 6, borderRadius: R.xl, backgroundColor: C.card, borderWidth: 1, borderColor: C.borderSoft, overflow: 'hidden', ...shadowSm },
+  wheelCaption: { fontSize: 11, fontWeight: '800', color: C.primary, letterSpacing: 1.4 },
+  agePill: { flexDirection: 'row', alignItems: 'baseline', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: R.pill, backgroundColor: C.primaryDark },
+  agePillKey: { fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.75)' },
+  agePillVal: { fontSize: 15, fontWeight: '900', color: C.white, fontVariant: ['tabular-nums'] },
+
+  rangeText: { fontSize: 12.5, color: C.muted, marginTop: 4, fontVariant: ['tabular-nums'] },
 
   previewRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: GUTTER, marginTop: 24 },
   previewCard: { flex: 1, borderRadius: R.lg, backgroundColor: C.card, borderWidth: 2, borderColor: C.border, overflow: 'hidden', alignItems: 'center', paddingBottom: 12 },

@@ -4,6 +4,9 @@ export const IMG = {
   coach: require('@/assets/images/onboarding/coach.webp'),
   genderMale: require('@/assets/images/onboarding/gender-male.webp'),
   genderFemale: require('@/assets/images/onboarding/gender-female.webp'),
+  /** Full-body cut-outs for the height step, cropped exactly head to sole. */
+  heightMale: require('@/assets/images/onboarding/height-male.webp'),
+  heightFemale: require('@/assets/images/onboarding/height-female.webp'),
   benefits: require('@/assets/images/onboarding/benefits.webp'),
   benefitsMale: require('@/assets/images/onboarding/benefits-m.webp'),
   benefitsBefore: require('@/assets/images/onboarding/benefits-before.webp'),
