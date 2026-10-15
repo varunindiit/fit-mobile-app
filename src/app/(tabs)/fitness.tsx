@@ -3,19 +3,21 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View, type ViewStyle } from 'react-native';
-import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut, useAnimatedScrollHandler, useSharedValue } from 'react-native-reanimated';
 import Svg, { Circle } from 'react-native-svg';
 
 import { WeekStrip } from '@/components/charts/Calendar';
 import { fmtNum } from '@/components/charts/Charts';
 import { ChallengeCard } from '@/components/program/ChallengeCard';
-import { Button, Card, Chip, CountUp, Dialog, EmptyState, enter, IconButton, IconTile, layoutTransition, nativeOnly, PressableScale, Ring, Screen, ScreenTitle, SectionTitle, Sheet, Stepper, T, tap, useToast, type IconName } from '@/components/ui';
+import { HeaderAction, HeaderActions, TabHeader, TabHeaderText } from '@/components/TabHeader';
+import { Button, Card, Chip, CountUp, Dialog, EmptyState, enter, IconButton, IconTile, layoutTransition, nativeOnly, PressableScale, Ring, Screen, SectionTitle, Sheet, Stepper, T, tap, useToast, type IconName } from '@/components/ui';
+import { NOTIFICATIONS } from '@/data/notifications';
 import { ACTIVITIES, WORKOUT_CATEGORIES, WORKOUTS } from '@/data/fitness';
 import { BODY_PARTS, FOCUS_SESSIONS, programById, programDay, PROGRAM_DAYS, sessionStats, type Session } from '@/data/program';
 import { kcalFromSteps, kmFromSteps } from '@/lib/calc';
 import { burnedOn, useStore, weekProgress, workoutStreak, type WorkoutLog } from '@/lib/store';
 import { useToday } from '@/lib/useToday';
-import { C, MOTION, R, shadowSm } from '@/theme';
+import { C, G, MOTION, R, shadowSm } from '@/theme';
 import { Glyph } from '@/components/Glyph';
 import { logArt, sessionArt, WORKOUT_ART } from '@/components/glyphs';
 
@@ -50,6 +52,13 @@ export default function TrainingScreen() {
     if (finished) setAskRestart(true);
     else openSession(session.key);
   };
+
+  // Header: collapses to a compact day row on scroll
+  const scrollY = useSharedValue(0);
+  const onScroll = useAnimatedScrollHandler((e) => {
+    scrollY.set(e.contentOffset.y);
+  });
+  const unread = NOTIFICATIONS.filter((n) => !state.readNotifs.includes(n.id)).length;
 
   // Weekly goal
   const streak = workoutStreak(state);
@@ -127,31 +136,28 @@ export default function TrainingScreen() {
 
   return (
     <Screen>
-      <ScrollView contentContainerStyle={st.content} showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <Animated.View entering={enter(0)}>
-          <ScreenTitle
-            title="Training"
-            subtitle={finished ? `${program.title} · all 30 days done` : `${program.title} · day ${day} of 30`}
-            right={
-              <PressableScale
-                scaleTo={0.94}
-                accessibilityRole="button"
-                accessibilityLabel={`Workout streak: ${streak}`}
-                onPress={() => {
-                  tap();
-                  router.push('/history');
-                }}
-                style={st.streak}>
-                <Ionicons name="flame" size={17} color={C.accent} />
-                <CountUp value={streak} style={st.streakText} />
-              </PressableScale>
-            }
-          />
-        </Animated.View>
-
+      <TabHeader
+        scrollY={scrollY}
+        eyebrow={finished ? `${program.title} · all 30 days done` : `${program.title} · day ${day} of 30`}
+        title="Training"
+        compact={
+          <>
+            <LinearGradient colors={G.deep} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.dayBadge}>
+              <Text style={st.dayBadgeText}>{finished ? '✓' : day}</Text>
+            </LinearGradient>
+            <TabHeaderText title={finished ? 'Program complete' : `Day ${day} of ${PROGRAM_DAYS}`} sub={`${program.title} · ${wp.done}/${goal} this week`} />
+          </>
+        }
+        right={
+          <HeaderActions>
+            <HeaderAction icon="flame" color={C.accent} label={`Workout streak: ${streak}`} href="/history" count={streak} />
+            <HeaderAction icon="notifications-outline" label={unread ? `Notifications, ${unread} unread` : 'Notifications'} href="/notifications" badge={unread} />
+          </HeaderActions>
+        }
+      />
+      <Animated.ScrollView onScroll={onScroll} scrollEventThrottle={16} contentContainerStyle={st.content} showsVerticalScrollIndicator={false}>
         {/* Weekly goal */}
-        <Animated.View entering={enter(1)} style={{ marginTop: 12 }}>
+        <Animated.View entering={enter(0)} style={{ marginTop: 6 }}>
           <Card>
             <View style={st.goalHead}>
               <Ring size={62} stroke={7} value={wp.done / goal} color={C.primary} track={C.primarySoft}>
@@ -379,7 +385,7 @@ export default function TrainingScreen() {
             ))}
           </View>
         </Animated.View>
-      </ScrollView>
+      </Animated.ScrollView>
 
       {/* Weekly goal sheet */}
       <Sheet visible={goalOpen} onClose={() => setGoalOpen(false)} title="Weekly goal">
@@ -564,8 +570,8 @@ function SumCol({ icon, color, bg, value, label, format }: { icon: IconName; col
 
 const st = StyleSheet.create({
   content: { paddingHorizontal: 16, paddingBottom: 40 },
-  streak: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: C.card, paddingHorizontal: 13, height: 38, borderRadius: R.pill, borderWidth: StyleSheet.hairlineWidth * 2, borderColor: C.border, ...shadowSm },
-  streakText: { fontSize: 15, fontWeight: '800', color: C.text, fontVariant: ['tabular-nums'] },
+  dayBadge: { width: 38, height: 38, borderRadius: 19, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
+  dayBadgeText: { color: C.white, fontSize: 16, fontWeight: '800', fontVariant: ['tabular-nums'] },
   goalHead: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   ringNum: { fontSize: 17, fontWeight: '800', color: C.text, fontVariant: ['tabular-nums'], letterSpacing: -0.4 },
   ringOf: { fontSize: 12, fontWeight: '600', color: C.muted },
