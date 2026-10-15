@@ -12,6 +12,7 @@ import Animated, {
   interpolate,
   useAnimatedScrollHandler,
   useAnimatedStyle,
+  useDerivedValue,
   useSharedValue,
   withSpring,
   withTiming,
@@ -67,16 +68,16 @@ export function DiaryView({ tab = false }: { tab?: boolean }) {
   const week = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   const loggedDays = useMemo(() => new Set(state.entries.map((e) => e.date)), [state.entries]);
 
-  // Compact summary bar that slides in once the big summary card scrolls away.
+  // Once the big summary card scrolls away, the header subtitle swaps the date for a compact kcal summary.
   const scrollY = useSharedValue(0);
   const summaryEnd = useSharedValue(100000);
   const onScroll = useAnimatedScrollHandler((e) => {
     scrollY.set(e.contentOffset.y);
   });
-  const compact = useAnimatedStyle(() => {
-    const t = interpolate(scrollY.get(), [summaryEnd.get() - 48, summaryEnd.get()], [0, 1], Extrapolation.CLAMP);
-    return { opacity: t, transform: [{ translateY: (1 - t) * -10 }] };
-  });
+  const collapse = useDerivedValue(() => interpolate(scrollY.get(), [summaryEnd.get() - 48, summaryEnd.get()], [0, 1], Extrapolation.CLAMP));
+  const dateFade = useAnimatedStyle(() => ({ opacity: 1 - collapse.get(), transform: [{ translateY: -collapse.get() * 6 }] }));
+  const compact = useAnimatedStyle(() => ({ opacity: collapse.get(), transform: [{ translateY: (1 - collapse.get()) * 6 }] }));
+  const topLine = useAnimatedStyle(() => ({ opacity: collapse.get() }));
 
   const remove = (e: FoodEntry) => {
     const index = state.entries.findIndex((x) => x.id === e.id);
@@ -114,7 +115,19 @@ export function DiaryView({ tab = false }: { tab?: boolean }) {
         {!tab && <IconButton icon="arrow-back" bordered onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))} />}
         <View style={{ flex: 1 }}>
           <Text style={st.title}>{tab ? 'Diet' : 'Food Diary'}</Text>
-          <Text style={[T.small, { marginTop: 1 }]}>{dayTitle(date)}</Text>
+          <View style={st.sub}>
+            <Animated.Text style={[T.small, dateFade]} numberOfLines={1}>
+              {dayTitle(date)}
+            </Animated.Text>
+            <Animated.View pointerEvents="none" style={[st.compact, compact]}>
+              <View style={[st.compactDot, { backgroundColor: over ? C.danger : C.primary }]} />
+              <Text style={st.compactMeta} numberOfLines={1}>
+                <Text style={[st.compactNum, over && { color: C.danger }]}>{fmtNum(Math.abs(remaining))}</Text>
+                <Text style={st.compactUnit}>{over ? ' kcal over' : ' kcal left'}</Text>
+                {`  ·  ${fmtNum(total.kcal)} eaten · ${fmtNum(burned)} burned`}
+              </Text>
+            </Animated.View>
+          </View>
         </View>
         {date !== today && (
           <Animated.View entering={nativeOnly(FadeIn.duration(MOTION.base))} exiting={nativeOnly(FadeOut.duration(MOTION.fast))}>
@@ -130,6 +143,7 @@ export function DiaryView({ tab = false }: { tab?: boolean }) {
           </Animated.View>
         )}
         <IconButton icon="calendar-outline" bordered onPress={() => setDate(today)} />
+        <Animated.View pointerEvents="none" style={[st.topLine, topLine]} />
       </View>
 
       <View style={{ flex: 1 }}>
@@ -349,17 +363,6 @@ export function DiaryView({ tab = false }: { tab?: boolean }) {
           <Text style={st.footNote}>Tap an item to edit portion or meal · values are approximate</Text>
         </Animated.ScrollView>
 
-        {/* Compact summary (appears when the summary card scrolls out of view) */}
-        <Animated.View pointerEvents="none" style={[st.compact, compact]}>
-          <View style={[st.compactDot, { backgroundColor: over ? C.danger : C.primary }]} />
-          <Text style={[st.compactNum, over && { color: C.danger }]}>
-            {fmtNum(Math.abs(remaining))} <Text style={st.compactUnit}>{over ? 'kcal over' : 'kcal left'}</Text>
-          </Text>
-          <View style={{ flex: 1 }} />
-          <Text style={st.compactMeta}>
-            {fmtNum(total.kcal)} eaten · {fmtNum(burned)} burned
-          </Text>
-        </Animated.View>
       </View>
 
       {undo && (
@@ -543,7 +546,9 @@ const st = StyleSheet.create({
   trash: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   mealFoot: { flexDirection: 'row', gap: 16, paddingHorizontal: 14, paddingTop: 10, paddingBottom: 10, borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: C.borderSoft, marginTop: 4 },
   footNote: { textAlign: 'center', fontSize: 12, color: C.muted, marginTop: 18 },
-  compact: { position: 'absolute', top: 0, left: 16, right: 16, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: C.card, borderRadius: R.md, paddingHorizontal: 14, height: 44, borderWidth: StyleSheet.hairlineWidth, borderColor: C.border, ...shadowLg },
+  sub: { marginTop: 1, justifyContent: 'center' },
+  compact: { position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  topLine: { position: 'absolute', left: 0, right: 0, bottom: 0, height: StyleSheet.hairlineWidth, backgroundColor: C.border },
   compactDot: { width: 8, height: 8, borderRadius: 4 },
   compactNum: { fontSize: 15, fontWeight: '800', color: C.text, fontVariant: ['tabular-nums'], letterSpacing: -0.2 },
   compactUnit: { fontSize: 12, fontWeight: '600', color: C.muted },
