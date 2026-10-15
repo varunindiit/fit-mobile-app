@@ -8,6 +8,7 @@ import { BackHandler, Pressable, ScrollView, StyleSheet, Text, View, type StyleP
 import Animated, { FadeInDown, ZoomIn, interpolateColor, useAnimatedStyle } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Glyph } from '@/components/Glyph';
 import { BodyShape, SHAPES, bodyFat } from '@/components/onboarding/BodyShape';
 import { IMG } from '@/components/onboarding/assets';
 import { Analysis, Intro, Motivation, Paywall, PlanResult, Welcome } from '@/components/onboarding/FullScreens';
@@ -269,13 +270,21 @@ export default function Onboarding() {
         const desired = step === 'desired';
         const level = desired ? p.targetShape : p.bodyShape;
         const bf = bodyFat(level, p.gender);
-        const toneColor = bf.tone === 'good' ? C.primary : bf.tone === 'ok' ? C.warning : C.accent;
+        // On the desired step the verdict reflects how far the target is from the current shape.
+        const drop = p.bodyShape - p.targetShape;
+        const goal =
+          drop >= 3
+            ? { verdict: 'Sweaty Choice!', tone: 'high' as const, note: "Get ready to break a sweat! This target is not easy but we're sure you are ready!" }
+            : drop >= 1
+              ? { verdict: 'Realistic Goal', tone: 'good' as const, note: "You're on the right track! Keep it up for a healthier, more confident you!" }
+              : drop === 0
+                ? { verdict: 'Maintain', tone: 'good' as const, note: "We'll help you keep your shape while building strength and definition." }
+                : { verdict: 'Bulk Up', tone: 'ok' as const, note: "Building size? We'll pair strength training with the right fuel." };
+        const verdict = desired ? goal.verdict : bf.verdict;
+        const tone = desired ? goal.tone : bf.tone;
+        const toneColor = tone === 'good' ? C.primary : tone === 'ok' ? C.warning : C.accent;
         const note = desired
-          ? bf.tone === 'good'
-            ? level === 0
-              ? 'Very lean takes serious dedication. We will get you there step by step.'
-              : "You're on the right track! Keep it up for a healthier, more confident you!"
-            : 'A realistic first goal. You can always aim higher later.'
+          ? goal.note
           : bf.tone === 'high'
             ? 'You may have a slow metabolism, and face some potential health problems.'
             : bf.tone === 'ok'
@@ -286,18 +295,30 @@ export default function Onboarding() {
             <QTitle text={desired ? "What's your *desired* body shape?" : "What's your *current* body shape?"} />
             <Rise i={1} style={{ alignItems: 'center', marginTop: 18 }}>
               <BodyShape level={level} gender={p.gender} style={st.shapePhoto} />
-              <Text style={st.figureLabel}>{desired ? 'Desired' : 'Current'}</Text>
             </Rise>
-            <Rise i={2} style={{ marginTop: 6 }}>
-              <StepSlider count={SHAPES} value={level} onChange={(v) => set(desired ? { targetShape: v } : { bodyShape: v, targetShape: Math.min(p.targetShape, v) })} left="Cut" right="Extra" />
+            <Rise i={2} style={{ marginTop: 14 }}>
+              <StepSlider
+                variant="pill"
+                count={SHAPES}
+                value={level}
+                anchor={desired ? p.bodyShape : undefined}
+                label={desired ? 'Desired' : 'Current'}
+                onChange={(v) => set(desired ? { targetShape: v } : { bodyShape: v, targetShape: Math.min(p.targetShape, v) })}
+                left="Cut"
+                right="Extra"
+              />
             </Rise>
             <Rise i={3} style={{ paddingHorizontal: GUTTER, marginTop: 16 }}>
               <View style={st.fatCard}>
-                <Text style={st.fatTitle}>{desired ? 'Your Target Body Fat (Approx.)' : 'Your Estimated Body Fat (Approx.)'}</Text>
-                <Animated.Text key={level} entering={nativeOnly(FadeInDown.duration(MOTION.base))} style={[st.fatValue, { color: toneColor }]}>
-                  {bf.range} <Text style={st.fatVerdict}>({bf.verdict})</Text>
-                </Animated.Text>
-                <Text style={st.fatNote}>{note}</Text>
+                <View style={st.fatHead}>
+                  <Text style={st.fatTitle}>{desired ? 'Your Target Body Fat' : 'Your Estimated Body Fat'}</Text>
+                </View>
+                <View style={st.fatBody}>
+                  <Animated.Text key={`${level}-${verdict}`} entering={nativeOnly(FadeInDown.duration(MOTION.base))} style={[st.fatValue, { color: toneColor }]}>
+                    {bf.range} <Text style={st.fatVerdict}>({verdict})</Text>
+                  </Animated.Text>
+                  <Text style={st.fatNote}>{note}</Text>
+                </View>
               </View>
             </Rise>
           </Body>
@@ -307,11 +328,13 @@ export default function Onboarding() {
         return (
           <Body>
             <QTitle text="What's your *birth* year?" />
-            <Rise i={1} style={{ marginTop: 24 }}>
-              <YearWheel values={YEARS} value={p.birthYear} onChange={(birthYear) => set({ birthYear })} />
+            <Rise i={1} style={{ paddingHorizontal: GUTTER, marginTop: 22 }}>
+              <TipCard art={<Glyph emoji="🎂" size={40} />}>
+                <Text style={st.tipText}>It will help us to adjust the workout that best suits your age group.</Text>
+              </TipCard>
             </Rise>
-            <Rise i={2} style={{ alignItems: 'center', marginTop: 16 }}>
-              <Text style={st.helper}>{yearNow - p.birthYear} years old</Text>
+            <Rise i={2} style={{ marginTop: 28 }}>
+              <YearWheel values={YEARS} value={p.birthYear} onChange={(birthYear) => set({ birthYear })} />
             </Rise>
           </Body>
         );
@@ -767,7 +790,6 @@ const st = StyleSheet.create({
   card: { backgroundColor: C.card, borderRadius: R.lg, padding: 16, borderWidth: 1, borderColor: C.borderSoft, ...shadowSm },
   list: { paddingHorizontal: GUTTER, gap: 10, marginTop: 22 },
   bold: { fontWeight: '800', color: C.text },
-  helper: { fontSize: 14, fontWeight: '600', color: C.muted },
   centerCopy: { fontSize: 15, color: C.textSoft, lineHeight: 22, textAlign: 'center' },
   tipTitle: { fontSize: 14, fontWeight: '800', color: C.text },
   tipText: { fontSize: 13, color: C.textSoft, lineHeight: 18 },
@@ -782,10 +804,11 @@ const st = StyleSheet.create({
   otherText: { fontSize: 13, fontWeight: '600', color: C.textSoft },
 
   shapePhoto: { alignSelf: 'stretch', marginHorizontal: GUTTER + 8, aspectRatio: 4 / 3, borderRadius: R.lg },
-  figureLabel: { fontSize: 13, fontWeight: '700', color: C.textSoft, marginTop: 10 },
-  fatCard: { backgroundColor: C.card, borderRadius: R.md, padding: 16, borderWidth: 1, borderColor: C.borderSoft },
-  fatTitle: { fontSize: 13, fontWeight: '700', color: C.text },
-  fatValue: { fontSize: 19, fontWeight: '800', marginTop: 6, fontVariant: ['tabular-nums'] },
+  fatCard: { backgroundColor: C.card, borderRadius: R.md, borderWidth: 1, borderColor: C.borderSoft, overflow: 'hidden' },
+  fatHead: { backgroundColor: C.primarySoft, paddingHorizontal: 16, paddingVertical: 11 },
+  fatBody: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 16 },
+  fatTitle: { fontSize: 13.5, fontWeight: '700', color: C.primaryDark },
+  fatValue: { fontSize: 19, fontWeight: '800', fontVariant: ['tabular-nums'] },
   fatVerdict: { fontSize: 14, fontWeight: '700' },
   fatNote: { fontSize: 12.5, color: C.textSoft, lineHeight: 17, marginTop: 4 },
 

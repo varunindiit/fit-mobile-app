@@ -155,14 +155,17 @@ export function ChoiceRow({
 
 /* ---------------- Tip card ---------------- */
 
-export function TipCard({ icon, tone = 'neutral', children, style }: { icon: React.ComponentProps<typeof Ionicons>['name']; tone?: 'neutral' | 'warn' | 'good'; children: React.ReactNode; style?: StyleProp<ViewStyle> }) {
+/** `art` (an illustration) replaces the round icon badge when given. */
+export function TipCard({ icon, art, tone = 'neutral', children, style }: { icon?: React.ComponentProps<typeof Ionicons>['name']; art?: React.ReactNode; tone?: 'neutral' | 'warn' | 'good'; children: React.ReactNode; style?: StyleProp<ViewStyle> }) {
   const bg = tone === 'warn' ? C.warningSoft : tone === 'good' ? C.primarySoft : C.surfaceAlt;
   const fg = tone === 'warn' ? C.warning : C.primaryDark;
   return (
     <View style={[s.tip, { backgroundColor: bg }, style]}>
-      <View style={[s.tipIcon, { backgroundColor: tone === 'neutral' ? C.primarySoft : C.white }]}>
-        <Ionicons name={icon} size={17} color={fg} />
-      </View>
+      {art ?? (
+        <View style={[s.tipIcon, { backgroundColor: tone === 'neutral' ? C.primarySoft : C.white }]}>
+          <Ionicons name={icon ?? 'bulb'} size={17} color={fg} />
+        </View>
+      )}
       <View style={{ flex: 1 }}>{children}</View>
     </View>
   );
@@ -170,11 +173,21 @@ export function TipCard({ icon, tone = 'neutral', children, style }: { icon: Rea
 
 /* ---------------- Step slider ---------------- */
 
-/** Discrete slider: a track of `count` dots with a draggable thumb. Tap anywhere on the track or drag to choose. */
-export function StepSlider({ count, value, onChange, left, right }: { count: number; value: number; onChange: (i: number) => void; left: string; right: string }) {
+/** Half the pill track's height: how far the pill reaches past the first and last dot. */
+const PILL = 15;
+
+/**
+ * Discrete slider: a track of `count` dots with a draggable thumb. Tap anywhere on the track or drag to choose.
+ * `variant="pill"` draws a thick rounded track; `anchor` fills the range between that step and the thumb,
+ * and `label` floats above the thumb as it moves.
+ */
+export function StepSlider({ count, value, onChange, left, right, variant = 'line', anchor, label }: { count: number; value: number; onChange: (i: number) => void; left: string; right: string; variant?: 'line' | 'pill'; anchor?: number; label?: string }) {
   const [w, setW] = useState(0);
   const gap = count > 1 ? w / (count - 1) : 0;
+  const pill = variant === 'pill';
+  const from = anchor ?? 0;
   const x = useSharedValue(0);
+  const a = useSharedValue(0);
   const ready = useSharedValue(0);
   const trackRef = useRef<View>(null);
   const originX = useRef(0);
@@ -188,6 +201,9 @@ export function StepSlider({ count, value, onChange, left, right }: { count: num
       ready.set(1);
     } else if (!dragging.current) x.set(withSpring(value * gap, MOTION.spring));
   }, [value, gap, w, x, ready]);
+  useEffect(() => {
+    a.set(from * gap);
+  }, [from, gap, a]);
 
   // Plain responder handlers (no gesture-handler root needed): grant measures the track, moves follow the finger.
   const move = (pageX: number) => {
@@ -205,11 +221,26 @@ export function StepSlider({ count, value, onChange, left, right }: { count: num
     x.set(withSpring(last.current * gap, MOTION.spring));
   };
 
-  const thumb = useAnimatedStyle(() => ({ opacity: ready.get(), transform: [{ translateX: x.get() - 13 }] }));
-  const fill = useAnimatedStyle(() => ({ width: x.get() }));
+  const half = pill ? 16 : 13;
+  const thumb = useAnimatedStyle(() => ({ opacity: ready.get(), transform: [{ translateX: x.get() - half }] }));
+  const tag = useAnimatedStyle(() => ({ opacity: ready.get(), transform: [{ translateX: x.get() - 60 }] }));
+  const fill = useAnimatedStyle(() => {
+    const lo = Math.min(x.get(), a.get());
+    const hi = Math.max(x.get(), a.get());
+    return pill ? { left: lo - PILL, width: hi - lo + PILL * 2 } : { left: lo, width: hi - lo };
+  });
+  const lo = Math.min(value, from);
+  const hi = Math.max(value, from);
 
   return (
-    <View style={{ paddingHorizontal: GUTTER + 8 }}>
+    <View style={{ paddingHorizontal: GUTTER + (pill ? PILL + 2 : 8) }}>
+      {label ? (
+        <View style={s.sliderTagRow}>
+          <Animated.View pointerEvents="none" style={[s.sliderTag, tag]}>
+            <Text style={s.sliderTagText}>{label}</Text>
+          </Animated.View>
+        </View>
+      ) : null}
       <View
         ref={trackRef}
         style={s.sliderHit}
@@ -232,16 +263,21 @@ export function StepSlider({ count, value, onChange, left, right }: { count: num
         onResponderMove={(e) => move(e.nativeEvent.pageX)}
         onResponderRelease={release}
         onResponderTerminate={release}>
-        <View style={s.sliderTrack} />
-        <Animated.View style={[s.sliderFill, fill]} />
-        {Array.from({ length: count }, (_, i) => (
-          <View key={i} style={[s.sliderDot, { left: i * gap - 4 }, i <= value && { backgroundColor: C.primary }]} />
-        ))}
-        <Animated.View pointerEvents="none" style={[s.sliderThumb, thumb]}>
-          <View style={s.sliderThumbCore} />
+        <View style={pill ? s.pillTrack : s.sliderTrack} />
+        <Animated.View style={[pill ? s.pillFill : s.sliderFill, fill]} />
+        {Array.from({ length: count }, (_, i) => {
+          const on = i >= lo && i <= hi;
+          return pill ? (
+            <View key={i} style={[s.pillDot, { left: i * gap - 3.5 }, on && s.pillDotOn]} />
+          ) : (
+            <View key={i} style={[s.sliderDot, { left: i * gap - 4 }, on && { backgroundColor: C.primary }]} />
+          );
+        })}
+        <Animated.View pointerEvents="none" style={[s.sliderThumb, pill && s.pillThumb, thumb]}>
+          <View style={[s.sliderThumbCore, pill && s.pillThumbCore]} />
         </Animated.View>
       </View>
-      <View style={s.sliderLabels}>
+      <View style={[s.sliderLabels, pill && { marginHorizontal: -PILL, marginTop: 10 }]}>
         <Text style={s.sliderLabel}>{left}</Text>
         <Text style={s.sliderLabel}>{right}</Text>
       </View>
@@ -312,6 +348,15 @@ const s = StyleSheet.create({
   sliderThumbCore: { width: 10, height: 10, borderRadius: 5, backgroundColor: C.primary },
   sliderLabels: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 6, marginHorizontal: -8 },
   sliderLabel: { fontSize: 12, fontWeight: '600', color: C.textSoft },
+  sliderTagRow: { height: 22, marginBottom: 2 },
+  sliderTag: { position: 'absolute', left: 0, width: 120, alignItems: 'center' },
+  sliderTagText: { fontSize: 13, fontWeight: '700', color: C.text },
+  pillTrack: { position: 'absolute', left: -PILL, right: -PILL, height: PILL * 2, borderRadius: PILL, backgroundColor: C.primarySoft },
+  pillFill: { position: 'absolute', height: PILL * 2, borderRadius: PILL, backgroundColor: C.primary },
+  pillDot: { position: 'absolute', width: 7, height: 7, borderRadius: 3.5, backgroundColor: C.primary, opacity: 0.35 },
+  pillDotOn: { backgroundColor: C.white, opacity: 0.7 },
+  pillThumb: { width: 32, height: 32, borderRadius: 16, borderWidth: 3 },
+  pillThumbCore: { width: 0, height: 0 },
 
   unit: { flexDirection: 'row', width: 124, height: 34, borderRadius: 17, backgroundColor: C.border, padding: 3, alignSelf: 'center' },
   unitThumb: { position: 'absolute', top: 3, left: 3, width: 60, height: 28, borderRadius: 14, backgroundColor: C.primary },

@@ -47,6 +47,7 @@ export const GLYPHS: Record<string, GlyphEntry> = {
   '💥': { img: require('@/assets/images/glyphs/g-burst.webp') },
   '😴': { img: require('@/assets/images/glyphs/g-sleep.webp') },
   '🎉': { img: require('@/assets/images/glyphs/g-party.webp') },
+  '🎂': { img: require('@/assets/images/glyphs/g-cake.webp') },
   '🏸': { img: require('@/assets/images/glyphs/g-badminton.webp') },
   '🏏': { img: require('@/assets/images/glyphs/g-cricket.webp') },
   '🏋': { img: require('@/assets/images/glyphs/g-dumbbell.webp') },
