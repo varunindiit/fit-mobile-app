@@ -25,11 +25,11 @@ import { BRAND, C, G, MOTION, R, glow, shadowLg, shadowSm } from '@/theme';
 
 type StepId =
   | 'intro' | 'welcome' | 'gender' | 'shape' | 'desired' | 'birth' | 'height' | 'weight' | 'target' | 'preview' | 'timeline' | 'benefits'
-  | 'experience' | 'level' | 'activity' | 'rest' | 'diet' | 'dietinfo' | 'reward' | 'proof' | 'motivation' | 'analysis' | 'result' | 'paywall';
+  | 'experience' | 'level' | 'activity' | 'rest' | 'diet' | 'dietinfo' | 'reward' | 'motivation' | 'analysis' | 'result' | 'paywall';
 
 const STEPS: StepId[] = [
   'intro', 'welcome', 'gender', 'shape', 'desired', 'birth', 'height', 'weight', 'target', 'preview', 'timeline', 'benefits',
-  'experience', 'level', 'activity', 'rest', 'diet', 'dietinfo', 'reward', 'proof', 'motivation', 'analysis', 'result', 'paywall',
+  'experience', 'level', 'activity', 'rest', 'diet', 'dietinfo', 'reward', 'motivation', 'analysis', 'result', 'paywall',
 ];
 
 /** Question steps share the persistent header; the rest are full-screen. Value = section label. */
@@ -51,7 +51,6 @@ const SECTION: Partial<Record<StepId, string>> = {
   diet: 'Fitness Assessment',
   dietinfo: 'Nutrition Plan',
   reward: 'Nutrition Plan',
-  proof: 'Social Proof',
 };
 const QUESTIONS = STEPS.filter((s) => SECTION[s]);
 
@@ -207,7 +206,7 @@ export default function Onboarding() {
   if (step === 'paywall') return <Paywall male={p.gender === 'male'} gaining={final.goal === 'gain'} onSkip={() => finish(false)} onSubscribe={() => finish(true)} />;
 
   const qIndex = QUESTIONS.indexOf(step);
-  const cta = step === 'gender' ? null : step === 'proof' ? 'Get My Plan' : 'Next';
+  const cta = step === 'gender' ? null : 'Next';
 
   return (
     <SafeAreaView style={st.screen} edges={['top']}>
@@ -606,36 +605,6 @@ export default function Onboarding() {
             </View>
           </Body>
         );
-      case 'proof':
-        return (
-          <Body>
-            <QTitle text={"Don't worry.\nWe can help!"} />
-            <Rise i={1} style={{ paddingHorizontal: GUTTER, marginTop: 8 }}>
-              <Text style={st.centerCopy}>
-                We&apos;ve helped <Text style={{ color: C.primary, fontWeight: '800' }}>1M+</Text> users get their dream body!
-              </Text>
-            </Rise>
-            <Rise i={2} style={[st.card, { marginHorizontal: GUTTER, marginTop: 18, padding: 0, overflow: 'hidden' }]}>
-              <Photo source={IMG.testimonial} style={{ height: 190 }} />
-              <View style={{ padding: 16 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <Text style={st.proofTitle}>Seeing real changes</Text>
-                  <View style={{ flexDirection: 'row', gap: 2 }}>
-                    {[0, 1, 2, 3, 4].map((n) => (
-                      <Animated.View key={n} entering={nativeOnly(ZoomIn.duration(MOTION.base).delay(500 + n * 70))}>
-                        <Ionicons name="star" size={15} color={C.gold} />
-                      </Animated.View>
-                    ))}
-                  </View>
-                </View>
-                <Text style={st.proofQuote}>
-                  &ldquo;Incredibly intuitive! The crafted plan is just right for my beginner level. Workouts are interesting, by the way. Gonna recommend it to all my pals.&rdquo;
-                </Text>
-                <Text style={st.proofName}>Priya, 31 · lost 9 kg</Text>
-              </View>
-            </Rise>
-          </Body>
-        );
       default:
         return null;
     }
@@ -871,7 +840,4 @@ const st = StyleSheet.create({
   rewardText: { fontSize: 13, fontWeight: '700', color: C.text, textAlign: 'center', marginTop: 8, paddingHorizontal: 8, minHeight: 34 },
   rewardCheck: { position: 'absolute', top: 8, right: 8, width: 24, height: 24, borderRadius: 12, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: C.white },
 
-  proofTitle: { fontSize: 15, fontWeight: '800', color: C.text },
-  proofQuote: { fontSize: 13.5, color: C.textSoft, lineHeight: 20, marginTop: 8, fontStyle: 'italic' },
-  proofName: { fontSize: 12, fontWeight: '700', color: C.muted, marginTop: 10 },
 });

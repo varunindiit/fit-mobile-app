@@ -28,7 +28,6 @@ export const IMG = {
   rewardTripMale: require('@/assets/images/onboarding/reward-trip-m.webp'),
   rewardMakeover: require('@/assets/images/onboarding/reward-makeover.webp'),
   rewardMakeoverMale: require('@/assets/images/onboarding/reward-makeover-m.webp'),
-  testimonial: require('@/assets/images/onboarding/testimonial.webp'),
   motivation: require('@/assets/images/onboarding/motivation.webp'),
   motivationMale: require('@/assets/images/onboarding/motivation-m.webp'),
   paywall: require('@/assets/images/onboarding/paywall.webp'),
