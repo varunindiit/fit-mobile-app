@@ -616,7 +616,7 @@ export default function Onboarding() {
       case 'rest':
         return (
           <Body>
-            <QTitle text="Plan your *rest* days" sub="Recovery is where progress happens. Tap the days you'll take off." />
+            <QTitle text="Plan your *rest* days" sub={`Recovery is where progress happens. Tap up to ${MAX_REST} days you'll take off.`} />
             <Rise i={1} style={{ paddingHorizontal: GUTTER, marginTop: 22 }}>
               <RestPlanner
                 days={DAYS}

@@ -6,7 +6,7 @@ import { useOn } from '@/components/onboarding/kit';
 import { nativeOnly, PressableScale, tap, type IconName } from '@/components/ui';
 import { C, MOTION, R, shadowSm } from '@/theme';
 
-export const MAX_REST = 5;
+export const MAX_REST = 2;
 
 /** One-tap rest-day patterns; days are the stored full names. */
 const PRESETS: { label: string; days: string[] }[] = [
@@ -17,14 +17,10 @@ const PRESETS: { label: string; days: string[] }[] = [
 
 const tip = (rest: number): { icon: IconName; text: string } =>
   rest === 0
-    ? { icon: 'moon-outline', text: 'Pick at least one day to recover.' }
-    : rest === 1
-      ? { icon: 'flash-outline', text: 'Great for momentum. Take it easy if your body asks for it.' }
-      : rest === 2
-        ? { icon: 'leaf-outline', text: 'A balanced week with time to train and time to recover.' }
-        : rest >= MAX_REST
-          ? { icon: 'information-circle-outline', text: `That's the most rest days you can pick: ${MAX_REST} per week.` }
-          : { icon: 'heart-outline', text: 'Plenty of recovery. A gentle way to ease into training.' };
+    ? { icon: 'moon-outline', text: `Pick up to ${MAX_REST} days to recover.` }
+    : rest < MAX_REST
+      ? { icon: 'flash-outline', text: `Great for momentum. You can add ${MAX_REST - rest} more rest day.` }
+      : { icon: 'leaf-outline', text: `A balanced week. ${MAX_REST} rest days is the max you can pick.` };
 
 /**
  * Week planner for rest days: a strip of day capsules (dumbbell = workout, moon = rest), quick presets,
