@@ -287,7 +287,7 @@ const s = StyleSheet.create({
   stage: { width: STAGE, height: STAGE, alignItems: 'center', justifyContent: 'center' },
   halo: { position: 'absolute', width: MEDAL, height: MEDAL, borderRadius: MEDAL / 2, backgroundColor: C.accent },
   medal: { width: MEDAL, height: MEDAL, borderRadius: MEDAL / 2, backgroundColor: C.accent, ...glow(C.accent) },
-  medalFill: { flex: 1, borderRadius: MEDAL / 2, alignItems: 'center', justifyContent: 'center', borderWidth: 4, borderColor: 'rgba(255,255,255,0.55)' },
+  medalFill: { flex: 1, borderRadius: MEDAL / 2, alignItems: 'center', justifyContent: 'center', borderWidth: 4, borderColor: 'rgba(255,255,255,0.55)', overflow: 'hidden' },
   sparkle: { position: 'absolute' },
   count: { fontSize: 64, fontWeight: '800', color: C.text, letterSpacing: -2, fontVariant: ['tabular-nums'], marginTop: -6, lineHeight: 72 },
   title: { fontSize: 24, fontWeight: '800', color: C.text, letterSpacing: -0.6 },

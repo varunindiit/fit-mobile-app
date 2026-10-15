@@ -93,8 +93,8 @@ export function CompareTable() {
 const COL = 62;
 
 const s = StyleSheet.create({
-  hero: { height: 196, marginTop: 34 },
-  heroBg: { borderRadius: R.xl, ...glow(C.primary) },
+  hero: { height: 196, marginTop: 34, borderRadius: R.xl, ...glow(C.primary) },
+  heroBg: { borderRadius: R.xl, overflow: 'hidden' },
   heroCopy: { position: 'absolute', left: 20, top: 22, width: '52%' },
   heroEyebrow: { fontSize: 10.5, fontWeight: '800', color: 'rgba(255,255,255,0.75)', letterSpacing: 1.4 },
   heroTitle: { fontSize: 26, fontWeight: '900', color: C.white, letterSpacing: -0.6, lineHeight: 30, marginTop: 6 },

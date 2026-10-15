@@ -158,7 +158,7 @@ export function Avatar({ name, size = 68, premium, ring }: { name: string; size?
         colors={premium ? GOLD : G.brand}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={{ width: size, height: size, borderRadius: size / 2, alignItems: 'center', justifyContent: 'center' }}>
+        style={{ width: size, height: size, borderRadius: size / 2, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' }}>
         <Text style={{ color: premium ? C.navy : C.white, fontSize: size * 0.36, fontWeight: '800' }}>{initials(name)}</Text>
       </LinearGradient>
     );
@@ -422,10 +422,10 @@ export function AboutSheet({ visible, onClose }: { visible: boolean; onClose: ()
 
 const st = StyleSheet.create({
   groupRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 26, marginBottom: 10, marginLeft: 4, minHeight: 20 },
-  ring: { alignItems: 'center', justifyContent: 'center' },
+  ring: { alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   ringGap: { backgroundColor: C.card, alignItems: 'center', justifyContent: 'center' },
-  ringBadge: { position: 'absolute', right: 0, bottom: 2, width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: C.card },
-  badge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 9, paddingVertical: 4, borderRadius: R.pill, alignSelf: 'flex-start' },
+  ringBadge: { position: 'absolute', right: 0, bottom: 2, width: 24, height: 24, borderRadius: 12, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: C.card },
+  badge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 9, paddingVertical: 4, borderRadius: R.pill, alignSelf: 'flex-start', overflow: 'hidden' },
   badgeText: { fontSize: 11, fontWeight: '700', color: C.navy, letterSpacing: 0.4 },
   accBorder: { borderBottomWidth: StyleSheet.hairlineWidth * 2, borderBottomColor: C.borderSoft },
   accHead: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 15 },
@@ -439,7 +439,7 @@ const st = StyleSheet.create({
   faqList: { backgroundColor: C.card },
   askRia: { marginTop: 18, backgroundColor: C.aiSoft, borderColor: C.aiBorder, borderWidth: 1 },
   aboutHead: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 8, paddingBottom: 16, borderBottomWidth: StyleSheet.hairlineWidth * 2, borderBottomColor: C.borderSoft },
-  logo: { width: 56, height: 56, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  logo: { width: 56, height: 56, borderRadius: 18, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   aboutItem: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginTop: 16 },
   aboutH: { fontSize: 15, fontWeight: '700', color: C.text, marginBottom: 3, marginTop: 1 },
   madeWith: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, marginTop: 24 },

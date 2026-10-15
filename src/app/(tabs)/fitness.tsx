@@ -614,7 +614,7 @@ const st = StyleSheet.create({
   cStartText: { fontSize: 12, fontWeight: '800' },
   chips: { gap: 8, paddingHorizontal: 16, paddingBottom: 12 },
   focusRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, paddingHorizontal: 8, marginHorizontal: -8, borderRadius: R.sm },
-  focusTile: { width: 52, height: 52, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  focusTile: { width: 52, height: 52, borderRadius: 16, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 12 },
   wCell: { width: '48.3%' },
   wCard: { backgroundColor: C.card, borderRadius: R.lg, borderWidth: StyleSheet.hairlineWidth, borderColor: C.borderSoft, overflow: 'hidden', ...shadowSm },

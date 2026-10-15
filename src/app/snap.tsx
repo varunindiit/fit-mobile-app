@@ -476,7 +476,7 @@ const st = StyleSheet.create({
   bl: { bottom: 0, left: 0, borderBottomWidth: 4, borderLeftWidth: 4, borderBottomLeftRadius: 26 },
   br: { bottom: 0, right: 0, borderBottomWidth: 4, borderRightWidth: 4, borderBottomRightRadius: 26 },
   scanWrap: { position: 'absolute', top: 0, left: 12, right: 12, height: 43 },
-  scanTrail: { height: 40, borderRadius: 2 },
+  scanTrail: { height: 40, borderRadius: 2, overflow: 'hidden' },
   scanLine: { height: 3, borderRadius: 2, backgroundColor: C.primary, shadowColor: C.primary, shadowOpacity: 0.9, shadowRadius: 10, shadowOffset: { width: 0, height: 0 }, elevation: 6 },
   plate: { backgroundColor: '#F6F2EA', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.45, shadowRadius: 16, shadowOffset: { width: 0, height: 8 }, elevation: 8 },
   conf: { position: 'absolute', top: -9, left: -2, backgroundColor: C.primary, borderRadius: 6, paddingHorizontal: 4, paddingVertical: 1 },

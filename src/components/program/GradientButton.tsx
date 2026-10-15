@@ -34,6 +34,6 @@ export function GradientButton({ title, onPress, colors = START_COLORS, icon, he
 }
 
 const s = StyleSheet.create({
-  fill: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 18 },
+  fill: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 18, overflow: 'hidden' },
   text: { color: C.white, fontSize: 16, fontWeight: '700', letterSpacing: 0.4 },
 });
