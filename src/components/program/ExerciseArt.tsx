@@ -2,43 +2,56 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect } from 'react';
 import { StyleSheet, View, type DimensionValue, type ViewStyle } from 'react-native';
-import Animated, { cancelAnimation, Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
+import Animated, { cancelAnimation, Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withDelay, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
 
 import { Glyph } from '@/components/Glyph';
-import { EXERCISE_ART } from '@/components/glyphs';
+import { EXERCISE_ART, EXERCISE_ART_B } from '@/components/glyphs';
 import { C } from '@/theme';
 
 const ART: [string, string] = ['#F6FBF8', '#E1F2EA'];
+/** 2-frame rep loop: hold each pose, then a quick cross-fade — reads like a GIF. */
+const HOLD = 420;
+const SWAP = 160;
 
-/** Illustration tile: the exercise's 3D figure (or its emoji glyph) standing on a soft mint mat, optionally with a looping "rep" motion. */
+/** Illustration tile: the exercise's 3D figure (or its emoji glyph) standing on a soft mint mat, optionally with a looping "rep" motion
+ *  (2-frame pose swap when a second keyframe exists, gentle breathing for static holds). */
 export function ExerciseArt({ id, emoji, size = 64, width, height, animated = false, radius, style }: { id?: string; emoji: string; size?: number; width?: DimensionValue; height?: number; animated?: boolean; radius?: number; style?: ViewStyle }) {
   const h = height ?? size;
   const reduce = useReducedMotion();
   const loop = animated && !reduce;
   const t = useSharedValue(0);
+  const art = id ? EXERCISE_ART[id] : undefined;
+  const artB = art && id ? EXERCISE_ART_B[id] : undefined;
+  const mode = !art ? 'bob' : artB ? 'frames' : 'breathe';
 
   useEffect(() => {
     if (!loop) {
       t.set(0);
       return;
     }
-    t.set(withRepeat(withTiming(1, { duration: 850, easing: Easing.inOut(Easing.quad) }), -1, true));
+    if (mode === 'frames') {
+      const swap = (to: number) => withDelay(HOLD, withTiming(to, { duration: SWAP, easing: Easing.inOut(Easing.quad) }));
+      t.set(withRepeat(withSequence(swap(1), swap(0)), -1));
+    } else {
+      t.set(withRepeat(withTiming(1, { duration: mode === 'breathe' ? 1400 : 850, easing: Easing.inOut(Easing.quad) }), -1, true));
+    }
     return () => cancelAnimation(t);
-  }, [loop, t]);
+  }, [loop, mode, t]);
 
   const lift = h * 0.06;
   const figure = useAnimatedStyle(() => {
-    if (!loop) return { transform: [{ translateY: 0 }, { scale: 1 }, { rotate: '0deg' }] };
-    const v = t.get();
-    return { transform: [{ translateY: -lift * v }, { scale: 1 + 0.07 * v }, { rotate: `${-3 + 6 * v}deg` }] };
-  });
-  const shade = useAnimatedStyle(() => {
     const v = loop ? t.get() : 0;
+    if (mode === 'frames') return { opacity: 1 - v, transform: [{ translateY: 0 }, { scale: 1 }, { rotate: '0deg' }] };
+    if (mode === 'breathe') return { opacity: 1, transform: [{ translateY: -lift * 0.15 * v }, { scale: 1 + 0.025 * v }, { rotate: '0deg' }] };
+    return { opacity: 1, transform: [{ translateY: -lift * v }, { scale: 1 + 0.07 * v }, { rotate: `${-3 + 6 * v}deg` }] };
+  });
+  const figureB = useAnimatedStyle(() => ({ opacity: loop ? t.get() : 0 }));
+  const shade = useAnimatedStyle(() => {
+    const v = loop && mode !== 'frames' ? t.get() : 0;
     return { opacity: 1 - 0.45 * v, transform: [{ scaleX: 1 - 0.28 * v }] };
   });
 
   const fs = Math.round(h * 0.48);
-  const art = id ? EXERCISE_ART[id] : undefined;
   const figH = Math.round(h * 0.8);
   const matBottom = Math.round(h * 0.13);
   const matH = Math.max(4, Math.round(h * 0.065));
@@ -60,6 +73,11 @@ export function ExerciseArt({ id, emoji, size = 64, width, height, animated = fa
         <Animated.View style={figure}>
           {art ? <Image source={art} style={{ width: figH, height: figH }} contentFit="contain" /> : <Glyph emoji={emoji} size={Math.round(fs * 1.25)} />}
         </Animated.View>
+        {artB && loop && (
+          <Animated.View style={[s.frameB, figureB]}>
+            <Image source={artB} style={{ width: figH, height: figH }} contentFit="contain" />
+          </Animated.View>
+        )}
       </View>
     </LinearGradient>
   );
@@ -70,4 +88,5 @@ const s = StyleSheet.create({
   mat: { position: 'absolute', left: '9%', right: '9%', borderRadius: 99, backgroundColor: C.primaryTint },
   shadow: { backgroundColor: 'rgba(19,35,31,0.12)' },
   figure: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
+  frameB: { position: 'absolute', top: 0, left: 0, right: 0, alignItems: 'center' },
 });

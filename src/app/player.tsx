@@ -358,7 +358,7 @@ function Player({ session, resume }: { session: Session; resume: boolean }) {
 function NextUp({ id, emoji, name, value }: { id: string; emoji: string; name: string; value: string }) {
   return (
     <View style={s.nextUp}>
-      <ExerciseArt id={id} emoji={emoji} size={40} radius={12} />
+      <ExerciseArt id={id} emoji={emoji} size={40} animated radius={12} />
       <View style={{ flex: 1 }}>
         <Text style={s.nextUpLabel}>NEXT UP</Text>
         <Text style={s.nextUpName} numberOfLines={1}>

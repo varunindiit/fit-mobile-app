@@ -294,7 +294,7 @@ function DayPlan({ session }: { session: Session }) {
                             </Pressable>
                           </Animated.View>
                         )}
-                        <ExerciseArt id={ex.id} emoji={ex.emoji} size={60} radius={R.sm} />
+                        <ExerciseArt id={ex.id} emoji={ex.emoji} size={60} animated radius={R.sm} />
                         <View style={{ flex: 1 }}>
                           <Text style={s.rowName} numberOfLines={2}>
                             {ex.name}

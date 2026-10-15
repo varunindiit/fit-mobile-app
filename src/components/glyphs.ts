@@ -131,3 +131,30 @@ export const EXERCISE_ART: Record<string, number> = {
   'cobra-stretch': require('@/assets/images/exercises/cobra-stretch.webp'),
   'spine-twist': require('@/assets/images/exercises/spine-twist.webp'),
 };
+
+/** Second keyframe (opposite phase of the rep) for exercises that loop as a 2-frame animation. Static holds (plank, side plank) have none. */
+export const EXERCISE_ART_B: Record<string, number> = {
+  'jumping-jacks': require('@/assets/images/exercises/jumping-jacks-b.webp'),
+  'abdominal-crunches': require('@/assets/images/exercises/abdominal-crunches-b.webp'),
+  'russian-twist': require('@/assets/images/exercises/russian-twist-b.webp'),
+  'mountain-climber': require('@/assets/images/exercises/mountain-climber-b.webp'),
+  'heel-touch': require('@/assets/images/exercises/heel-touch-b.webp'),
+  'leg-raises': require('@/assets/images/exercises/leg-raises-b.webp'),
+  'bent-leg-twist': require('@/assets/images/exercises/bent-leg-twist-b.webp'),
+  'reverse-crunches': require('@/assets/images/exercises/reverse-crunches-b.webp'),
+  'v-crunch': require('@/assets/images/exercises/v-crunch-b.webp'),
+  'flutter-kicks': require('@/assets/images/exercises/flutter-kicks-b.webp'),
+  'cross-arm-crunches': require('@/assets/images/exercises/cross-arm-crunches-b.webp'),
+  'bicycle-crunches': require('@/assets/images/exercises/bicycle-crunches-b.webp'),
+  'x-man-crunch': require('@/assets/images/exercises/x-man-crunch-b.webp'),
+  'push-ups': require('@/assets/images/exercises/push-ups-b.webp'),
+  'wide-push-ups': require('@/assets/images/exercises/wide-push-ups-b.webp'),
+  'tricep-dips': require('@/assets/images/exercises/tricep-dips-b.webp'),
+  'squats': require('@/assets/images/exercises/squats-b.webp'),
+  'lunges': require('@/assets/images/exercises/lunges-b.webp'),
+  'glute-bridge': require('@/assets/images/exercises/glute-bridge-b.webp'),
+  'superman': require('@/assets/images/exercises/superman-b.webp'),
+  'burpees': require('@/assets/images/exercises/burpees-b.webp'),
+  'cobra-stretch': require('@/assets/images/exercises/cobra-stretch-b.webp'),
+  'spine-twist': require('@/assets/images/exercises/spine-twist-b.webp'),
+};
