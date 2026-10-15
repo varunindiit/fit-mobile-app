@@ -2,8 +2,15 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useState, type ReactNode } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import Animated from "react-native-reanimated";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import Animated, {
+  Extrapolation,
+  interpolate,
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  useSharedValue,
+  type SharedValue,
+} from "react-native-reanimated";
 
 import { Glyph } from "@/components/Glyph";
 import { PROGRAM_ART } from "@/components/glyphs";
@@ -24,7 +31,6 @@ import {
   PressableScale,
   ProgressBar,
   Screen,
-  ScreenTitle,
   SectionTitle,
   Sheet,
   T,
@@ -141,6 +147,113 @@ function Row({
   );
 }
 
+/**
+ * Me-tab header: big "Me" title at rest; once the profile card scrolls away it
+ * hands over to a compact avatar + name. A soft fade lets content slide under it.
+ */
+function MeHeader({
+  scrollY,
+  name,
+  premium,
+  sub,
+  unread,
+}: {
+  scrollY: SharedValue<number>;
+  name: string;
+  premium: boolean;
+  sub: string;
+  unread: number;
+}) {
+  const big = useAnimatedStyle(() => {
+    const v = interpolate(scrollY.get(), [120, 170], [0, 1], Extrapolation.CLAMP);
+    return { opacity: 1 - v, transform: [{ translateY: -8 * v }] };
+  });
+  const compact = useAnimatedStyle(() => {
+    const v = interpolate(scrollY.get(), [150, 200], [0, 1], Extrapolation.CLAMP);
+    return { opacity: v, transform: [{ translateY: 8 * (1 - v) }] };
+  });
+  const edge = useAnimatedStyle(() => ({
+    opacity: interpolate(scrollY.get(), [0, 20], [0, 1], Extrapolation.CLAMP),
+  }));
+  const action = (
+    icon: IconName,
+    label: string,
+    href: string,
+    badge?: number,
+  ) => (
+    <PressableScale
+      scaleTo={0.88}
+      hitSlop={4}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      onPress={() => {
+        tap();
+        router.push(href);
+      }}
+      style={st.meAction}
+    >
+      <Ionicons name={icon} size={20} color={C.text} />
+      {!!badge && (
+        <View style={st.meBadge}>
+          <Text style={st.meBadgeText}>{badge > 9 ? "9+" : badge}</Text>
+        </View>
+      )}
+    </PressableScale>
+  );
+
+  return (
+    <View style={st.meHead}>
+      <View style={st.meHeadRow}>
+        <View style={st.meTitleBox}>
+          <Animated.View style={big}>
+            <View style={st.meEyebrow}>
+              <LinearGradient
+                colors={G.brand}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={st.meDot}
+              />
+              <Text style={st.meEyebrowText}>Profile · Plan · Settings</Text>
+            </View>
+            <Text style={st.meTitle}>Me</Text>
+          </Animated.View>
+          <Animated.View
+            pointerEvents="none"
+            style={[StyleSheet.absoluteFill, st.meCompact, compact]}
+          >
+            <Avatar name={name} premium={premium} size={38} />
+            <View style={{ flex: 1 }}>
+              <Text style={st.meCompactName} numberOfLines={1}>
+                {name || "Fitora member"}
+              </Text>
+              <Text style={st.meCompactSub} numberOfLines={1}>
+                {sub}
+              </Text>
+            </View>
+          </Animated.View>
+        </View>
+        <View style={st.meActions}>
+          {action("settings-outline", "Settings", "/settings")}
+          <View style={st.meSep} />
+          {action(
+            "notifications-outline",
+            unread ? `Notifications, ${unread} unread` : "Notifications",
+            "/notifications",
+            unread,
+          )}
+        </View>
+      </View>
+      <Animated.View pointerEvents="none" style={[st.meEdge, edge]}>
+        <View style={st.meHair} />
+        <LinearGradient
+          colors={[C.bg, tint(C.bg, "00")]}
+          style={{ flex: 1 }}
+        />
+      </Animated.View>
+    </View>
+  );
+}
+
 /** The profile / "Me" content. `tab` = Me tab (large title), `stack` = pushed /profile screen (back arrow). */
 export function ProfileBody({ mode }: { mode: "tab" | "stack" }) {
   const {
@@ -156,6 +269,11 @@ export function ProfileBody({ mode }: { mode: "tab" | "stack" }) {
   const [sheet, setSheet] = useState<SheetKind>(null);
   const [dialog, setDialog] = useState<DialogKind>(null);
   const [conds, setConds] = useState<string[]>([]);
+
+  const scrollY = useSharedValue(0);
+  const onScroll = useAnimatedScrollHandler((e) => {
+    scrollY.set(e.contentOffset.y);
+  });
 
   const close = () => setSheet(null);
   const unread = NOTIFICATIONS.filter(
@@ -208,21 +326,17 @@ export function ProfileBody({ mode }: { mode: "tab" | "stack" }) {
           }
         />
       ) : (
-        <ScreenTitle
-          title="Me"
-          subtitle="Your profile, plan & preferences"
-          style={st.tabHead}
-          right={
-            <IconButton
-              icon="notifications-outline"
-              bordered
-              badge={unread || undefined}
-              onPress={() => router.push("/notifications")}
-            />
-          }
+        <MeHeader
+          scrollY={scrollY}
+          name={p.name}
+          premium={!!premium}
+          sub={premium ? `Premium · valid till ${planTill}` : "Free plan"}
+          unread={unread}
         />
       )}
-      <ScrollView
+      <Animated.ScrollView
+        onScroll={onScroll}
+        scrollEventThrottle={16}
         contentContainerStyle={[
           st.content,
           mode === "tab" && { paddingBottom: 32 },
@@ -763,7 +877,7 @@ export function ProfileBody({ mode }: { mode: "tab" | "stack" }) {
             </Text>
           </View>
         </Animated.View>
-      </ScrollView>
+      </Animated.ScrollView>
 
       {/* Diet sheet */}
       <Sheet
@@ -994,7 +1108,81 @@ function DemoRow({
 }
 
 const st = StyleSheet.create({
-  tabHead: { paddingHorizontal: 16, paddingBottom: 10 },
+  meHead: { backgroundColor: C.bg, zIndex: 2 },
+  meHeadRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 12,
+  },
+  meTitleBox: { flex: 1, height: 56, justifyContent: "center" },
+  meEyebrow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  meDot: { width: 7, height: 7, borderRadius: 4 },
+  meEyebrowText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: C.muted,
+    letterSpacing: 1,
+    textTransform: "uppercase",
+  },
+  meTitle: {
+    fontSize: 32,
+    fontWeight: "800",
+    color: C.text,
+    letterSpacing: -1,
+    marginTop: 1,
+  },
+  meCompact: { flexDirection: "row", alignItems: "center", gap: 10 },
+  meCompactName: {
+    fontSize: 17,
+    fontWeight: "800",
+    color: C.text,
+    letterSpacing: -0.3,
+  },
+  meCompactSub: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: C.muted,
+    marginTop: 1,
+  },
+  meActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    height: 46,
+    paddingHorizontal: 3,
+    borderRadius: 23,
+    backgroundColor: C.card,
+    borderWidth: StyleSheet.hairlineWidth * 2,
+    borderColor: C.border,
+    ...shadowSm,
+  },
+  meAction: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  meSep: { width: 1, height: 18, backgroundColor: C.border },
+  meBadge: {
+    position: "absolute",
+    top: 3,
+    right: 3,
+    minWidth: 17,
+    height: 17,
+    borderRadius: 9,
+    paddingHorizontal: 4,
+    backgroundColor: C.accent,
+    borderWidth: 2,
+    borderColor: C.card,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  meBadgeText: { color: C.white, fontSize: 9, fontWeight: "800" },
+  meEdge: { position: "absolute", left: 0, right: 0, top: "100%", height: 18 },
+  meHair: { height: StyleSheet.hairlineWidth, backgroundColor: C.border },
   content: { paddingHorizontal: 16, paddingTop: 6, paddingBottom: 40 },
   hero: {
     borderRadius: R.xl,
