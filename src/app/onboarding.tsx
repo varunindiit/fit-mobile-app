@@ -68,12 +68,12 @@ const ACTIVITY: { t: string; s: string; v: Profile['activity'] }[] = [
   { t: 'I spend much of the day sitting', s: '(such as desk work)', v: 'sedentary' },
 ];
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-const DIETS: { t: string; img: number; diet: string }[] = [
-  { t: 'Meat-based', img: IMG.dietMeat, diet: 'Non-vegetarian' },
-  { t: 'Regular diet', img: IMG.dietRegular, diet: 'Non-vegetarian' },
-  { t: 'Vegetarian', img: IMG.dietVegetarian, diet: 'Vegetarian' },
-  { t: 'Vegan', img: IMG.dietVegan, diet: 'Vegan' },
-  { t: 'Other', img: IMG.dietOther, diet: '' },
+const DIETS: { t: string; img: number; hero: number; diet: string }[] = [
+  { t: 'Meat-based', img: IMG.dietMeat, hero: IMG.dietHeroMeat, diet: 'Non-vegetarian' },
+  { t: 'Regular diet', img: IMG.dietRegular, hero: IMG.diet, diet: 'Non-vegetarian' },
+  { t: 'Vegetarian', img: IMG.dietVegetarian, hero: IMG.dietHeroVegetarian, diet: 'Vegetarian' },
+  { t: 'Vegan', img: IMG.dietVegan, hero: IMG.dietHeroVegan, diet: 'Vegan' },
+  { t: 'Other', img: IMG.dietOther, hero: IMG.dietHeroOther, diet: '' },
 ];
 const REWARDS: { t: string; img: number }[] = [
   { t: 'Treat myself to a nice meal', img: IMG.rewardMeal },
@@ -576,7 +576,7 @@ export default function Onboarding() {
           <Body>
             <QTitle text="Get the best diet for your goals" />
             <Rise i={1} style={st.dietArt}>
-              <Photo source={IMG.diet} style={StyleSheet.absoluteFill} />
+              <Photo source={DIETS.find((d) => d.t === p.dietType)?.hero ?? IMG.diet} style={StyleSheet.absoluteFill} />
               <LinearGradient colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.28)']} style={StyleSheet.absoluteFill} />
               <Animated.View entering={nativeOnly(ZoomIn.duration(MOTION.enter).delay(380))} style={[st.dietTag, { left: 14, bottom: 16, backgroundColor: C.white }]}>
                 <Text style={[st.dietTagText, { color: C.primaryDark }]}>LOW CALORIES</Text>

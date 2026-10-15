@@ -14,6 +14,11 @@ export const IMG = {
   dietVegetarian: require('@/assets/images/onboarding/diet-vegetarian.webp'),
   dietVegan: require('@/assets/images/onboarding/diet-vegan.webp'),
   dietOther: require('@/assets/images/onboarding/diet-other.webp'),
+  /** Nutrition Plan hero per diet type; `diet` doubles as the Regular-diet hero. */
+  dietHeroMeat: require('@/assets/images/onboarding/diet-hero-meat.webp'),
+  dietHeroVegetarian: require('@/assets/images/onboarding/diet-hero-vegetarian.webp'),
+  dietHeroVegan: require('@/assets/images/onboarding/diet-hero-vegan.webp'),
+  dietHeroOther: require('@/assets/images/onboarding/diet-hero-other.webp'),
   activity: require('@/assets/images/onboarding/activity.webp'),
   rewardMeal: require('@/assets/images/onboarding/reward-meal.webp'),
   rewardClothes: require('@/assets/images/onboarding/reward-clothes.webp'),
