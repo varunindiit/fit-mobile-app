@@ -41,7 +41,7 @@ const SPARKLES: { icon: IconName; size: number; color: string; style: ViewStyle;
 
 export default function StreakScreen() {
   const p = useLocalSearchParams<{ key?: string; kcal?: string; minutes?: string; exercises?: string; advanced?: string }>();
-  const { state } = useStore();
+  const { state, unlockReward } = useStore();
   const [details, setDetails] = useState(false);
   const reduce = useReducedMotion();
   const pop = useSharedValue(0);
@@ -52,6 +52,12 @@ export default function StreakScreen() {
   const streak = workoutStreak(state);
   const cycle = days === 0 ? 0 : ((days - 1) % 7) + 1;
   const away = 7 - cycle;
+  // Each completed 7-day cycle unlocks a reward once (kept in the store).
+  const rewardId = days > 0 && away === 0 ? `cycle-${days / 7}` : null;
+  const rewardUnlocked = !!rewardId && state.unlockedRewards.includes(rewardId);
+  useEffect(() => {
+    if (rewardId && !rewardUnlocked) unlockReward(rewardId);
+  }, [rewardId, rewardUnlocked, unlockReward]);
   const session = findSession(String(p.key ?? ''));
   const meta = session ? sessionMeta(session) : undefined;
   const advanced = p.advanced === '1' && meta?.day !== undefined;
@@ -145,7 +151,7 @@ export default function StreakScreen() {
 
         <Animated.View entering={enter(5)} style={s.reward}>
           <Text style={s.rewardText}>
-            {away === 0 ? (
+            {rewardId ? (
               <>
                 <Text style={s.rewardStrong}>Amazing! </Text>
                 {"You've unlocked this week's reward"}
@@ -196,6 +202,11 @@ export default function StreakScreen() {
             <Text style={s.cycleVal}>{cycle}/7 days</Text>
           </View>
           <ProgressBar value={cycle / 7} height={10} />
+          {state.unlockedRewards.length > 0 && (
+            <Text style={[T.small, { marginTop: 8 }]}>
+              {state.unlockedRewards.length} reward{state.unlockedRewards.length === 1 ? '' : 's'} unlocked so far
+            </Text>
+          )}
         </View>
         <Button title="Let's Go!" onPress={() => setDetails(false)} style={{ marginTop: 20, borderRadius: R.pill }} />
       </Sheet>

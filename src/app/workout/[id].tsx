@@ -14,6 +14,7 @@ import { pad } from '@/lib/calc';
 import { useStore } from '@/lib/store';
 import { C, glow, MOTION, R, shadow, shadowSm } from '@/theme';
 import { Glyph } from '@/components/Glyph';
+import { WORKOUT_ART } from '@/components/glyphs';
 
 type Phase = 'overview' | 'player' | 'done';
 type Run = { idx: number; left: number; elapsed: number; prep: number; finished: boolean };
@@ -392,7 +393,7 @@ function WorkoutFlow({ w }: { w: Workout }) {
             </View>
           </View>
           <Animated.View entering={nativeOnly(ZoomIn.duration(MOTION.enter))} style={st.heroDisc}>
-            <Glyph emoji={w.emoji} size={74} />
+            <Glyph emoji={w.emoji} src={WORKOUT_ART[w.id]} size={74} />
           </Animated.View>
           <Text style={st.heroTitle}>{w.title}</Text>
           <Text style={st.heroCoach}>{coachText}</Text>

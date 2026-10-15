@@ -195,6 +195,9 @@ export function sanitize(s: AppState): AppState {
     backup: s.backup && typeof s.backup === 'object' ? s.backup : null,
     onboardingDraft:
       s.onboardingDraft && typeof s.onboardingDraft.step === 'string' ? { ...s.onboardingDraft, p: mergeTyped(DEFAULT_PROFILE, s.onboardingDraft.p) } : null,
+    sessionResume: Object.fromEntries(
+      Object.entries(s.sessionResume).filter(([, r]) => r && isNum(r.idx) && Array.isArray(r.done) && isNum(r.elapsedMs)),
+    ),
     planEdits: Object.fromEntries(
       Object.entries(s.planEdits)
         .filter(([, items]) => Array.isArray(items))
@@ -217,16 +220,16 @@ function useAppStore() {
   const dirty = useRef(false);
   // If storage couldn't be read, never write: saving INITIAL would erase the user's real data.
   const loadFailed = useRef(false);
-  latest.current = state;
 
-  const flush = useCallback(() => {
+  const flush = useCallback(function save() {
     if (saveTimer.current) clearTimeout(saveTimer.current);
     saveTimer.current = null;
     if (!dirty.current || loadFailed.current) return;
     dirty.current = false;
     saveState(latest.current).catch((e) => {
       dirty.current = true;
-      console.warn('[store] save failed', e);
+      console.warn('[store] save failed, retrying', e);
+      saveTimer.current = setTimeout(save, 2000);
     });
   }, []);
 
@@ -241,6 +244,7 @@ function useAppStore() {
   }, []);
 
   useEffect(() => {
+    latest.current = state;
     if (!hydrated) return;
     dirty.current = true;
     if (saveTimer.current) clearTimeout(saveTimer.current);
@@ -356,7 +360,7 @@ function useAppStore() {
 
       addWeight: (kg: number, date = todayKey()) =>
         update((s) => {
-          const weights = [...s.weights.filter((w) => w.date !== date), { id: uid(), date, kg: round1(kg) }].sort((a, b) => a.date.localeCompare(b.date));
+          const weights = [...s.weights.filter((w) => w.date !== date), { id: uid(), date, kg: Math.round(kg * 100) / 100 }].sort((a, b) => a.date.localeCompare(b.date));
           const latest = weights[weights.length - 1];
           return { ...s, weights, profile: { ...s.profile, weightKg: latest.kg } };
         }),

@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router, type Href } from 'expo-router';
+import { router, useLocalSearchParams, type Href } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, {
@@ -19,24 +19,24 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { dietKind, firstName, fmtNum, fmtWeight, goalSummary, useKeyboardShown, type DietKind } from '@/components/profile/shared';
-import { EASE_OUT, IconButton, layoutTransition, nativeOnly, PressableScale, Screen, T, tap, useToast, type IconName } from '@/components/ui';
+import { Dialog, EASE_OUT, IconButton, layoutTransition, nativeOnly, PressableScale, Screen, T, tap, useToast, type IconName } from '@/components/ui';
 import { foodById, type Food } from '@/data/foods';
 import { workoutById } from '@/data/fitness';
 import { exerciseById, PROGRAM_DAYS, programById, programDay, sessionStats } from '@/data/program';
 import { round1, todayKey } from '@/lib/calc';
-import { burnedOn, dayTotals, useStore, type AppState } from '@/lib/store';
+import { burnedOn, dayTotals, isPremiumActive, useStore, type AppState } from '@/lib/store';
 import { C, MOTION, R } from '@/theme';
 
-type Action = { label: string; icon: IconName; href?: Href; water?: boolean };
-type Msg = { id: string; from: 'bot' | 'user'; text: string; action?: Action };
+/** Actions are persisted with the chat, so links are plain route strings (cast to Href when opened). */
+type Action = { label: string; icon: IconName; href?: string; water?: boolean };
 type Reply = { text: string; action?: Action };
 type Store = ReturnType<typeof useStore>;
 
 const SUGGESTIONS = ['How am I doing today?', "What's my workout today?", 'Suggest a high-protein snack', 'What should I eat for dinner?', 'Plan a 15-min workout', 'Is biryani okay for weight loss?'];
 
-let seq = 0;
-const mid = () => `m${Date.now()}${seq++}`;
-const food = (id: string) => foodById(id) as Food;
+/** Known foods only: a renamed/removed id is skipped instead of crashing a reply. */
+const foodsOf = (ids: string[]) => ids.map((id) => foodById(id)).filter((f): f is Food => !!f);
+const foodLink = (id: string, meal: string) => `/food/${encodeURIComponent(id)}?meal=${meal}`;
 const snackMeal = () => (new Date().getHours() < 15 ? 'morningSnack' : 'eveningSnack');
 const mealNow = () => {
   const h = new Date().getHours();
@@ -67,7 +67,7 @@ function ctxOf(state: AppState, t: Store['targets']) {
     p: state.profile,
     t,
     units: state.settings.units,
-    premium: state.premium,
+    premium: isPremiumActive(state.premium) ? state.premium : null,
     program: programById(state.profile.program),
     programDone: Math.min(PROGRAM_DAYS, state.programProgress[state.profile.program] ?? 0),
     rest: state.settings.restSeconds,
@@ -116,8 +116,12 @@ const LIGHT: Record<DietKind, Plate> = {
   egg: [['boiled-egg', 2], ['green-salad', 1]],
   nonveg: [['fish-curry', 1], ['green-salad', 1]],
 };
-const plateStats = (pl: Plate) => pl.reduce((a, [id, q]) => ({ kcal: a.kcal + food(id).kcal * q, protein: a.protein + food(id).protein * q }), { kcal: 0, protein: 0 });
-const plateLines = (pl: Plate) => pl.map(([id, q]) => `• ${q !== 1 ? `${q} × ` : ''}${food(id).name}`).join('\n');
+const plateItems = (pl: Plate) => pl.flatMap(([id, q]) => {
+  const f = foodById(id);
+  return f ? [{ f, q }] : [];
+});
+const plateStats = (pl: Plate) => plateItems(pl).reduce((a, { f, q }) => ({ kcal: a.kcal + f.kcal * q, protein: a.protein + f.protein * q }), { kcal: 0, protein: 0 });
+const plateLines = (pl: Plate) => plateItems(pl).map(({ f, q }) => `• ${q !== 1 ? `${q} × ` : ''}${f.name}`).join('\n');
 
 function reply(raw: string, c: Ctx): Reply {
   const q = raw.toLowerCase();
@@ -130,30 +134,30 @@ function reply(raw: string, c: Ctx): Reply {
     return { text: `Anytime, ${c.name}! Small, consistent steps win. I'm here 24×7 whenever you need me.` };
 
   if (has('biryani', 'pizza', 'burger', 'samosa', 'sweet', 'mithai', 'gulab', 'cheat', 'junk', 'dessert')) {
-    if (has('biryani')) {
-      const nonveg = c.kind === 'nonveg';
-      const b = food(nonveg ? 'chicken-biryani' : 'veg-pulao');
+    const nonveg = c.kind === 'nonveg';
+    const b = foodById(nonveg ? 'chicken-biryani' : 'veg-pulao');
+    if (has('biryani') && b) {
       const kcal = nonveg ? b.kcal : b.kcal * 2;
       const fits = c.left >= kcal;
       return {
         text: `Yes — in moderation! ${nonveg ? 'A plate of chicken biryani' : 'A 2-katori serving of veg biryani'} is ~${fmtNum(kcal)} kcal, mostly carbs.\n\nYou have ${fmtNum(Math.max(0, c.left))} kcal left today, so ${fits ? 'it fits — enjoy it guilt-free' : `a half portion (~${fmtNum(kcal / 2)} kcal) is the smarter choice today.`}\n\nMake it lighter:\n• Pair with raita & a big salad\n• ${nonveg ? 'Pick chicken over mutton' : 'Ask for extra veggies'}\n• Skip extra fried onions & ghee\n• Take a 20-min walk afterwards`,
-        action: { label: `Log ${b.name}`, icon: 'add-circle', href: { pathname: '/food/[id]', params: { id: b.id, meal: mealNow() } } },
+        action: { label: `Log ${b.name}`, icon: 'add-circle', href: foodLink(b.id, mealNow()) },
       };
     }
-    const s = food('makhana');
+    const s = foodById('makhana');
     return {
-      text: `Treats are totally okay — I follow the 80/20 rule: eat well 80% of the time and enjoy the rest mindfully.\n\nKeep the portion small, have it earlier in the day, and balance with a lighter next meal. Craving something crunchy? ${s.emoji} ${s.name} is just ${s.kcal} kcal a cup.`,
-      action: { label: `Log ${s.name}`, icon: 'add-circle', href: { pathname: '/food/[id]', params: { id: s.id, meal: snackMeal() } } },
+      text: `Treats are totally okay — I follow the 80/20 rule: eat well 80% of the time and enjoy the rest mindfully.\n\nKeep the portion small, have it earlier in the day, and balance with a lighter next meal.${s ? ` Craving something crunchy? ${s.emoji} ${s.name} is just ${s.kcal} kcal a cup.` : ''}`,
+      action: s ? { label: `Log ${s.name}`, icon: 'add-circle', href: foodLink(s.id, snackMeal()) } : undefined,
     };
   }
 
   if (has('protein', 'snack', 'hungry', 'craving')) {
-    const items = SNACKS[c.kind].map(food);
+    const items = foodsOf(SNACKS[c.kind]);
     const top = items[0];
     const gap = Math.max(0, c.proteinT - c.protein);
     return {
-      text: `Here are high-protein snacks for your ${c.diet} diet\n\n${items.map((x) => `• ${x.name} — ${round1(x.protein)} g protein, ${x.kcal} kcal`).join('\n')}\n\n${gap > 0 ? `You're ${gap} g short of today's ${c.proteinT} g protein goal, so ${top.name} is a smart pick.` : "You've already hit today's protein goal — keep snacks light!"}`,
-      action: { label: `Log ${top.name}`, icon: 'add-circle', href: { pathname: '/food/[id]', params: { id: top.id, meal: snackMeal() } } },
+      text: `Here are high-protein snacks for your ${c.diet} diet\n\n${items.map((x) => `• ${x.name} — ${round1(x.protein)} g protein, ${x.kcal} kcal`).join('\n')}\n\n${gap > 0 ? `You're ${gap} g short of today's ${c.proteinT} g protein goal${top ? `, so ${top.name} is a smart pick` : ''}.` : "You've already hit today's protein goal — keep snacks light!"}`,
+      action: top ? { label: `Log ${top.name}`, icon: 'add-circle', href: foodLink(top.id, snackMeal()) } : undefined,
     };
   }
 
@@ -172,7 +176,7 @@ function reply(raw: string, c: Ctx): Reply {
     }
     return {
       text: `${intro}\n\n${plateLines(plate)}\n\nTip: start with the salad — the fibre keeps you full longer.`,
-      action: { label: `Log ${meal}`, icon: 'add-circle', href: { pathname: '/food-search', params: { meal } } },
+      action: { label: `Log ${meal}`, icon: 'add-circle', href: `/food-search?meal=${meal}` },
     };
   }
 
@@ -200,7 +204,7 @@ function reply(raw: string, c: Ctx): Reply {
       .join('\n');
     return {
       text: `You're on ${pr.title} (${pr.level}) — ${c.programDone}/${PROGRAM_DAYS} days done.\n\nNext up: Day ${day} · ${stats.exercises} exercises · ~${stats.minutes} min · ~${stats.kcal} kcal\n\n${list}${s.items.length > 4 ? `\n• +${s.items.length - 4} more` : ''}\n\nAbs are made in the kitchen too — ${c.left > 0 ? `you have ${fmtNum(c.left)} kcal left today.` : "you've reached today's calorie budget."}`,
-      action: { label: `Start Day ${day}`, icon: 'play-circle', href: { pathname: '/program-day', params: { key: s.key } } },
+      action: { label: `Start Day ${day}`, icon: 'play-circle', href: `/program-day?key=${encodeURIComponent(s.key)}` },
     };
   }
 
@@ -235,7 +239,7 @@ function reply(raw: string, c: Ctx): Reply {
   if (has('diabetes', 'sugar', 'pcos', 'pcod', 'thyroid', 'bp', 'pressure', 'cholesterol', 'liver', 'doctor', 'nutritionist', 'coach', 'trainer', 'expert', 'human')) {
     return {
       text: `For medical conditions, a personalised plan really matters. The basics:\n\n• Choose low-GI carbs — brown rice, ragi, jowar, oats\n• Add protein to every meal\n• Eat fibre first, carbs last\n• Limit sweets, juices and maida\n\nWith Fitora Pro, a certified specialist like Sneha Kulkarni (Diabetes Educator) builds your plan and reviews your logs every week.`,
-      action: { label: 'See Pro plans', icon: 'diamond', href: { pathname: '/plans', params: { tier: 'pro' } } },
+      action: { label: 'See Pro plans', icon: 'diamond', href: '/plans?tier=pro' },
     };
   }
 
@@ -281,7 +285,7 @@ function reply(raw: string, c: Ctx): Reply {
 
   return {
     text: `Hmm, I'm still learning about that one\n\nI can help with your calories, meals, high-protein snacks, workouts, water and weight goal. For anything medical, a Fitora Pro nutritionist is the best person to ask.`,
-    action: { label: 'Talk to a human coach', icon: 'people', href: { pathname: '/plans', params: { tier: 'pro' } } },
+    action: { label: 'Talk to a human coach', icon: 'people', href: '/plans?tier=pro' },
   };
 }
 
@@ -295,55 +299,78 @@ const webNoOutline = Platform.OS === 'web' ? ({ outlineStyle: 'none' } as object
 
 export default function CoachScreen() {
   const store = useStore();
+  const { state, targets, hydrated, addChatMessage, clearChat, addWater } = store;
   const toast = useToast();
   const insets = useSafeAreaInsets();
   const kb = useKeyboardShown();
-  const latest = useRef(store);
-  useEffect(() => {
-    latest.current = store;
-  });
+  const params = useLocalSearchParams<{ q?: string }>();
 
-  const [msgs, setMsgs] = useState<Msg[]>(() => [{ id: mid(), from: 'bot', text: greeting(ctxOf(store.state, store.targets)) }]);
   const [input, setInput] = useState('');
   const [focused, setFocused] = useState(false);
   const [typing, setTyping] = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false);
   const scroll = useRef<ScrollView>(null);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const seeding = useRef(false);
+  const sentQ = useRef(false);
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
 
+  // The chat is persisted; greet only when it is empty (first visit or after a new chat).
+  const chatLen = state.coachChat.length;
+  useEffect(() => {
+    if (chatLen > 0) {
+      seeding.current = false;
+      return;
+    }
+    if (!hydrated || seeding.current) return;
+    seeding.current = true;
+    addChatMessage({ from: 'bot', text: greeting(ctxOf(state, targets)) });
+  }, [chatLen, hydrated, addChatMessage, state, targets]);
+
+  // Reply and question are saved together right away; only the typing indicator is delayed,
+  // so leaving the screen mid-"typing" never drops the answer. The pending reply stays hidden until then.
   const send = (raw: string) => {
     const text = raw.trim();
     if (!text || typing) return;
     tap();
     setInput('');
-    setMsgs((m) => [...m, { id: mid(), from: 'user', text }]);
+    const r = reply(text, ctxOf(state, targets));
+    addChatMessage({ from: 'user', text });
+    addChatMessage({ from: 'bot', ...r });
     setTyping(true);
-    const t = setTimeout(() => {
-      const s = latest.current;
-      const r = reply(text, ctxOf(s.state, s.targets));
-      setMsgs((m) => [...m, { id: mid(), from: 'bot', ...r }]);
-      setTyping(false);
-    }, replyDelay());
-    timers.current.push(t);
+    timers.current.push(setTimeout(() => setTyping(false), replyDelay()));
   };
+
+  // Optional deep link: /coach?q=… asks once on arrival.
+  const q = typeof params.q === 'string' ? params.q : '';
+  useEffect(() => {
+    if (!hydrated || !q || sentQ.current) return;
+    sentQ.current = true;
+    send(q);
+  });
 
   const runAction = (a: Action) => {
     if (a.water) {
-      const s = latest.current;
-      const n = (s.state.water[todayKey()] ?? 0) + 1;
-      s.setWater(n);
-      toast(`Added a glass of water · ${n} of ${s.targets.water} today`, 'water');
+      const today = todayKey();
+      const n = Math.min(16, (state.water[today] ?? 0) + 1);
+      addWater(1, today);
+      toast(`Added a glass of water · ${n} of ${targets.water} today`, 'water');
       return;
     }
-    if (a.href) router.push(a.href);
+    if (a.href) router.push(a.href as Href);
   };
 
   const clear = () => {
+    setConfirmClear(false);
     timers.current.forEach(clearTimeout);
+    timers.current = [];
     setTyping(false);
-    setMsgs([{ id: mid(), from: 'bot', text: greeting(ctxOf(store.state, store.targets)) }]);
+    clearChat();
     toast('Started a new chat', 'chatbubbles');
   };
+
+  // While Ria is "typing", hold back the reply that was already saved.
+  const msgs = typing ? state.coachChat.slice(0, -1) : state.coachChat;
 
   const canSend = !!input.trim() && !typing;
 
@@ -364,10 +391,10 @@ export default function CoachScreen() {
             <Text style={st.status}>{typing ? 'typing…' : 'Online · replies instantly'}</Text>
           </View>
         </View>
-        <IconButton icon="refresh" bordered onPress={clear} />
+        <IconButton icon="refresh" bordered onPress={() => setConfirmClear(true)} />
       </View>
 
-      {!store.state.premium && (
+      {!isPremiumActive(state.premium) && (
         <PressableScale
           scaleTo={0.98}
           onPress={() => {
@@ -413,11 +440,11 @@ export default function CoachScreen() {
                       scaleTo={0.96}
                       onPress={() => {
                         tap();
-                        runAction(m.action!);
+                        runAction({ ...m.action!, icon: m.action!.icon as IconName });
                       }}
                       style={st.action}
                       accessibilityRole="button">
-                      <Ionicons name={m.action.icon} size={16} color={C.ai} />
+                      <Ionicons name={m.action.icon as IconName} size={16} color={C.ai} />
                       <Text style={st.actionText}>{m.action.label}</Text>
                       <Ionicons name="chevron-forward" size={14} color={C.ai} />
                     </PressableScale>
@@ -464,6 +491,17 @@ export default function CoachScreen() {
           <SendButton enabled={canSend} onPress={() => send(input)} />
         </View>
       </KeyboardAvoidingView>
+
+      <Dialog
+        visible={confirmClear}
+        iconName="chatbubbles"
+        title="Start a new chat?"
+        text="This clears your conversation with Ria."
+        confirm="New chat"
+        cancel="Cancel"
+        onConfirm={clear}
+        onCancel={() => setConfirmClear(false)}
+      />
     </Screen>
   );
 }

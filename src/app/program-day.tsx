@@ -32,6 +32,7 @@ import { exerciseById, sessionStats, type Session, type SessionItem } from '@/da
 import { useStore } from '@/lib/store';
 import { C, MOTION, R, shadowLg, shadowSm } from '@/theme';
 import { Glyph } from '@/components/Glyph';
+import { sessionArt } from '@/components/glyphs';
 
 const goBack = () => (router.canGoBack() ? router.back() : router.replace('/fitness'));
 const REST_TIPS: { icon: IconName; color: string; bg: string; t: string }[] = [
@@ -218,7 +219,7 @@ function DayPlan({ session }: { session: Session }) {
               )}
             </View>
             <Animated.View style={[s.heroDisc, heroArt]}>
-              <Glyph emoji={session.emoji} size={74} />
+              <Glyph emoji={session.emoji} src={sessionArt(session.key)} size={74} />
             </Animated.View>
           </Animated.View>
         </LinearGradient>

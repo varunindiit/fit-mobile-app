@@ -21,7 +21,7 @@ export function WaterBottle({ value }: { value: number }) {
     level.set(withTiming(Math.max(0, Math.min(1, value)), { duration: MOTION.progress, easing: EASE_OUT }));
   }, [value, level]);
   const fill = useAnimatedProps(() => {
-    const h = (BOTTOM - TOP) * level.get();
+    const h = Math.max(0, (BOTTOM - TOP) * level.get());
     return { y: BOTTOM - h, height: h };
   });
 

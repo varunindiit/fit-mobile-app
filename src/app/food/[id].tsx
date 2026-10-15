@@ -13,6 +13,7 @@ import { currentMeal, relDay, round1, todayKey } from '@/lib/calc';
 import { burnedOn, dayTotals, useStore } from '@/lib/store';
 import { C, MOTION, R, shadowSm } from '@/theme';
 import { Glyph } from '@/components/Glyph';
+import { FOOD_ART } from '@/components/glyphs';
 
 const QUICK = [0.5, 1, 1.5, 2, 3];
 const LIST = layoutTransition;
@@ -136,7 +137,7 @@ export default function FoodDetailScreen() {
             <Circle cx="94%" cy="88%" r={92} fill={C.white} opacity={0.35} />
           </Svg>
           <View style={st.emojiTile}>
-            <Glyph emoji={food.emoji} size={92} />
+            <Glyph emoji={food.emoji} src={FOOD_ART[food.id]} size={92} />
           </View>
           <Text style={st.name}>{food.name}</Text>
           <Text style={st.unitLine}>

@@ -10,9 +10,10 @@ const keyOf = (emoji: string) => emoji.replace(/\uFE0F/g, '');
 
 /**
  * Renders an emoji token from the data layer as artwork that never depends on the device's emoji font:
- * a generated illustration when one exists, otherwise a matching vector icon, otherwise a neutral mark.
+ * `src` (entity-specific artwork) when given, else a generated illustration when one exists, otherwise a matching vector icon, otherwise a neutral mark.
  */
-export function Glyph({ emoji, size = 24, color, style }: { emoji?: string; size?: number; color?: string; style?: StyleProp<ViewStyle> }) {
+export function Glyph({ emoji, src, size = 24, color, style }: { emoji?: string; src?: number; size?: number; color?: string; style?: StyleProp<ViewStyle> }) {
+  if (src) return <Image source={src} style={[{ width: size, height: size }, style as object]} contentFit="contain" />;
   if (!emoji) return null;
   const g = GLYPHS[keyOf(emoji)];
   if (g && 'img' in g) return <Image source={g.img} style={[{ width: size, height: size }, style as object]} contentFit="contain" />;

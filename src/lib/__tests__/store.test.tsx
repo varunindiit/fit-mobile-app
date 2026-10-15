@@ -30,7 +30,9 @@ beforeEach(async () => {
   await AsyncStorage.clear();
   jest.spyOn(console, 'warn').mockImplementation(() => {});
 });
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => {
+  jest.restoreAllMocks();
+});
 
 const profile = { ...DEFAULT_PROFILE, name: 'Asha', weightKg: 70, targetKg: 62 };
 
@@ -130,6 +132,14 @@ describe('every user action survives an app restart', () => {
     await act(async () => listeners.forEach((fn) => fn('background')));
     // Well under the 300ms debounce, so only the background flush can have written it.
     await waitFor(async () => expect((await saved())?.water?.[todayKey()]).toBe(2), { timeout: 100, interval: 10 });
+  });
+
+  it('retries a failed save', async () => {
+    const h = await launch();
+    jest.spyOn(AsyncStorage, 'setItem').mockRejectedValueOnce(new Error('disk full'));
+    await act(async () => h.result.current.addWater(4));
+    await act(async () => h.result.current.flush());
+    await waitFor(async () => expect((await saved())?.water?.[todayKey()]).toBe(4), { timeout: 3500 });
   });
 
   it('does not overwrite storage when reading it failed', async () => {

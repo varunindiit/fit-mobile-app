@@ -10,6 +10,15 @@ import { initials, shared, tint } from './shared';
 
 const pad = (n: number) => (n < 10 ? '0' + n : '' + n);
 export const fmtClock = (d = new Date()) => `${d.getHours() % 12 || 12}:${pad(d.getMinutes())} ${d.getHours() < 12 ? 'am' : 'pm'}`;
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+/** `lastSync` is an ISO timestamp; older saves hold a bare clock string, shown as-is. */
+const fmtSync = (s: string) => {
+  const d = new Date(s);
+  if (!s.includes('T') || Number.isNaN(d.getTime())) return s;
+  const now = new Date();
+  const sameDay = d.toDateString() === now.toDateString();
+  return sameDay ? fmtClock(d) : `${d.getDate()} ${MONTHS[d.getMonth()]}${d.getFullYear() === now.getFullYear() ? '' : ` ${d.getFullYear()}`}, ${fmtClock(d)}`;
+};
 const slug = (name: string) =>
   name
     .trim()
@@ -83,9 +92,10 @@ export function BackupCard() {
   };
   const agree = () => {
     setStep(null);
+    // Save the sign-in right away; the loader is cosmetic, so leaving mid-way can't lose it.
+    if (pick) setBackup({ ...pick, lastSync: new Date().toISOString() });
     later(() => setStep('loading'), 350);
     later(() => {
-      if (pick) setBackup({ ...pick, lastSync: fmtClock() });
       setStep(null);
       toast('Backup complete', 'cloud-done');
     }, 350 + 1200);
@@ -93,8 +103,8 @@ export function BackupCard() {
   const sync = () => {
     if (!backup || syncing) return;
     setSyncing(true);
+    setBackup({ ...backup, lastSync: new Date().toISOString() });
     later(() => {
-      setBackup({ ...backup, lastSync: fmtClock() });
       setSyncing(false);
       toast('Synced just now', 'cloud-done');
     }, 1000);
@@ -123,7 +133,7 @@ export function BackupCard() {
               <Animated.View entering={nativeOnly(FadeIn.duration(MOTION.fast))} style={st.statusRow}>
                 <Ionicons name="cloud-done" size={14} color={C.primary} />
                 <Text style={T.small} numberOfLines={1}>
-                  Last sync: {backup.lastSync}
+                  Last sync: {fmtSync(backup.lastSync)}
                 </Text>
               </Animated.View>
             )}
@@ -223,7 +233,7 @@ export function BackupCard() {
               </Text>
               <View style={[st.statusRow, { marginTop: 4 }]}>
                 <Ionicons name="cloud-done" size={13} color={C.primary} />
-                <Text style={[T.tiny, { color: C.primaryDark }]}>Last sync {backup.lastSync}</Text>
+                <Text style={[T.tiny, { color: C.primaryDark }]}>Last sync {fmtSync(backup.lastSync)}</Text>
               </View>
             </View>
             <GBadge size={24} />
@@ -248,7 +258,7 @@ export function BackupCard() {
             subtitle="Bring back data from your last backup"
             onPress={() => {
               setStep(null);
-              toast(`Data restored from backup · ${backup?.lastSync ?? ''}`, 'cloud-download');
+              toast(`Data restored from backup · ${backup ? fmtSync(backup.lastSync) : ''}`, 'cloud-download');
             }}
           />
           <Divider style={shared.inset} />

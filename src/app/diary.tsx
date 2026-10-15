@@ -40,7 +40,7 @@ export default function DiaryScreen() {
   const [collapsed, setCollapsed] = useState<Partial<Record<MealKey, boolean>>>({});
   const [undo, setUndo] = useState<{ entry: FoodEntry; index: number } | null>(null);
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const copiedFor = useRef<string | null>(null);
+  const copiedAt = useRef(0);
 
   // Follow a new `date` param (derived during render instead of a setState-in-effect).
   const [seenParam, setSeenParam] = useState(params.date);
@@ -92,9 +92,9 @@ export default function DiaryScreen() {
     setUndo(null);
   };
   const copyPrev = () => {
-    // One copy per day: copyDay itself is a no-op once the day has food, this also stops a double toast.
-    if (copiedFor.current === date || dayEntries.length > 0) return;
-    copiedFor.current = date;
+    // copyDay is a no-op once the day has food; the short window also swallows a double tap's second toast.
+    if (dayEntries.length > 0 || Date.now() - copiedAt.current < 1500) return;
+    copiedAt.current = Date.now();
     copyDay(prevDate, date);
     const kcal = prevEntries.reduce((a, e) => a + (foodById(e.foodId)?.kcal ?? 0) * e.qty, 0);
     toast(`Copied ${prevEntries.length} items · ${fmtNum(kcal)} kcal`, 'copy');

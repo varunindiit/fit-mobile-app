@@ -12,10 +12,12 @@ import { Bolts } from '@/components/program/PlanAccordion';
 import { Button, Card, Chip, CountUp, Dialog, EmptyState, enter, IconButton, IconTile, layoutTransition, nativeOnly, PressableScale, ProgressBar, Ring, Screen, ScreenTitle, SectionTitle, Sheet, Stepper, T, tap, useToast, type IconName } from '@/components/ui';
 import { ACTIVITIES, WORKOUT_CATEGORIES, WORKOUTS } from '@/data/fitness';
 import { BODY_PARTS, FOCUS_SESSIONS, programById, programDay, PROGRAM_DAYS, sessionStats, type Session } from '@/data/program';
-import { kcalFromSteps, kmFromSteps, todayKey } from '@/lib/calc';
+import { kcalFromSteps, kmFromSteps } from '@/lib/calc';
 import { burnedOn, useStore, weekProgress, workoutStreak, type WorkoutLog } from '@/lib/store';
+import { useToday } from '@/lib/useToday';
 import { C, MOTION, R, shadowSm } from '@/theme';
 import { Glyph } from '@/components/Glyph';
+import { logArt, sessionArt, WORKOUT_ART } from '@/components/glyphs';
 
 const SOURCE = Platform.OS === 'ios' ? 'Apple Health' : 'Google Fit';
 type Focus = (typeof FOCUS_SESSIONS)[number];
@@ -32,9 +34,9 @@ const rowIn = nativeOnly(FadeIn.duration(MOTION.base));
 const rowOut = nativeOnly(FadeOut.duration(MOTION.fast));
 
 export default function TrainingScreen() {
-  const { state, targets, addSteps, logWorkout, removeWorkout, updateProfile, resetProgram } = useStore();
+  const { state, targets, addSteps, logWorkout, removeWorkout, updateProfile, updateSettings, resetProgram } = useStore();
   const toast = useToast();
-  const today = todayKey();
+  const today = useToday();
 
   // Program / daily challenge
   const program = programById(state.profile.program);
@@ -70,8 +72,10 @@ export default function TrainingScreen() {
     if (syncTimer.current) clearTimeout(syncTimer.current);
   }, []);
   const sync = () => {
+    if (syncTimer.current) return; // a sync is already running
     setSyncing(true);
     syncTimer.current = setTimeout(() => {
+      syncTimer.current = null;
       const n = 250 + Math.floor(Math.random() * 651);
       addSteps(n);
       setSyncing(false);
@@ -85,13 +89,19 @@ export default function TrainingScreen() {
   const [mins, setMins] = useState(30);
   const act = ACTIVITIES.find((a) => a.id === actId) ?? ACTIVITIES[0];
   const actKcal = Math.round(act.kcalPerMin * mins);
+  const adding = useRef(false);
   const openLog = () => {
-    setActId(ACTIVITIES[0].id);
-    setMins(30);
+    const last = state.settings.lastActivity;
+    setActId(ACTIVITIES.some((a) => a.id === last.id) ? last.id : ACTIVITIES[0].id);
+    setMins(last.mins > 0 ? last.mins : 30);
+    adding.current = false;
     setLogOpen(true);
   };
   const addActivity = () => {
-    logWorkout({ title: act.label, emoji: act.emoji, minutes: mins, kcal: actKcal, date: today });
+    if (adding.current) return;
+    adding.current = true;
+    logWorkout({ title: act.label, emoji: act.emoji, minutes: mins, kcal: actKcal });
+    updateSettings({ lastActivity: { id: act.id, mins } });
     setLogOpen(false);
     toast(`${act.label} added · ${mins} min · ${actKcal} kcal`, 'flame');
   };
@@ -102,9 +112,11 @@ export default function TrainingScreen() {
   };
 
   // Body focus + guided classes
-  const [part, setPart] = useState(BODY_PARTS[0]);
+  const part = BODY_PARTS.includes(state.settings.trainingPart) ? state.settings.trainingPart : BODY_PARTS[0];
+  const setPart = (p: string) => updateSettings({ trainingPart: p });
   const partList = FOCUS_SESSIONS.filter((s) => s.part === part);
-  const [cat, setCat] = useState<Cat>('All');
+  const cat: Cat = WORKOUT_CATEGORIES.find((c) => c === state.settings.trainingCat) ?? 'All';
+  const setCat = (c: Cat) => updateSettings({ trainingCat: c });
   const classes = WORKOUTS.filter((w) => cat === 'All' || w.category === cat);
   const doneToday = new Set(todays.map((w) => w.workoutId).filter(Boolean));
   const pct = Math.round((done / PROGRAM_DAYS) * 100);
@@ -195,7 +207,7 @@ export default function TrainingScreen() {
                   <Text style={st.dayMeta}>{finished ? 'You finished all 30 days!' : session.restDay ? 'Rest day · recover & stretch' : `${stats.exercises} exercises · ${stats.minutes} min · ${stats.kcal} kcal`}</Text>
                 </View>
                 <View style={st.heroDisc}>
-                  <Glyph emoji={finished ? '🏆' : session.emoji} size={64} />
+                  <Glyph emoji={finished ? '🏆' : session.emoji} src={finished ? undefined : sessionArt(session.key)} size={64} />
                 </View>
               </View>
               <View style={st.daysRow}>
@@ -247,7 +259,7 @@ export default function TrainingScreen() {
                   <Animated.View key={w.id} entering={rowIn} exiting={rowOut} layout={listLayout}>
                     <Pressable onPress={() => linked && openLogged(w)} style={({ pressed }) => [st.actRow, i > 0 && st.actBorder, pressed && linked && st.rowPressed]}>
                       <View style={st.actEmoji}>
-                        <Glyph emoji={w.emoji} size={30} />
+                        <Glyph emoji={w.emoji} src={logArt(w)} size={30} />
                       </View>
                       <View style={{ flex: 1 }}>
                         <Text style={st.actTitle} numberOfLines={1}>
@@ -299,7 +311,7 @@ export default function TrainingScreen() {
                   }}
                   style={({ pressed }) => [st.focusRow, i > 0 && st.actBorder, pressed && st.rowPressed]}>
                   <LinearGradient colors={s.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.focusTile}>
-                    <Glyph emoji={s.emoji} size={34} />
+                    <Glyph emoji={s.emoji} src={sessionArt(s.key)} size={34} />
                   </LinearGradient>
                   <View style={{ flex: 1 }}>
                     <Text style={st.actTitle} numberOfLines={1}>
@@ -344,7 +356,7 @@ export default function TrainingScreen() {
                   }}
                   style={st.wCard}>
                   <View style={[st.wHead, { backgroundColor: w.color + '17' }]}>
-                    <Glyph emoji={w.emoji} size={54} />
+                    <Glyph emoji={w.emoji} src={WORKOUT_ART[w.id]} size={54} />
                     <View style={st.wTime}>
                       <Ionicons name="time-outline" size={11} color={C.text} />
                       <Text style={st.wTimeText}>{w.minutes} min</Text>
@@ -527,7 +539,7 @@ function Carousel({ items }: { items: Focus[] }) {
           style={[st.cShell, { backgroundColor: s.colors[1] }]}>
           <LinearGradient colors={s.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.cCard}>
             <Deco size={180} style={{ right: -50, bottom: -70 }} />
-            <Glyph emoji={s.emoji} size={72} style={st.cEmoji} />
+            <Glyph emoji={s.emoji} src={sessionArt(s.key)} size={72} style={st.cEmoji} />
             <Text style={st.cTitle} numberOfLines={2}>
               {s.title}
             </Text>

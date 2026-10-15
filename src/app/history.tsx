@@ -7,10 +7,11 @@ import Animated from 'react-native-reanimated';
 import { longestStreak, MonthCalendar, MONTH_NAMES } from '@/components/charts/Calendar';
 import { fmtNum } from '@/components/charts/Charts';
 import { Card, CountUp, EmptyState, enter, fadeEnter, Header, IconButton, IconTile, PressableScale, Screen, Segmented, T, tap, type IconName } from '@/components/ui';
-import { pad, parseKey, relDay, todayKey } from '@/lib/calc';
+import { dateKey, pad, parseKey, relDay, todayKey } from '@/lib/calc';
 import { useStore, workoutDays, workoutStreak, type WorkoutLog } from '@/lib/store';
 import { C, R, shadow, shadowSm } from '@/theme';
 import { Glyph } from '@/components/Glyph';
+import { logArt } from '@/components/glyphs';
 
 const firstOfMonth = (k: string) => {
   const d = parseKey(k);
@@ -20,9 +21,11 @@ const sum = (ws: WorkoutLog[]) => ws.reduce((a, w) => ({ kcal: a.kcal + w.kcal, 
 
 export default function HistoryScreen() {
   const { state } = useStore();
-  const { date } = useLocalSearchParams<{ date?: string }>();
+  const { date: rawDate } = useLocalSearchParams<{ date?: string | string[] }>();
+  const date = Array.isArray(rawDate) ? rawDate[0] : rawDate;
   const today = todayKey();
-  const initial = typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : today;
+  // Only accept real calendar dates (e.g. rejects 2024-02-31, which would roll over).
+  const initial = typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date) && dateKey(parseKey(date)) === date ? date : today;
   const [sel, setSel] = useState(initial);
   const [month, setMonth] = useState(() => firstOfMonth(initial));
   const [mode, setMode] = useState<'day' | 'month'>('day');
@@ -167,7 +170,7 @@ function Row({ w, index }: { w: WorkoutLog; index: number }) {
   const body = (
     <>
       <View style={st.emoji}>
-        <Glyph emoji={w.emoji} size={30} />
+        <Glyph emoji={w.emoji} src={logArt(w)} size={30} />
       </View>
       <View style={{ flex: 1 }}>
         <Text style={st.rowTitle} numberOfLines={1}>

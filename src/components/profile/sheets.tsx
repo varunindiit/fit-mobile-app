@@ -108,14 +108,19 @@ export function LanguageSheet({ visible, onClose }: SheetProps) {
 
 const RATING_TEXT = ['', 'We can do better', 'Needs work', "It's okay", 'Really good', 'Love it!'];
 
+/** Once the user has rated, the sheet thanks them and only offers to change it. */
 export function RateSheet({ visible, onClose }: SheetProps) {
+  const { state, setRating: saveRating } = useStore();
   const toast = useToast();
-  const [rating, setRating] = useState(5);
+  const rated = state.rating;
+  const [rating, setRating] = useState(rated ?? 5);
   return (
     <Sheet visible={visible} onClose={onClose} title="Rate us">
       <View style={st.rateHead}>
         <IconTile icon="star" color={C.warning} bg={C.warningSoft} size={56} />
-        <Text style={[T.body, { textAlign: 'center', marginTop: 12 }]}>Enjoying Fitora? Your rating helps more people find us.</Text>
+        <Text style={[T.body, { textAlign: 'center', marginTop: 12 }]}>
+          {rated ? `Thanks for rating us ${rated} star${rated === 1 ? '' : 's'}! You can change it anytime.` : 'Enjoying Fitora? Your rating helps more people find us.'}
+        </Text>
       </View>
       <View style={st.stars}>
         {[1, 2, 3, 4, 5].map((n) => (
@@ -137,9 +142,10 @@ export function RateSheet({ visible, onClose }: SheetProps) {
         {RATING_TEXT[rating]}
       </Animated.Text>
       <Button
-        title="Submit"
+        title={rated ? 'Update rating' : 'Submit'}
         style={{ marginTop: 18 }}
         onPress={() => {
+          saveRating(rating);
           onClose();
           toast(`Thanks for rating us ${rating} star${rating === 1 ? '' : 's'}`, 'star');
         }}

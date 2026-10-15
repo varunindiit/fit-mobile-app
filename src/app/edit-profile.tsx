@@ -7,6 +7,7 @@ import Animated, { FadeInDown, FadeOutUp, interpolateColor, useAnimatedStyle, us
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { IndiaFlag } from '@/components/IndiaFlag';
+import { PACES as PACE_OPTIONS } from '@/components/onboarding/kit';
 import { ACTIVITY, ACTIVITY_ICON, Decor, fmtFull, fmtNum, fmtWeight, GOAL_ICON, goalSummary, GOALS, GroupLabel, useKeyboardShown } from '@/components/profile/shared';
 import { Button, Card, CountUp, enter, Header, IconTile, layoutTransition, nativeOnly, OptionCard, PressableScale, Screen, Segmented, Stepper, T, tap, useToast, type IconName } from '@/components/ui';
 import { cmToFtIn, round1, targets as calcTargets } from '@/lib/calc';
@@ -20,7 +21,8 @@ const GENDERS: { value: Profile['gender']; label: string; icon: IconName }[] = [
   { value: 'male', label: 'Male', icon: 'male' },
   { value: 'other', label: 'Other', icon: 'male-female' },
 ];
-const PACES = [0.25, 0.5, 0.75, 1];
+/** Same pace steps as onboarding, so a pace picked there is always selectable here. */
+const PACES = PACE_OPTIONS.map((x) => x.v);
 const paceHint = (v: number) =>
   v <= 0.25 ? 'Gentle and easy to sustain.' : v <= 0.5 ? 'Recommended — steady, sustainable progress.' : v <= 0.75 ? 'Faster — needs good consistency.' : 'Aggressive — best with coach support.';
 
@@ -68,9 +70,23 @@ export default function EditProfile() {
     set({ goal: g, targetKg });
   };
 
+  const name = d.name.trim() || state.profile.name;
+  // A phone number is optional, but a half-typed one is never saved.
+  const phoneBad = d.phone.length > 0 && d.phone.length !== 10;
+  const paceOpts = PACES.includes(d.pace) ? PACES : [...PACES, d.pace].sort((a, b) => a - b);
+
+  /** Write the edits. A partial phone keeps the saved number. */
+  const commit = () =>
+    updateProfile({
+      ...d,
+      name,
+      phone: phoneBad ? state.profile.phone : d.phone,
+      birthYear: new Date().getFullYear() - d.age,
+      targetKg: directional ? d.targetKg : w,
+    });
+
   const save = () => {
-    const name = d.name.trim();
-    updateProfile({ ...d, name, targetKg: directional ? d.targetKg : w });
+    commit();
     toast(goalsFirst ? 'Goals updated' : 'Profile updated');
     if (router.canGoBack()) router.back();
     else router.replace('/profile');
@@ -109,6 +125,7 @@ export default function EditProfile() {
             onBlur={() => setFocus(null)}
           />
         </Field>
+        {phoneBad && focus !== 'phone' && <Text style={st.error}>Enter all 10 digits, or leave it empty.</Text>}
         <Text style={[st.fieldLabel, { marginTop: 16 }]}>Gender</Text>
         <Segmented<Profile['gender']> options={GENDERS.map((g) => ({ value: g.value, label: g.label }))} value={d.gender} onChange={(gender) => set({ gender })} />
         <View style={st.stepRow}>
@@ -162,6 +179,9 @@ export default function EditProfile() {
               accessibilityRole="button"
               onPress={() => {
                 tap();
+                // Leaving this screen drops the draft, so keep the edits made so far.
+                commit();
+                toast('Changes saved', 'checkmark-circle');
                 router.push({ pathname: '/progress', params: { log: String(Date.now()) } });
               }}
               style={st.weighLink}>
@@ -171,8 +191,8 @@ export default function EditProfile() {
             </PressableScale>
 
             <View style={st.hair} />
-            <Text style={st.fieldLabel}>Weekly pace</Text>
-            <Segmented<string> options={PACES.map((v) => ({ value: String(v), label: `${v} kg` }))} value={String(d.pace)} onChange={(v) => set({ pace: Number(v) })} />
+            <Text style={st.fieldLabel}>Weekly pace (kg / week)</Text>
+            <Segmented<string> options={paceOpts.map((v) => ({ value: String(v), label: String(v) }))} value={String(d.pace)} onChange={(v) => set({ pace: Number(v) })} />
             <View style={st.hint}>
               <Ionicons name="information-circle-outline" size={15} color={C.muted} />
               <Text style={[T.small, { flex: 1 }]}>{paceHint(d.pace)}</Text>
@@ -236,7 +256,7 @@ export default function EditProfile() {
               <Text style={st.barUnit}> kcal</Text>
             </CountUp>
           </View>
-          <Button title="Save changes" icon="checkmark" onPress={save} disabled={!d.name.trim()} style={{ flex: 1.4 }} />
+          <Button title="Save changes" icon="checkmark" onPress={save} disabled={phoneBad || (!goalsFirst && !name)} style={{ flex: 1.4 }} />
         </View>
       </KeyboardAvoidingView>
     </Screen>
@@ -258,6 +278,7 @@ function PvMacro({ label, value, unit = 'g' }: { label: string; value: number; u
 const st = StyleSheet.create({
   content: { paddingHorizontal: 16, paddingBottom: 32 },
   fieldLabel: { fontSize: 13, fontWeight: '600', color: C.textSoft, marginBottom: 8, marginLeft: 2 },
+  error: { fontSize: 12.5, fontWeight: '600', color: C.danger, marginTop: 6, marginLeft: 2 },
   input: { flexDirection: 'row', alignItems: 'center', height: 52, borderRadius: R.md, borderWidth: 1, borderColor: C.border, backgroundColor: C.card, overflow: 'hidden' },
   textInput: { flex: 1, height: '100%', paddingHorizontal: 14, fontSize: 16, color: C.text },
   prefixBox: { height: '100%', flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, backgroundColor: C.surfaceAlt, borderRightWidth: 1, borderRightColor: C.borderSoft },

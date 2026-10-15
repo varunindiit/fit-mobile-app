@@ -18,7 +18,7 @@ import { RulerPicker } from '@/components/onboarding/RulerPicker';
 import { YearWheel } from '@/components/onboarding/YearWheel';
 import { Button, Dialog, EASE_OUT, nativeOnly, PressableScale, tap, useToast, type IconName } from '@/components/ui';
 import { bmi, bmiLabel, cmToFtIn, targets } from '@/lib/calc';
-import { DEFAULT_PROFILE, useStore, type Goal, type Profile } from '@/lib/store';
+import { DEFAULT_PROFILE, isPremiumActive, useStore, type Goal, type Profile } from '@/lib/store';
 import { BRAND, C, G, MOTION, R, glow, shadowLg, shadowSm } from '@/theme';
 
 /* ---------------- Flow ---------------- */
@@ -137,7 +137,9 @@ export default function Onboarding() {
 
   useEffect(() => {
     if (wasOnboarded) return;
-    saveOnboardingDraft({ p, step, genderPicked });
+    // Short debounce so dragging a ruler doesn't re-render the whole app every frame.
+    const t = setTimeout(() => saveOnboardingDraft({ p, step, genderPicked }), 250);
+    return () => clearTimeout(t);
   }, [p, step, genderPicked, wasOnboarded, saveOnboardingDraft]);
 
   const go = (to: StepId, d: 1 | -1) => {
@@ -213,7 +215,10 @@ export default function Onboarding() {
   if (step === 'motivation') return <Motivation male={p.gender === 'male'} onNext={next} />;
   if (step === 'analysis') return <Analysis p={final} units={units} onDone={next} />;
   if (step === 'result') return <PlanResult p={final} units={units} onBack={back} onNext={next} />;
-  if (step === 'paywall') return <Paywall male={p.gender === 'male'} gaining={final.goal === 'gain'} onSkip={finish} onPaid={subscribe} onDone={finish} />;
+  if (step === 'paywall') return <Paywall male={p.gender === 'male'} gaining={final.goal === 'gain' || final.goal === 'muscle'} onSkip={finish} onPaid={(tier, months, amount) => {
+        // Resumed onto the paywall after already paying: don't record a second purchase.
+        if (!isPremiumActive(state.premium)) subscribe(tier, months, amount);
+      }} onDone={finish} />;
 
   const qIndex = QUESTIONS.indexOf(step);
   const cta = step === 'gender' ? null : 'Next';

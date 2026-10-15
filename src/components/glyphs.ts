@@ -1,5 +1,6 @@
 // Generated from the onboarding/app artwork: maps emoji tokens used in data to generated images or vector icons.
 import type { IconName } from '@/components/ui';
+import { isRestDay } from '@/data/program';
 import { C } from '@/theme';
 
 export type GlyphEntry = { img: number } | { icon: IconName; color: string };
@@ -50,7 +51,7 @@ export const GLYPHS: Record<string, GlyphEntry> = {
   '🎂': { img: require('@/assets/images/glyphs/g-cake.webp') },
   '🏸': { img: require('@/assets/images/glyphs/g-badminton.webp') },
   '🏏': { img: require('@/assets/images/glyphs/g-cricket.webp') },
-  '🏋': { img: require('@/assets/images/glyphs/g-dumbbell.webp') },
+  '🏋': { img: require('@/assets/images/glyphs/p-strength.webp') },
   '🦵': { img: require('@/assets/images/glyphs/g-leg.webp') },
   '🧘': { img: require('@/assets/images/glyphs/p-yoga.webp') },
   '🚶': { img: require('@/assets/images/glyphs/p-walk.webp') },
@@ -158,3 +159,66 @@ export const EXERCISE_ART_B: Record<string, number> = {
   'cobra-stretch': require('@/assets/images/exercises/cobra-stretch-b.webp'),
   'spine-twist': require('@/assets/images/exercises/spine-twist-b.webp'),
 };
+
+/** Dish-specific artwork keyed by food id — wins over the emoji glyph, which several dishes share (🍛, 🍚, 🫓, ☕…). */
+export const FOOD_ART: Record<string, number> = {
+  'poha': require('@/assets/images/glyphs/food-poha.webp'),
+  'upma': require('@/assets/images/glyphs/food-upma.webp'),
+  'aloo-paratha': require('@/assets/images/glyphs/food-aloo-paratha.webp'),
+  'mix-veg': require('@/assets/images/glyphs/food-mix-veg.webp'),
+  'chicken-curry': require('@/assets/images/glyphs/food-curry.webp'),
+  'grilled-chicken': require('@/assets/images/glyphs/food-grilled-chicken.webp'),
+  'egg-curry': require('@/assets/images/glyphs/food-egg-curry.webp'),
+  'chicken-biryani': require('@/assets/images/glyphs/food-biryani.webp'),
+  'veg-pulao': require('@/assets/images/glyphs/food-rice.webp'),
+  'rice': require('@/assets/images/glyphs/food-steamed-rice.webp'),
+  'brown-rice': require('@/assets/images/glyphs/food-brown-rice.webp'),
+  'butter-naan': require('@/assets/images/glyphs/food-butter-naan.webp'),
+  'greek-yogurt': require('@/assets/images/glyphs/food-greek-yogurt.webp'),
+  'sprouts': require('@/assets/images/glyphs/food-sprouts-salad.webp'),
+  'papaya': require('@/assets/images/glyphs/food-papaya.webp'),
+  'black-coffee': require('@/assets/images/glyphs/food-black-coffee.webp'),
+  'buttermilk': require('@/assets/images/glyphs/food-buttermilk.webp'),
+  'whey': require('@/assets/images/glyphs/food-whey-shake.webp'),
+};
+
+/** The mascot illustrating each 30-day program. */
+export const PROGRAM_ART: Record<string, number> = {
+  belly: require('@/assets/images/glyphs/hero-belly.webp'),
+  abs: require('@/assets/images/glyphs/hero-abs.webp'),
+  sixpack: require('@/assets/images/glyphs/hero-sixpack.webp'),
+};
+
+/** Signature exercise shown on each body-focus session card. */
+const FOCUS_EXERCISE: Record<string, string> = {
+  'focus:abs-beginner': 'abdominal-crunches',
+  'focus:rock-hard': 'v-crunch',
+  'focus:intense-shred': 'burpees',
+  'focus:stronger-abs': 'bicycle-crunches',
+  'focus:chest-beginner': 'push-ups',
+  'focus:chest-dumbbell': 'wide-push-ups',
+  'focus:arm-toning': 'tricep-dips',
+  'focus:leg-day': 'squats',
+  'focus:back-relief': 'superman',
+  'focus:ultimate-core': 'x-man-crunch',
+};
+
+/** Guided workouts whose emoji glyph is too generic (🔥, 💪) get the mascot doing the move instead. */
+export const WORKOUT_ART: Record<string, number> = {
+  'fat-burn-hiit': EXERCISE_ART['burpees'],
+  'core-blast': EXERCISE_ART['abdominal-crunches'],
+};
+
+/** Artwork for a session key (program day or body-focus session); undefined for rest days and unknown keys so callers fall back to the emoji. */
+export function sessionArt(key?: string): number | undefined {
+  if (!key) return undefined;
+  if (key.startsWith('program:')) {
+    const [, pid, day] = key.split(':');
+    return isRestDay(Number(day)) ? undefined : PROGRAM_ART[pid];
+  }
+  const ex = FOCUS_EXERCISE[key];
+  return ex ? EXERCISE_ART[ex] : undefined;
+}
+
+/** Artwork for a logged workout: its program/focus session or guided workout, when it came from one. */
+export const logArt = (w: { sessionKey?: string; workoutId?: string }) => sessionArt(w.sessionKey) ?? (w.workoutId ? WORKOUT_ART[w.workoutId] : undefined);

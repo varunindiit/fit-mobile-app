@@ -9,6 +9,7 @@ import { MEALS, type Food, type MealKey } from '@/data/foods';
 import { dateKey, parseKey, todayKey } from '@/lib/calc';
 import { C, MOTION, R } from '@/theme';
 import { Glyph } from '@/components/Glyph';
+import { FOOD_ART } from '@/components/glyphs';
 
 export const isMeal = (m?: string | string[]): m is MealKey => typeof m === 'string' && MEALS.some((x) => x.key === m);
 /** A real calendar day in `YYYY-MM-DD` form (rejects e.g. 2025-02-31). */
@@ -69,7 +70,7 @@ export function VegDot({ type, size = 12, style }: { type: Food['type']; size?: 
 export function EmojiTile({ food, size = 46 }: { food: Food; size?: number }) {
   return (
     <View style={[st.tile, { width: size, height: size, borderRadius: size * 0.3, backgroundColor: foodBg(food) }]}>
-      <Glyph emoji={food.emoji} size={Math.round(size * 0.7)} />
+      <Glyph emoji={food.emoji} src={FOOD_ART[food.id]} size={Math.round(size * 0.7)} />
     </View>
   );
 }

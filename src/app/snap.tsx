@@ -26,6 +26,7 @@ import { currentMeal, relDay, round1, todayKey } from '@/lib/calc';
 import { useStore } from '@/lib/store';
 import { C, MOTION, R } from '@/theme';
 import { Glyph } from '@/components/Glyph';
+import { FOOD_ART } from '@/components/glyphs';
 
 const DARK = '#0B0E0D';
 const GLASS = 'rgba(255,255,255,0.12)';
@@ -445,7 +446,7 @@ function Plate({ size, items, detected }: { size: number; items: { foodId: strin
               { position: 'absolute', left: size / 2 + Math.cos(a) * r - box / 2, top: size / 2 + Math.sin(a) * r - box / 2, width: box, height: box, alignItems: 'center', justifyContent: 'center', borderRadius: box * 0.22 },
               detected && { borderWidth: 2, borderColor: C.primary, backgroundColor: 'rgba(18,168,125,0.1)' },
             ]}>
-            <Glyph emoji={f?.emoji} size={Math.round(emo * 1.3)} />
+            <Glyph emoji={f?.emoji} src={f ? FOOD_ART[f.id] : undefined} size={Math.round(emo * 1.3)} />
             {detected && size > 120 && (
               <Animated.View entering={nativeOnly(ZoomIn.duration(MOTION.base).delay(i * 60))} style={st.conf}>
                 <Text style={st.confText}>{confidence(it.foodId)}%</Text>

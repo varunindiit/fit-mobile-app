@@ -5,6 +5,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View, type ViewStyle } from 'r
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 
 import { longestStreak, WeekStrip } from '@/components/charts/Calendar';
+import { fromUnit, toUnit } from '@/components/onboarding/kit';
 import { BarChart, fmtNum, GoalLegend, LineChart } from '@/components/charts/Charts';
 import { Button, Card, Chip, CountUp, Dialog, EmptyState, enter, fadeEnter, IconButton, IconTile, layoutTransition, nativeOnly, Pill, PressableScale, ProgressBar, Screen, ScreenTitle, SectionTitle, Segmented, Sheet, T, tap, useToast, type IconName } from '@/components/ui';
 import { addDays, bmi, bmiLabel, dayShort, fmtDate, kmFromSteps, parseKey, relDay, round1, todayKey } from '@/lib/calc';
@@ -33,13 +34,14 @@ export default function ReportsScreen() {
   const weekTotal = weekKcal.reduce((a, v) => a + v, 0);
   const today = todayKey();
 
-  // Log weight sheet
+  // Log weight sheet: edited and shown in the user's unit, saved in kg.
+  const units = state.settings.units;
   const latest = state.weights[state.weights.length - 1];
   const [sheet, setSheet] = useState(false);
-  const [kg, setKg] = useState(68);
+  const [val, setVal] = useState(68);
   const [date, setDate] = useState(today);
   const openLog = () => {
-    setKg(latest?.kg ?? state.profile.weightKg);
+    setVal(toUnit(latest?.kg ?? state.profile.weightKg, units));
     setDate(todayKey());
     setSheet(true);
   };
@@ -49,15 +51,16 @@ export default function ReportsScreen() {
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [log]);
-  const adj = (d: number) => setKg((v) => Math.round(Math.max(30, Math.min(250, v + d)) * 10) / 10);
+  const adj = (d: number) => setVal((v) => round1(Math.max(toUnit(30, units), Math.min(toUnit(250, units), v + d))));
   const save = () => {
-    addWeight(kg, date);
+    addWeight(fromUnit(val, units), date);
     setSheet(false);
-    toast(`Weight logged: ${kg.toFixed(1)} kg`, 'scale');
+    toast(`Weight logged: ${val.toFixed(1)} ${units}`, 'scale');
   };
   const dateOpts = Array.from({ length: 7 }, (_, i) => addDays(today, -i));
   const existing = state.weights.find((w) => w.date === date);
-  const delta = latest ? round1(kg - latest.kg) : 0;
+  const latestVal = latest ? toUnit(latest.kg, units) : 0;
+  const delta = latest ? round1(val - latestVal) : 0;
 
   return (
     <Screen>
@@ -163,20 +166,20 @@ export default function ReportsScreen() {
           <View style={st.kgRow}>
             <IconButton icon="remove" size={26} bg={C.card} color={C.primaryDark} onPress={() => adj(-0.1)} style={st.kgBtnSoft} />
             <View style={st.kgValueWrap}>
-              <Text style={st.kgValue}>{kg.toFixed(1)}</Text>
-              <Text style={st.kgUnit}>kg</Text>
+              <Text style={st.kgValue}>{val.toFixed(1)}</Text>
+              <Text style={st.kgUnit}>{units}</Text>
             </View>
             <IconButton icon="add" size={26} bg={C.primaryDark} color={C.white} onPress={() => adj(0.1)} style={st.kgBtnSolid} />
           </View>
           <View style={st.deltaRow}>
             <Ionicons name={!latest ? 'flag' : delta === 0 ? 'remove' : delta > 0 ? 'caret-up' : 'caret-down'} size={14} color={!latest ? C.primary : C.textSoft} />
             <Text style={T.small}>
-              {!latest ? 'Your first weigh-in' : delta === 0 ? 'Same as your last weigh-in' : `${Math.abs(delta).toFixed(1)} kg vs last weigh-in (${latest.kg.toFixed(1)} kg)`}
+              {!latest ? 'Your first weigh-in' : delta === 0 ? 'Same as your last weigh-in' : `${Math.abs(delta).toFixed(1)} ${units} vs last weigh-in (${latestVal.toFixed(1)} ${units})`}
             </Text>
           </View>
           <View style={st.quickAdj}>
             {[-1, -0.5, 0.5, 1].map((d) => (
-              <Chip key={d} label={`${d > 0 ? '+' : '−'}${Math.abs(d)} kg`} onPress={() => adj(d)} style={{ height: 34, backgroundColor: C.card }} />
+              <Chip key={d} label={`${d > 0 ? '+' : '−'}${Math.abs(d)} ${units}`} onPress={() => adj(d)} style={{ height: 34, backgroundColor: C.card }} />
             ))}
           </View>
         </View>
@@ -190,7 +193,7 @@ export default function ReportsScreen() {
           <Animated.View entering={nativeOnly(FadeIn.duration(MOTION.base))} exiting={nativeOnly(FadeOut.duration(MOTION.fast))} style={st.replaceNote}>
             <Ionicons name="information-circle" size={16} color={C.warning} />
             <Text style={[T.small, { flex: 1 }]}>
-              Replaces your {existing.kg.toFixed(1)} kg entry for {relDay(date)}.
+              Replaces your {toUnit(existing.kg, units).toFixed(1)} {units} entry for {relDay(date)}.
             </Text>
           </Animated.View>
         )}

@@ -74,9 +74,9 @@ const MEAL_TINT: Record<string, { color: string; bg: string; bar: string }> = {
 };
 const TIP_W = 248;
 const TIP_TAG: Record<string, string> = { nutrition: 'Nutrition', 'pie-chart': 'Portions', walk: 'Activity', moon: 'Sleep' };
-const RIA_CHIPS: { label: string; icon: IconName }[] = [
+const RIA_CHIPS: { label: string; icon: IconName; q?: string }[] = [
   { label: 'Chat with Ria', icon: 'chatbubble-ellipses-outline' },
-  { label: 'Meal ideas', icon: 'sparkles' },
+  { label: 'Meal ideas', icon: 'sparkles', q: 'What should I eat next?' },
 ];
 
 export default function Home() {
@@ -340,7 +340,7 @@ export default function Home() {
                   scaleTo={0.95}
                   onPress={() => {
                     tap();
-                    router.push('/coach');
+                    router.push(c.q ? { pathname: '/coach', params: { q: c.q } } : '/coach');
                   }}
                   style={st.riaChip}>
                   <Ionicons name={c.icon} size={14} color={C.ai} />

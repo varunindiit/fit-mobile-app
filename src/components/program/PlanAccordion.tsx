@@ -9,6 +9,7 @@ import { EASE_OUT, layoutTransition, nativeOnly, PressableScale, ProgressBar, ta
 import { PROGRAMS, type ProgramId } from '@/data/program';
 import { C, MOTION, R } from '@/theme';
 import { Glyph } from '@/components/Glyph';
+import { PROGRAM_ART } from '@/components/glyphs';
 
 type Program = (typeof PROGRAMS)[number];
 
@@ -80,7 +81,7 @@ function PlanCard({ p, open, done, cta, onChange, onStart }: { p: Program; open:
             <Animated.View entering={bodyIn} exiting={bodyOut}>
               <View style={s.artRow}>
                 <View style={s.emojiDisc}>
-                  <Glyph emoji={p.emoji} size={70} />
+                  <Glyph emoji={p.emoji} src={PROGRAM_ART[p.id]} size={70} />
                 </View>
                 <View style={s.users}>
                   <Ionicons name="people" size={14} color={C.white} />
