@@ -45,10 +45,8 @@ export function RewardWall({ options, value, onToggle }: { options: RewardOption
 
 function RewardTile({ o, height, on, onPress }: { o: RewardOption; height: number; on: boolean; onPress: () => void }) {
   const p = useOn(on);
-  const ring = useAnimatedStyle(() => ({
-    borderColor: interpolateColor(p.get(), [0, 1], ['rgba(255,255,255,0)', C.primary]),
-    transform: [{ scale: 1 - 0.03 * p.get() }],
-  }));
+  const press = useAnimatedStyle(() => ({ transform: [{ scale: 1 - 0.03 * p.get() }] }));
+  const ring = useAnimatedStyle(() => ({ borderColor: interpolateColor(p.get(), [0, 1], ['rgba(255,255,255,0)', C.primary]) }));
   return (
     <PressableScale
       scaleTo={0.96}
@@ -59,9 +57,13 @@ function RewardTile({ o, height, on, onPress }: { o: RewardOption; height: numbe
         tap();
         onPress();
       }}>
-      <Animated.View style={[s.tile, { height }, ring]}>
-        <Image source={o.img} style={StyleSheet.absoluteFill} contentFit="cover" transition={200} />
-        <LinearGradient colors={['rgba(19,35,31,0)', 'rgba(19,35,31,0.82)']} locations={[0.45, 1]} style={StyleSheet.absoluteFill} />
+      {/* Shadow lives on the outer view; clipping on the inner one (iOS drops rounded clipping when both share a view). */}
+      <Animated.View style={[s.tile, { height }, press]}>
+        <View style={s.clip}>
+          <Image source={o.img} style={[StyleSheet.absoluteFill, { borderRadius: R.xl }]} contentFit="cover" transition={200} />
+          <LinearGradient colors={['rgba(19,35,31,0)', 'rgba(19,35,31,0.82)']} locations={[0.45, 1]} style={StyleSheet.absoluteFill} />
+        </View>
+        <Animated.View pointerEvents="none" style={[s.ring, ring]} />
         <View style={s.foot}>
           <View style={[s.icon, on && { backgroundColor: C.primary }]}>
             <Ionicons name={o.icon} size={13} color={C.white} />
@@ -85,7 +87,9 @@ function RewardTile({ o, height, on, onPress }: { o: RewardOption; height: numbe
 const s = StyleSheet.create({
   wall: { flexDirection: 'row', gap: 12 },
   col: { flex: 1, gap: 12 },
-  tile: { borderRadius: R.xl, overflow: 'hidden', borderWidth: 3, backgroundColor: C.skeleton, ...shadowSm },
+  tile: { borderRadius: R.xl, backgroundColor: C.skeleton, ...shadowSm },
+  clip: { ...StyleSheet.absoluteFill, borderRadius: R.xl, overflow: 'hidden' },
+  ring: { ...StyleSheet.absoluteFill, borderRadius: R.xl, borderWidth: 3 },
   foot: { position: 'absolute', left: 12, right: 12, bottom: 12, gap: 6 },
   icon: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.22)' },
   label: { fontSize: 15, fontWeight: '800', color: C.white, letterSpacing: -0.2, lineHeight: 19 },
