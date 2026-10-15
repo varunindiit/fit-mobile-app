@@ -19,7 +19,7 @@ import { DailyTargets, DietGrid, PlateHero, type DietOption } from '@/components
 import { IntensityList, StoryGrid, type IntensityOption, type StoryOption } from '@/components/onboarding/Choices';
 import { GoalCurve } from '@/components/onboarding/GoalCurve';
 import { HeightStage } from '@/components/onboarding/HeightStage';
-import { GUTTER, OnbHeader, PACES, QTitle, StepSlider, UnitToggle, fromUnit, stepIn, toUnit, useOn, type WeightUnit } from '@/components/onboarding/kit';
+import { GUTTER, OnbHeader, PACES, QTitle, StepSlider, UnitToggle, fmtWeight, fromUnit, stepIn, toUnit, useOn, type WeightUnit } from '@/components/onboarding/kit';
 import { PacePicker } from '@/components/onboarding/PacePicker';
 import { MAX_REST, RestPlanner } from '@/components/onboarding/RestPlanner';
 import { RewardWall } from '@/components/onboarding/Rewards';
@@ -239,7 +239,15 @@ export default function Onboarding() {
       </>
     );
   if (step === 'welcome') return <Welcome onNext={next} />;
-  if (step === 'motivation') return <Motivation male={p.gender === 'male'} onNext={next} />;
+  if (step === 'motivation')
+    return (
+      <Motivation
+        male={p.gender === 'male'}
+        onNext={next}
+        goal={Math.abs(p.targetKg - p.weightKg) >= 0.05 ? { from: fmtWeight(p.weightKg, units), to: fmtWeight(p.targetKg, units) } : undefined}
+        reward={REWARDS.find((r) => p.rewards.includes(r.t))?.label}
+      />
+    );
   if (step === 'analysis') return <Analysis p={final} units={units} onDone={next} />;
   if (step === 'result') return <PlanResult p={final} units={units} onBack={back} onNext={next} />;
   if (step === 'paywall') return <Paywall male={p.gender === 'male'} gaining={final.goal === 'gain' || final.goal === 'muscle'} onSkip={finish} onPaid={(tier, months, amount) => {

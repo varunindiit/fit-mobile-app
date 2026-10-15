@@ -249,7 +249,7 @@ export function Welcome({ onNext }: { onNext: () => void }) {
 /* ---------------- 19 · Motivation ---------------- */
 
 /** Full-bleed photo that slowly settles (Ken Burns), headline top-left, two choices at the bottom. */
-export function Motivation({ male, onNext }: { male: boolean; onNext: () => void }) {
+export function Motivation({ male, onNext, goal, reward }: { male: boolean; onNext: () => void; goal?: { from: string; to: string }; reward?: string }) {
   const reduce = useReducedMotion();
   const zoom = useSharedValue(reduce ? 1 : 1.12);
   useEffect(() => {
@@ -262,17 +262,54 @@ export function Motivation({ male, onNext }: { male: boolean; onNext: () => void
       <Animated.View style={[StyleSheet.absoluteFill, photo]}>
         <Image source={male ? IMG.motivationMale : IMG.motivation} style={StyleSheet.absoluteFill} contentFit="cover" contentPosition="top" transition={300} />
       </Animated.View>
-      <LinearGradient colors={['rgba(12,10,9,0.62)', 'rgba(12,10,9,0)']} locations={[0, 0.42]} style={StyleSheet.absoluteFill} />
-      <LinearGradient colors={['rgba(12,10,9,0)', 'rgba(12,10,9,0.7)']} locations={[0.6, 1]} style={StyleSheet.absoluteFill} />
+      <LinearGradient colors={['rgba(19,35,31,0.7)', 'rgba(19,35,31,0)']} locations={[0, 0.4]} style={StyleSheet.absoluteFill} />
+      <LinearGradient colors={['rgba(19,35,31,0)', 'rgba(19,35,31,0.94)']} locations={[0.38, 0.8]} style={StyleSheet.absoluteFill} />
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 24 }} edges={['top', 'bottom']}>
-        <Animated.Text entering={rise(150)} style={st.motTitle}>
-          Ready to amaze friends with a better look?
+        <Animated.View entering={nativeOnly(ZoomIn.duration(MOTION.enter).delay(100))} style={st.motPill}>
+          <Ionicons name="sparkles" size={12} color={C.gold} />
+          <Text style={st.motPillText}>ALMOST THERE</Text>
+        </Animated.View>
+        <Animated.Text entering={rise(200)} style={st.motTitle}>
+          Ready to meet the <Text style={{ color: C.primaryTint }}>new you</Text>?
+        </Animated.Text>
+        <Animated.Text entering={rise(320)} style={st.motSub}>
+          Stronger, lighter, more confident. Your plan is just a few taps away.
         </Animated.Text>
         <View style={{ flex: 1 }} />
-        <Animated.View entering={nativeOnly(FadeInUp.duration(MOTION.enter).delay(500).easing(EASE_OUT))} style={{ gap: 6, paddingBottom: 8 }}>
-          <Button title="Yes, I'm ready" onPress={onNext} style={{ backgroundColor: C.white, borderColor: C.white }} textStyle={{ color: C.text }} />
+        {(goal || reward) && (
+          <Animated.View entering={nativeOnly(FadeInUp.duration(MOTION.enter).delay(450).easing(EASE_OUT))} style={st.motGlass}>
+            {goal && (
+              <View style={st.motGoal}>
+                <View>
+                  <Text style={st.motKey}>Today</Text>
+                  <Text style={st.motVal}>{goal.from}</Text>
+                </View>
+                <View style={st.motArrow}>
+                  <Ionicons name="arrow-forward" size={16} color={C.navy} />
+                </View>
+                <View style={{ alignItems: 'flex-end' }}>
+                  <Text style={st.motKey}>Your goal</Text>
+                  <Text style={[st.motVal, { color: C.primaryTint }]}>{goal.to}</Text>
+                </View>
+              </View>
+            )}
+            {goal && reward && <View style={st.motRule} />}
+            {reward && (
+              <View style={st.motReward}>
+                <View style={st.motTrophy}>
+                  <Ionicons name="trophy" size={14} color={C.navy} />
+                </View>
+                <Text style={st.motRewardText} numberOfLines={1}>
+                  Then: <Text style={{ fontWeight: '800', color: C.white }}>{reward}</Text>
+                </Text>
+              </View>
+            )}
+          </Animated.View>
+        )}
+        <Animated.View entering={nativeOnly(FadeInUp.duration(MOTION.enter).delay(600).easing(EASE_OUT))} style={{ gap: 4, paddingTop: 16, paddingBottom: 8 }}>
+          <Button title="Yes, let's do this" icon="flash" onPress={onNext} />
           <Pressable accessibilityRole="button" onPress={() => { tap(); onNext(); }} style={({ pressed }) => [st.textBtn, pressed && { opacity: 0.6 }]}>
-            <Text style={[st.textBtnLabel, { color: C.white }]}>Not now</Text>
+            <Text style={[st.textBtnLabel, { color: 'rgba(255,255,255,0.8)' }]}>Maybe later</Text>
           </Pressable>
         </Animated.View>
       </SafeAreaView>
@@ -282,14 +319,25 @@ export function Motivation({ male, onNext }: { male: boolean; onNext: () => void
 
 /* ---------------- 20 · Analysis ---------------- */
 
-const TASKS: [IconName, string][] = [
-  ['barbell', 'Analyzing your body data...'],
-  ['clipboard', 'Building your workout plan...'],
-  ['restaurant', 'Creating your meal plan...'],
+const TASKS: [IconName, string, string][] = [
+  ['body', 'Reading your body stats', 'BMI, weight and height'],
+  ['barbell', 'Designing your workouts', 'Matched to your level and rest days'],
+  ['restaurant', 'Balancing your meals', 'Calories and macros for your diet'],
 ];
 const TASK_MS = 1500;
 
-/** Three task rings fill one after another while the checklist ticks off, then it moves on by itself. */
+/** Soft halo that breathes behind the progress ring while the plan is being built. */
+function Halo() {
+  const reduce = useReducedMotion();
+  const v = useSharedValue(0);
+  useEffect(() => {
+    if (!reduce) v.set(withRepeat(withTiming(1, { duration: 1600, easing: Easing.inOut(Easing.sin) }), -1, true));
+  }, [v, reduce]);
+  const style = useAnimatedStyle(() => ({ opacity: 0.1 + v.get() * 0.12, transform: [{ scale: 1 + v.get() * 0.08 }] }));
+  return <Animated.View pointerEvents="none" style={[st.anHalo, style]} />;
+}
+
+/** One big ring fills across all tasks while the steps tick off below, then it moves on by itself. */
 export function Analysis({ p, units, onDone }: { p: Profile; units: WeightUnit; onDone: () => void }) {
   const [t, setT] = useState(0); // 0 … TASKS.length, fractional
   useEffect(() => {
@@ -308,131 +356,165 @@ export function Analysis({ p, units, onDone }: { p: Profile; units: WeightUnit; 
     return () => clearTimeout(id);
   }, [done, onDone]);
 
+  const pct = Math.round((t / TASKS.length) * 100);
+  const current = Math.min(TASKS.length - 1, Math.floor(t));
   const b = bmi(p.weightKg, p.heightCm);
-  const stats: [string, number, (n: number) => string, string][] = [
-    ['BMI', b, (n) => n.toFixed(1), ''],
-    ['Weight', toUnit(p.weightKg, units), (n) => n.toFixed(0), ` ${units}`],
-    ['Height', p.heightCm, (n) => n.toFixed(0), ' cm'],
+  const stats: [string, string][] = [
+    ['BMI', b.toFixed(1)],
+    ['Weight', `${toUnit(p.weightKg, units).toFixed(0)} ${units}`],
+    ['Height', `${p.heightCm} cm`],
   ];
 
   return (
-    <SafeAreaView style={st.white} edges={['top', 'bottom']}>
+    <View style={{ flex: 1, backgroundColor: C.bg }}>
       <StatusBar style="dark" />
-      <View style={[st.center, { paddingHorizontal: GUTTER }]}>
-        <Animated.Text entering={rise(0)} style={st.anTitle}>
-          Creating your personalized plan
-        </Animated.Text>
-        <View style={st.anRings}>
-          {TASKS.map(([icon], i) => {
-            const v = Math.max(0, Math.min(1, t - i));
-            const active = v > 0 && v < 1;
-            return (
-              <Animated.View key={icon} entering={nativeOnly(ZoomIn.duration(MOTION.enter).delay(120 + i * 90))} style={{ transform: [{ scale: active ? 1.08 : 1 }] }}>
-                <Ring size={68} stroke={4} value={v} track={C.border}>
-                  <View style={[st.anIcon, v >= 1 && { backgroundColor: C.primary }]}>
-                    <Ionicons name={v >= 1 ? 'checkmark' : icon} size={22} color={v >= 1 ? C.white : C.primary} />
-                  </View>
-                </Ring>
-              </Animated.View>
-            );
-          })}
-        </View>
-        <Animated.View entering={rise(300)} style={st.anStats}>
-          {stats.map(([k, v, f, unit], i) => (
-            <View key={k} style={[st.anStat, i > 0 && st.anStatDivider]}>
-              <CountUp value={v} format={f} fromZero duration={1200} style={st.anStatVal}>
-                <Text style={st.anStatUnit}>{unit}</Text>
-              </CountUp>
-              <Text style={st.anStatKey}>{k}</Text>
-            </View>
-          ))}
-        </Animated.View>
-        <Animated.View entering={rise(420)} style={st.anList}>
-          {TASKS.map(([, label], i) => {
-            const isDone = t >= i + 1;
-            const isActive = t >= i && !isDone;
-            return (
-              <View key={label} style={[st.anRow, { opacity: isDone || isActive ? 1 : 0.4 }]}>
-                {isDone ? (
-                  <Animated.View entering={nativeOnly(ZoomIn.duration(MOTION.base))}>
-                    <Ionicons name="checkmark-circle" size={22} color={C.primary} />
-                  </Animated.View>
-                ) : (
-                  <Ionicons name="ellipse-outline" size={22} color={isActive ? C.primary : C.muted} />
-                )}
-                <Text style={[st.anRowText, isDone && { color: C.text, fontWeight: '700' }]}>{label}</Text>
-                {isActive && <Text style={st.anPct}>{Math.round((t - i) * 100)}%</Text>}
+      <LinearGradient colors={[C.primarySoft, C.white]} start={{ x: 0, y: 0 }} end={{ x: 0.3, y: 1 }} style={StyleSheet.absoluteFill} />
+      <SafeAreaView style={{ flex: 1, paddingHorizontal: GUTTER }} edges={['top', 'bottom']}>
+        <View style={[st.center, { justifyContent: 'center' }]}>
+          <Animated.Text entering={rise(0)} style={st.anEyebrow}>
+            {done ? 'ALL SET' : 'HANG TIGHT'}
+          </Animated.Text>
+          <Animated.Text key={done ? 'ready' : 'making'} entering={rise(done ? 0 : 60)} style={st.anTitle}>
+            {done ? 'Your plan is ready!' : 'Crafting your plan'}
+          </Animated.Text>
+          <Animated.Text entering={rise(120)} style={st.anSub}>
+            {"We're turning your answers into workouts and meals made just for you."}
+          </Animated.Text>
+
+          <Animated.View entering={nativeOnly(ZoomIn.duration(MOTION.enter).delay(200))} style={st.anRingWrap}>
+            <Halo />
+            <Ring size={196} stroke={12} value={t / TASKS.length} track="rgba(18,168,125,0.14)" gradient={[C.primary, C.primaryDark]}>
+              <View style={st.anRingInner}>
+                <Animated.View key={done ? 'done' : current} entering={nativeOnly(ZoomIn.duration(MOTION.base))} style={[st.anRingIcon, done && { backgroundColor: C.primary }]}>
+                  <Ionicons name={done ? 'checkmark' : TASKS[current][0]} size={20} color={done ? C.white : C.primaryDark} />
+                </Animated.View>
+                <Text style={st.anPctBig}>
+                  {pct}
+                  <Text style={st.anPctSign}>%</Text>
+                </Text>
               </View>
-            );
-          })}
-        </Animated.View>
-      </View>
-    </SafeAreaView>
+            </Ring>
+          </Animated.View>
+
+          <Animated.View entering={rise(320)} style={st.anChips}>
+            {stats.map(([k, v]) => (
+              <View key={k} style={st.anChip}>
+                <Text style={st.anChipKey}>{k}</Text>
+                <Text style={st.anChipVal}>{v}</Text>
+              </View>
+            ))}
+          </Animated.View>
+
+          <Animated.View entering={rise(420)} style={st.anList}>
+            {TASKS.map(([icon, label, note], i) => {
+              const isDone = t >= i + 1;
+              const isActive = t >= i && !isDone;
+              return (
+                <View key={label} style={[st.anRow, i > 0 && st.anRowLine, { opacity: isDone || isActive ? 1 : 0.45 }]}>
+                  <View style={[st.anRowIcon, isDone && { backgroundColor: C.primary }]}>
+                    {isDone ? (
+                      <Animated.View entering={nativeOnly(ZoomIn.duration(MOTION.base))}>
+                        <Ionicons name="checkmark" size={15} color={C.white} />
+                      </Animated.View>
+                    ) : (
+                      <Ionicons name={icon} size={15} color={isActive ? C.primaryDark : C.muted} />
+                    )}
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={st.anRowText}>{label}</Text>
+                    <Text style={st.anRowNote}>{note}</Text>
+                  </View>
+                  {isActive && <Text style={st.anPct}>{Math.round((t - i) * 100)}%</Text>}
+                  {isDone && <Text style={[st.anPct, { color: C.muted }]}>Done</Text>}
+                </View>
+              );
+            })}
+          </Animated.View>
+        </View>
+      </SafeAreaView>
+    </View>
   );
 }
 
 /* ---------------- 21 · Result ---------------- */
 
-/** "Get Dream Abs with Our Plan by <date>": projected curve plus About You / About Plan cards. */
+/** Plan-ready summary: goal date, projected curve, the plan's key numbers and what it includes. */
 export function PlanResult({ p, units, onBack, onNext }: { p: Profile; units: WeightUnit; onBack: () => void; onNext: () => void }) {
   const t = targets(p);
   const weeks = Math.max(t.weeks, 4);
   const date = new Date();
   date.setDate(date.getDate() + weeks * 7);
   const diff = toUnit(p.targetKg, units) - toUnit(p.weightKg, units);
-  const badge = Math.abs(diff) < 0.1 ? undefined : `${diff > 0 ? '+' : '−'}${Math.abs(diff).toFixed(Math.abs(diff) < 10 ? 1 : 0)} ${units}`;
+  const changing = Math.abs(diff) >= 0.1;
+  const badge = !changing ? undefined : `${diff > 0 ? '+' : '−'}${Math.abs(diff).toFixed(Math.abs(diff) < 10 ? 1 : 0)} ${units}`;
   const age = new Date().getFullYear() - p.birthYear;
   const gender = p.gender === 'male' ? 'Male' : p.gender === 'female' ? 'Female' : 'Other';
+  const sameYear = date.getFullYear() === new Date().getFullYear();
+  const stats: [IconName, string, string, string][] = [
+    ['calendar', `${weeks}`, 'weeks', C.steps],
+    ['barbell', `${p.weeklyGoal}×`, 'workouts / wk', C.primary],
+    ['flame', t.budget.toLocaleString('en-IN'), 'kcal / day', C.accent],
+  ];
 
   return (
     <SafeAreaView style={st.white} edges={['top']}>
       <StatusBar style="dark" />
+      <LinearGradient colors={[C.primarySoft, 'rgba(255,255,255,0)']} locations={[0, 0.45]} style={StyleSheet.absoluteFill} pointerEvents="none" />
       <View style={st.bar}>
         <Pressable onPress={() => { tap(); onBack(); }} hitSlop={12} accessibilityRole="button" accessibilityLabel="Back" style={({ pressed }) => [st.backBtn, pressed && { opacity: 0.5 }]}>
           <Ionicons name="chevron-back" size={24} color={C.text} />
         </Pressable>
       </View>
       <ScrollView contentContainerStyle={{ paddingHorizontal: GUTTER, paddingBottom: 24 }} showsVerticalScrollIndicator={false}>
-        <Animated.Text entering={rise(0)} style={st.resEyebrow}>
-          Get Dream Abs with Our Plan by
+        <Animated.View entering={nativeOnly(ZoomIn.duration(MOTION.enter))} style={st.resPill}>
+          <Ionicons name="checkmark-circle" size={14} color={C.primary} />
+          <Text style={st.resPillText}>YOUR PLAN IS READY</Text>
+        </Animated.View>
+        <Animated.Text entering={rise(80)} style={st.resEyebrow}>
+          {changing ? `You could reach ${fmtWeight(p.targetKg, units, 0)} by` : 'A stronger, fitter you by'}
         </Animated.Text>
-        <Animated.Text entering={nativeOnly(ZoomIn.duration(MOTION.enter).delay(140).easing(EASE_OUT))} style={st.resDate}>
-          {date.getDate()} {MONTHS[date.getMonth()].toUpperCase()}
+        <Animated.Text entering={nativeOnly(ZoomIn.duration(MOTION.enter).delay(180).easing(EASE_OUT))} style={st.resDate}>
+          {date.getDate()} {MONTHS[date.getMonth()]}
+          {sameYear ? '' : ` ${date.getFullYear()}`}
         </Animated.Text>
         <Animated.View entering={rise(260)} style={[st.card, { marginTop: 18, paddingTop: 18 }]}>
-          <GoalCurve from={toUnit(p.weightKg, units)} to={toUnit(p.targetKg, units)} fromText={`${fmtWeight(p.weightKg, units, 0)}\nCurrent`} toText={`${fmtWeight(p.targetKg, units, 0)}\nTarget`} badge={badge} height={140} />
+          <GoalCurve from={toUnit(p.weightKg, units)} to={toUnit(p.targetKg, units)} fromText={`${fmtWeight(p.weightKg, units, 0)}\nToday`} toText={`${fmtWeight(p.targetKg, units, 0)}\nGoal`} badge={badge} height={130} />
         </Animated.View>
-        <View style={{ flexDirection: 'row', gap: 12, marginTop: 12 }}>
-          <Animated.View entering={rise(380)} style={[st.card, { flex: 1 }]}>
-            <Text style={st.resCardTitle}>About You</Text>
-            <Text style={st.resLine}>
-              {gender}, {age} years old
-            </Text>
-            <Text style={st.resLine}>
-              {fmtWeight(p.weightKg, units, 0)} → {fmtWeight(p.targetKg, units, 0)}
-            </Text>
-            <View style={st.resChecks}>
-              <Check text={`${p.weeklyGoal} workouts / week`} />
-              <Check text={`${weeks} weeks`} />
-            </View>
-          </Animated.View>
-          <Animated.View entering={rise(460)} style={[st.card, { flex: 1 }]}>
-            <Text style={st.resCardTitle}>About Plan</Text>
-            <Text style={st.resLine}>Personalized workouts</Text>
-            <Text style={st.resLine}>Custom meal plan</Text>
-            <View style={st.resPlanArt}>
-              <Ionicons name="barbell" size={22} color={C.primary} />
-              <Ionicons name="nutrition" size={22} color={C.accent} />
-              <Ionicons name="calendar" size={22} color={C.steps} />
-            </View>
-          </Animated.View>
+        <View style={st.resStats}>
+          {stats.map(([icon, v, k, color], i) => (
+            <Animated.View key={k} entering={nativeOnly(ZoomIn.duration(MOTION.enter).delay(380 + i * 90))} style={st.resStat}>
+              <Ionicons name={icon} size={16} color={color} />
+              <Text style={st.resStatVal}>{v}</Text>
+              <Text style={st.resStatKey}>{k}</Text>
+            </Animated.View>
+          ))}
         </View>
-        <Animated.Text entering={nativeOnly(FadeIn.delay(600))} style={st.resNote}>
-          Your results may vary. This estimate is based on your answers and a steady weekly pace.
+        <Animated.View entering={rise(560)} style={[st.card, { marginTop: 12 }]}>
+          <View style={st.resWho}>
+            <View style={st.resAvatar}>
+              <Ionicons name={p.gender === 'female' ? 'woman' : p.gender === 'male' ? 'man' : 'person'} size={20} color={C.primaryDark} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={st.resCardTitle}>Made for you</Text>
+              <Text style={st.resLine}>
+                {gender} · {age} yrs · {fmtWeight(p.weightKg, units, 0)} → {fmtWeight(p.targetKg, units, 0)}
+              </Text>
+            </View>
+          </View>
+          <View style={st.resRule} />
+          <Text style={[st.resCardTitle, { marginBottom: 10 }]}>{"What's inside"}</Text>
+          <View style={st.resChecks}>
+            <Check text="Personalized workouts for your level" />
+            <Check text="Meal plan that fits your diet" />
+            <Check text="Progress tracking toward your goal" />
+          </View>
+        </Animated.View>
+        <Animated.Text entering={nativeOnly(FadeIn.delay(700))} style={st.resNote}>
+          Results vary from person to person. This estimate is based on your answers and a steady weekly pace.
         </Animated.Text>
       </ScrollView>
       <Cta>
-        <Button title="Get My Plan" onPress={onNext} />
+        <Button title="Unlock my plan" icon="lock-open" onPress={onNext} />
       </Cta>
     </SafeAreaView>
   );
@@ -440,8 +522,10 @@ export function PlanResult({ p, units, onBack, onNext }: { p: Profile; units: We
 
 function Check({ text }: { text: string }) {
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-      <Ionicons name="checkmark" size={14} color={C.primary} />
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+      <View style={st.resCheckDot}>
+        <Ionicons name="checkmark" size={12} color={C.white} />
+      </View>
       <Text style={st.resCheck}>{text}</Text>
     </View>
   );
@@ -480,17 +564,29 @@ export function Paywall({ male, gaining, onSkip, onPaid, onDone }: { male: boole
               <Ionicons name="close" size={20} color={C.white} />
             </Pressable>
           </SafeAreaView>
+        </View>
+        <View style={st.paySheet}>
           <Animated.View entering={nativeOnly(ZoomIn.duration(MOTION.enter).delay(250))} style={st.payBadge}>
             <Ionicons name="star" size={12} color={C.white} />
-            <Text style={st.payBadgeText}>Best Value</Text>
+            <Text style={st.payBadgeText}>Best value</Text>
           </Animated.View>
-        </View>
-        <View style={{ paddingHorizontal: GUTTER }}>
           <Animated.Text entering={rise(80)} style={st.payTitle}>
-            GET PERSONALIZED{'\n'}
-            <Text style={{ color: C.primary }}>{gaining ? 'MUSCLE-BUILDING' : 'FAT-LOSING'}</Text> PLAN!
+            Unlock your <Text style={{ color: C.primary }}>{gaining ? 'muscle-building' : 'fat-burning'}</Text> plan
           </Animated.Text>
-          <PlanPicker tier={tier} months={months} onTier={setTier} onMonths={setMonths} enterAt={1} titleTop={18} />
+          <Animated.Text entering={rise(160)} style={st.paySub}>
+            Workouts, meals and progress tracking, all built around you.
+          </Animated.Text>
+          <Animated.View entering={rise(240)} style={st.payPerks}>
+            {([['barbell', 'Workouts'], ['restaurant', 'Meal plan'], ['stats-chart', 'Progress']] as [IconName, string][]).map(([icon, label]) => (
+              <View key={label} style={st.payPerk}>
+                <View style={st.payPerkIcon}>
+                  <Ionicons name={icon} size={16} color={C.primaryDark} />
+                </View>
+                <Text style={st.payPerkText}>{label}</Text>
+              </View>
+            ))}
+          </Animated.View>
+          <PlanPicker tier={tier} months={months} onTier={setTier} onMonths={setMonths} enterAt={1} titleTop={20} />
         </View>
       </ScrollView>
       <Cta>
@@ -498,7 +594,8 @@ export function Paywall({ male, gaining, onSkip, onPaid, onDone }: { male: boole
           {plan.name} · {dur.months} months · {formatINR(Math.round(dur.price / dur.months))}/mo · save {pctOff(dur)}%
         </Text>
         <Button
-          title={`CONTINUE · ${formatINR(dur.price)}`}
+          title={`Start my plan · ${formatINR(dur.price)}`}
+          icon="arrow-forward"
           loading={loading}
           onPress={() => {
             if (loading || confirm) return;
@@ -586,44 +683,78 @@ const st = StyleSheet.create({
   wTrack: { width: 88, height: 4, borderRadius: 2, backgroundColor: C.borderSoft, overflow: 'hidden' },
   wFill: { height: 4, borderRadius: 2, backgroundColor: C.primary },
 
-  motTitle: { fontSize: 32, lineHeight: 39, fontWeight: '800', color: C.white, marginTop: 28, letterSpacing: -0.6, maxWidth: 300 },
+  motPill: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 6, marginTop: 24, paddingHorizontal: 12, paddingVertical: 6, borderRadius: R.pill, backgroundColor: 'rgba(255,255,255,0.14)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)' },
+  motPillText: { fontSize: 11, fontWeight: '800', color: C.white, letterSpacing: 1.4 },
+  motTitle: { fontSize: 34, lineHeight: 40, fontWeight: '900', color: C.white, marginTop: 14, letterSpacing: -0.8, maxWidth: 320 },
+  motSub: { fontSize: 15, lineHeight: 21, color: 'rgba(255,255,255,0.85)', marginTop: 10, maxWidth: 300 },
+  motGlass: { padding: 16, borderRadius: R.xl, backgroundColor: 'rgba(19,35,31,0.45)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.22)' },
+  motGoal: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  motKey: { fontSize: 11.5, fontWeight: '700', color: 'rgba(255,255,255,0.7)' },
+  motVal: { fontSize: 22, fontWeight: '900', color: C.white, letterSpacing: -0.4, marginTop: 1, fontVariant: ['tabular-nums'] },
+  motArrow: { width: 34, height: 34, borderRadius: 17, backgroundColor: C.primaryTint, alignItems: 'center', justifyContent: 'center' },
+  motRule: { height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(255,255,255,0.25)', marginVertical: 12 },
+  motReward: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  motTrophy: { width: 28, height: 28, borderRadius: 14, backgroundColor: C.gold, alignItems: 'center', justifyContent: 'center' },
+  motRewardText: { flex: 1, fontSize: 14, color: 'rgba(255,255,255,0.85)' },
   textBtn: { alignItems: 'center', paddingVertical: 14 },
   textBtnLabel: { fontSize: 15, fontWeight: '700', color: C.textSoft },
 
-  anTitle: { fontSize: 22, fontWeight: '800', color: C.text, letterSpacing: -0.4, textAlign: 'center' },
-  anRings: { flexDirection: 'row', gap: 26, marginTop: 30 },
-  anIcon: { width: 50, height: 50, borderRadius: 25, backgroundColor: C.primarySoft, alignItems: 'center', justifyContent: 'center' },
-  anStats: { flexDirection: 'row', marginTop: 34, alignSelf: 'stretch', backgroundColor: C.surfaceAlt, borderRadius: R.lg, paddingVertical: 16 },
-  anStat: { flex: 1, alignItems: 'center' },
-  anStatDivider: { borderLeftWidth: 1, borderLeftColor: C.border },
-  anStatVal: { fontSize: 22, fontWeight: '800', color: C.text, fontVariant: ['tabular-nums'] },
-  anStatUnit: { fontSize: 13, fontWeight: '700', color: C.textSoft },
-  anStatKey: { fontSize: 12, color: C.muted, fontWeight: '600', marginTop: 2 },
-  anList: { alignSelf: 'stretch', marginTop: 28, gap: 16, paddingHorizontal: 8 },
-  anRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  anRowText: { flex: 1, fontSize: 15, color: C.textSoft },
+  anEyebrow: { fontSize: 11, fontWeight: '800', color: C.primary, letterSpacing: 1.6 },
+  anTitle: { fontSize: 28, fontWeight: '900', color: C.text, letterSpacing: -0.6, textAlign: 'center', marginTop: 6 },
+  anSub: { fontSize: 14, lineHeight: 20, color: C.textSoft, textAlign: 'center', marginTop: 8, maxWidth: 300 },
+  anRingWrap: { marginTop: 28, alignItems: 'center', justifyContent: 'center' },
+  anHalo: { position: 'absolute', width: 220, height: 220, borderRadius: 110, backgroundColor: C.primary },
+  anRingInner: { width: 160, height: 160, borderRadius: 80, backgroundColor: C.white, alignItems: 'center', justifyContent: 'center', ...shadowSm },
+  anRingIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: C.primarySoft, alignItems: 'center', justifyContent: 'center' },
+  anPctBig: { fontSize: 44, fontWeight: '900', color: C.text, letterSpacing: -1.5, marginTop: 4, fontVariant: ['tabular-nums'] },
+  anPctSign: { fontSize: 20, fontWeight: '800', color: C.primary },
+  anChips: { flexDirection: 'row', gap: 8, marginTop: 26 },
+  anChip: { alignItems: 'center', paddingHorizontal: 14, paddingVertical: 8, borderRadius: R.md, backgroundColor: C.white, borderWidth: 1, borderColor: C.borderSoft, ...shadowSm },
+  anChipKey: { fontSize: 10.5, fontWeight: '700', color: C.muted, letterSpacing: 0.6, textTransform: 'uppercase' },
+  anChipVal: { fontSize: 15, fontWeight: '800', color: C.text, marginTop: 1, fontVariant: ['tabular-nums'] },
+  anList: { alignSelf: 'stretch', marginTop: 22, paddingHorizontal: 14, borderRadius: R.xl, backgroundColor: C.white, borderWidth: 1, borderColor: C.borderSoft, ...shadowSm },
+  anRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
+  anRowLine: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: C.border },
+  anRowIcon: { width: 30, height: 30, borderRadius: 15, backgroundColor: C.primarySoft, alignItems: 'center', justifyContent: 'center' },
+  anRowText: { fontSize: 14.5, fontWeight: '700', color: C.text },
+  anRowNote: { fontSize: 12, color: C.muted, marginTop: 1 },
   anPct: { fontSize: 13, fontWeight: '800', color: C.primary, fontVariant: ['tabular-nums'] },
 
   bar: { height: 48, justifyContent: 'center', paddingHorizontal: 12 },
   backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  resEyebrow: { fontSize: 17, fontWeight: '700', color: C.text, textAlign: 'center' },
-  resDate: { fontSize: 36, fontWeight: '900', color: C.primary, textAlign: 'center', letterSpacing: -0.5, marginTop: 4 },
+  resEyebrow: { fontSize: 17, fontWeight: '700', color: C.textSoft, textAlign: 'center', marginTop: 14 },
+  resDate: { fontSize: 40, fontWeight: '900', color: C.primaryDark, textAlign: 'center', letterSpacing: -1.2, marginTop: 2 },
   card: { backgroundColor: C.card, borderRadius: R.lg, padding: 16, borderWidth: 1, borderColor: C.borderSoft, ...shadowSm },
-  resCardTitle: { fontSize: 15, fontWeight: '800', color: C.text, marginBottom: 8 },
-  resLine: { fontSize: 13, color: C.textSoft, lineHeight: 19 },
-  resChecks: { marginTop: 10, gap: 4 },
-  resCheck: { fontSize: 12.5, fontWeight: '700', color: C.text },
-  resPlanArt: { flexDirection: 'row', gap: 10, marginTop: 14 },
+  resCardTitle: { fontSize: 15, fontWeight: '800', color: C.text },
+  resLine: { fontSize: 13, color: C.textSoft, lineHeight: 19, marginTop: 2 },
+  resChecks: { gap: 10 },
+  resCheck: { flex: 1, fontSize: 13.5, fontWeight: '600', color: C.text },
+  resPill: { flexDirection: 'row', alignItems: 'center', alignSelf: 'center', gap: 6, marginTop: 4, paddingHorizontal: 12, paddingVertical: 6, borderRadius: R.pill, backgroundColor: C.white, borderWidth: 1, borderColor: C.primaryTint },
+  resPillText: { fontSize: 11, fontWeight: '800', color: C.primaryDark, letterSpacing: 1.2 },
+  resStats: { flexDirection: 'row', gap: 10, marginTop: 12 },
+  resStat: { flex: 1, alignItems: 'center', paddingVertical: 12, borderRadius: R.lg, backgroundColor: C.card, borderWidth: 1, borderColor: C.borderSoft, ...shadowSm },
+  resStatVal: { fontSize: 20, fontWeight: '900', color: C.text, marginTop: 4, letterSpacing: -0.4, fontVariant: ['tabular-nums'] },
+  resStatKey: { fontSize: 11.5, fontWeight: '600', color: C.muted },
+  resWho: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  resAvatar: { width: 42, height: 42, borderRadius: 21, backgroundColor: C.primarySoft, alignItems: 'center', justifyContent: 'center' },
+  resRule: { height: StyleSheet.hairlineWidth, backgroundColor: C.border, marginVertical: 14 },
+  resCheckDot: { width: 20, height: 20, borderRadius: 10, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center' },
   resNote: { fontSize: 11, color: C.muted, textAlign: 'center', marginTop: 16, lineHeight: 15 },
   cta: { paddingHorizontal: GUTTER, paddingTop: 12, backgroundColor: C.white },
 
   paywall: { flex: 1, backgroundColor: C.bg },
-  payHero: { height: 300, backgroundColor: C.skeleton },
+  payHero: { height: 330, backgroundColor: C.skeleton },
+  paySheet: { marginTop: -36, paddingTop: 22, paddingHorizontal: GUTTER, borderTopLeftRadius: R.xl, borderTopRightRadius: R.xl, backgroundColor: C.bg },
+  paySub: { fontSize: 14.5, lineHeight: 20, color: C.textSoft, marginTop: 8 },
+  payPerks: { flexDirection: 'row', gap: 8, marginTop: 16 },
+  payPerk: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 8, paddingHorizontal: 8, borderRadius: R.md, backgroundColor: C.card, borderWidth: 1, borderColor: C.borderSoft },
+  payPerkIcon: { width: 26, height: 26, borderRadius: 13, backgroundColor: C.primarySoft, alignItems: 'center', justifyContent: 'center' },
+  payPerkText: { flexShrink: 1, fontSize: 12, fontWeight: '700', color: C.text },
   payTop: { flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: 16 },
   payClose: { width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(12,10,9,0.35)', alignItems: 'center', justifyContent: 'center', marginTop: 6 },
-  payBadge: { position: 'absolute', left: GUTTER, bottom: 28, flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: C.accent, borderRadius: R.pill, paddingHorizontal: 12, paddingVertical: 6 },
+  payBadge: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: C.accent, borderRadius: R.pill, paddingHorizontal: 12, paddingVertical: 6, marginBottom: 12 },
   payBadgeText: { color: C.white, fontWeight: '800', fontSize: 12 },
-  payTitle: { fontSize: 26, lineHeight: 31, fontWeight: '900', color: C.text, letterSpacing: -0.4, fontStyle: 'italic' },
+  payTitle: { fontSize: 30, lineHeight: 35, fontWeight: '900', color: C.text, letterSpacing: -0.8 },
   payNote: { fontSize: 12, color: C.textSoft, fontWeight: '600', textAlign: 'center', marginBottom: 8, fontVariant: ['tabular-nums'] },
   payFoot: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, marginTop: 10 },
   payFootText: { fontSize: 11.5, color: C.textSoft, fontWeight: '600' },
