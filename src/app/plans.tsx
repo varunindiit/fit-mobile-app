@@ -22,7 +22,7 @@ import { Accordion, Decor, fmtFull, GOLD, planEnd, PREMIUM_BG } from '@/componen
 import { Button, Card, Dialog, EASE_OUT, enter, IconButton, IconTile, nativeOnly, PressableScale, Screen, SectionTitle, Sheet, T, tap, useToast, type IconName } from '@/components/ui';
 import { COACHES, formatINR, PLAN_TIERS, TESTIMONIALS, type PlanTier } from '@/data/plans';
 import { fmtDate, todayKey } from '@/lib/calc';
-import { useStore } from '@/lib/store';
+import { isPremiumActive, useStore } from '@/lib/store';
 import { C, G, glow, MOTION, R } from '@/theme';
 import { Glyph } from '@/components/Glyph';
 import { ACCENT, DEFAULT_MONTHS, pctOff, PlanPicker, planFor } from '@/components/plans/PlanPicker';
@@ -48,7 +48,7 @@ export default function PlansScreen() {
   const { width, height } = useWindowDimensions();
   const focused = useIsFocused();
   const bar = <StatusBar style={focused ? 'light' : 'dark'} />;
-  const premium = state.premium;
+  const premium = isPremiumActive(state.premium) ? state.premium : null;
 
   const [tier, setTier] = useState<PlanTier>(params.tier === 'pro' || params.tier === 'smart' ? params.tier : premium ? 'pro' : 'smart');
   const [months, setMonths] = useState(DEFAULT_MONTHS);
@@ -60,8 +60,13 @@ export default function PlansScreen() {
   const [success, setSuccess] = useState<{ tier: PlanTier; months: number } | null>(null);
   const [slide, setSlide] = useState(0);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => () => {
-    if (timer.current) clearTimeout(timer.current);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      if (timer.current) clearTimeout(timer.current);
+    };
   }, []);
 
   const { plan, dur } = planFor(tier, months);
@@ -73,12 +78,15 @@ export default function PlansScreen() {
 
   const back = () => (router.canGoBack() ? router.back() : router.replace('/(tabs)'));
   const pay = () => {
+    if (paying) return;
+    // Demo payment succeeds instantly: save it now so leaving or killing the app during the spinner can't lose it.
+    subscribe(tier, dur.months, total);
     setPaying(true);
     timer.current = setTimeout(() => {
-      subscribe(tier, months);
+      if (!mounted.current) return;
       setPaying(false);
       setCheckout(false);
-      setSuccess({ tier, months });
+      setSuccess({ tier, months: dur.months });
     }, 1500);
   };
 
@@ -144,11 +152,15 @@ export default function PlansScreen() {
                     <View style={{ flex: 1 }}>
                       <Text style={T.h3}>{`You're on Fitora ${premium.tier === 'pro' ? 'Pro' : 'Smart'}`}</Text>
                       <Text style={T.small}>
-                        Since {fmtDate(premium.since)} · valid till {fmtFull(planEnd(premium.since, premium.months))}
+                        {premium.cancelledAt
+                          ? `Cancelled · active till ${fmtFull(planEnd(premium.since, premium.months))}`
+                          : `Since ${fmtDate(premium.since)} · valid till ${fmtFull(planEnd(premium.since, premium.months))}`}
                       </Text>
                     </View>
                   </View>
-                  <Button title="Cancel plan (demo)" variant="danger" small icon="close-circle-outline" style={{ marginTop: 14 }} onPress={() => setAskCancel(true)} />
+                  {!premium.cancelledAt && (
+                    <Button title="Cancel plan (demo)" variant="danger" small icon="close-circle-outline" style={{ marginTop: 14 }} onPress={() => setAskCancel(true)} />
+                  )}
                 </Card>
               </Animated.View>
             )}
@@ -351,7 +363,7 @@ export default function PlansScreen() {
         visible={askCancel}
         icon="😢"
         title={`Cancel Fitora ${premium?.tier === 'pro' ? 'Pro' : 'Smart'}?`}
-        text="You'll lose Ria's unlimited chats and personalised plans. This is a demo, so nothing is charged or refunded."
+        text={`You keep premium until ${premium ? fmtFull(planEnd(premium.since, premium.months)) : 'your plan ends'}, then lose Ria's unlimited chats and personalised plans. This is a demo, so nothing is charged or refunded.`}
         confirm="Cancel plan"
         cancel="Keep plan"
         danger
@@ -359,7 +371,7 @@ export default function PlansScreen() {
         onConfirm={() => {
           setAskCancel(false);
           cancelPremium();
-          toast("Plan cancelled · you're on the Free plan", 'close-circle');
+          toast(premium ? `Plan cancelled · active till ${fmtFull(planEnd(premium.since, premium.months))}` : 'Plan cancelled', 'close-circle');
         }}
       />
     </Screen>

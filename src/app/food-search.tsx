@@ -5,7 +5,7 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text
 import Animated, { interpolate, interpolateColor, useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming, ZoomIn, ZoomOut } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { EmojiTile, fmtNum, goBack, isDateKey, isMeal, MealChips, VegDot } from '@/components/food/shared';
+import { EmojiTile, fmtNum, goBack, isDateKey, isMeal, MealChips, notFuture, VegDot } from '@/components/food/shared';
 import { Button, Chip, CountUp, EmptyState, enter, fadeEnter, Header, IconButton, nativeOnly, PressableScale, T, tap, useToast, type IconName } from '@/components/ui';
 import { FOOD_CATEGORIES, FOODS, foodById, mealLabel, POPULAR_IDS, type Food, type MealKey } from '@/data/foods';
 import { currentMeal, relDay, todayKey } from '@/lib/calc';
@@ -18,11 +18,12 @@ const webNoOutline = Platform.OS === 'web' ? ({ outlineStyle: 'none' } as object
 
 export default function FoodSearchScreen() {
   const params = useLocalSearchParams<{ meal?: string; date?: string }>();
-  const { state, addFood } = useStore();
+  const { state, addFood, addRecentSearch, clearRecentSearches } = useStore();
   const toast = useToast();
   const insets = useSafeAreaInsets();
   const [meal, setMeal] = useState<MealKey>(isMeal(params.meal) ? params.meal : (currentMeal() as MealKey));
-  const date = isDateKey(params.date) ? params.date : todayKey();
+  const today = todayKey();
+  const date = isDateKey(params.date) ? notFuture(params.date, today) : today;
   const [query, setQuery] = useState('');
   const [focused, setFocused] = useState(false);
   const [cat, setCat] = useState<Cat>('All');
@@ -49,17 +50,26 @@ export default function FoodSearchScreen() {
     return ids.map((id) => foodById(id)!);
   }, [state.entries]);
   const popular = useMemo(() => POPULAR_IDS.map((id) => foodById(id)).filter(Boolean) as Food[], []);
+  const favourites = useMemo(() => state.favoriteFoods.map((id) => foodById(id)).filter((f): f is Food => !!f), [state.favoriteFoods]);
 
   const session = state.entries.filter((e) => !startIds.has(e.id));
   const sessionKcal = session.reduce((a, e) => a + (foodById(e.foodId)?.kcal ?? 0) * e.qty, 0);
 
+  /** Remember the query once the user commits to it (submit, open or add a result). */
+  const rememberQuery = () => {
+    if (query.trim()) addRecentSearch(query);
+  };
   const quickAdd = (f: Food) => {
+    rememberQuery();
     addFood(f.id, meal, 1, date);
     toast(`Added ${f.name} to ${mealLabel(meal)}`);
     setJustAdded((s) => ({ ...s, [f.id]: true }));
     timers.current.push(setTimeout(() => setJustAdded((s) => ({ ...s, [f.id]: false })), 1500));
   };
-  const open = (f: Food) => router.push({ pathname: '/food/[id]', params: { id: f.id, meal, date } });
+  const open = (f: Food) => {
+    rememberQuery();
+    router.push({ pathname: '/food/[id]', params: { id: f.id, meal, date } });
+  };
 
   const browsing = !q && cat === 'All';
   const row = (f: Food, i: number, list: Food[]) => (
@@ -72,7 +82,7 @@ export default function FoodSearchScreen() {
         title={`Add to ${mealLabel(meal)}`}
         right={<IconButton icon="camera-outline" bordered onPress={() => router.push({ pathname: '/snap', params: { meal, date } })} />}
       />
-      {date !== todayKey() && (
+      {date !== today && (
         <View style={st.dateNote}>
           <Ionicons name="calendar-outline" size={12} color={C.accent} />
           <Text style={st.dateNoteText}>Logging for {relDay(date)}</Text>
@@ -91,6 +101,7 @@ export default function FoodSearchScreen() {
           placeholderTextColor={C.muted}
           style={[st.input, webNoOutline]}
           returnKeyType="search"
+          onSubmitEditing={rememberQuery}
           autoCorrect={false}
           autoCapitalize="none"
           selectionColor={C.primary}
@@ -114,6 +125,27 @@ export default function FoodSearchScreen() {
         <ScrollView style={{ flex: 1 }} contentContainerStyle={st.list} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
           {browsing ? (
             <Animated.View key="browse" entering={fadeEnter()}>
+              {state.recentSearches.length > 0 && (
+                <Animated.View entering={enter(0)}>
+                  <View style={st.sectionRow}>
+                    <SectionLabel icon="search-outline" text="Recent searches" />
+                    <Pressable hitSlop={10} onPress={clearRecentSearches} accessibilityRole="button" accessibilityLabel="Clear recent searches">
+                      <Text style={st.clear}>Clear</Text>
+                    </Pressable>
+                  </View>
+                  <View style={st.recentChips}>
+                    {state.recentSearches.map((s) => (
+                      <Chip key={s} label={s} icon="time-outline" onPress={() => setQuery(s)} style={{ height: 34 }} />
+                    ))}
+                  </View>
+                </Animated.View>
+              )}
+              {favourites.length > 0 && (
+                <Animated.View entering={enter(0)}>
+                  <SectionLabel icon="heart-outline" text="Favourites" />
+                  <View style={st.group}>{favourites.map(row)}</View>
+                </Animated.View>
+              )}
               {recent.length > 0 && (
                 <Animated.View entering={enter(0)}>
                   <SectionLabel icon="time-outline" text="Recently logged" />
@@ -255,6 +287,9 @@ const st = StyleSheet.create({
   cats: { gap: 8, paddingHorizontal: 16, paddingVertical: 12 },
   list: { paddingHorizontal: 16, paddingBottom: 24 },
   section: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6, marginBottom: 10, marginLeft: 2 },
+  sectionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  clear: { fontSize: 13, fontWeight: '700', color: C.primary, marginTop: -4 },
+  recentChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14 },
   group: { backgroundColor: C.card, borderRadius: R.lg, overflow: 'hidden', marginBottom: 14, borderWidth: StyleSheet.hairlineWidth, borderColor: C.borderSoft, ...shadow },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 11, minHeight: 68 },
   sep: { position: 'absolute', left: 72, right: 0, bottom: 0, height: StyleSheet.hairlineWidth * 2, backgroundColor: C.borderSoft },

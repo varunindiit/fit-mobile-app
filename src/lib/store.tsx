@@ -1,10 +1,11 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { AppState as RNAppState, Platform } from 'react-native';
 
 import { foodById, type MealKey } from '@/data/foods';
 import type { PlanTier } from '@/data/plans';
-import { programDay, sessionStats, type ProgramId } from '@/data/program';
-import { addDays, round1, targets, todayKey } from './calc';
+import { EXERCISES, type ProgramId, type SessionItem } from '@/data/program';
+import { addDays, parseKey, round1, targets, todayKey } from './calc';
+import { loadState, mergeTyped, saveState } from './persist';
 
 export type Goal = 'lose' | 'maintain' | 'gain' | 'muscle' | 'healthy';
 
@@ -45,10 +46,38 @@ export type Profile = {
   rewards: string[];
 };
 
-export type FoodEntry = { id: string; foodId: string; meal: MealKey; qty: number; date: string };
+export type FoodEntry = { id: string; foodId: string; meal: MealKey; qty: number; date: string; snapId?: string };
+/** A meal logged from the camera, kept so the user has a snap history. */
+export type SnapLog = { id: string; date: string; meal: MealKey; title: string; score: number; kcal: number; items: { foodId: string; qty: number }[] };
+export type ChatMsg = { id: string; from: 'bot' | 'user'; text: string; action?: { label: string; icon: string; href?: string; water?: boolean }; at: number };
 export type WorkoutLog = { id: string; workoutId?: string; sessionKey?: string; title: string; emoji: string; minutes: number; kcal: number; date: string };
 export type WeightEntry = { id: string; date: string; kg: number };
-export type Settings = { mealReminders: boolean; waterReminders: boolean; weighInReminders: boolean; units: 'kg' | 'lb'; language: string; restSeconds: number; coachVoice: boolean; music: boolean; countdown: number };
+/** `cancelledAt` keeps access until the paid period ends. */
+export type Premium = { tier: PlanTier; months: number; since: string; cancelledAt?: string };
+export type OnboardingDraft = { p: Profile; step: string; genderPicked: boolean };
+export type Settings = {
+  mealReminders: boolean;
+  waterReminders: boolean;
+  weighInReminders: boolean;
+  units: 'kg' | 'lb';
+  language: string;
+  restSeconds: number;
+  coachVoice: boolean;
+  music: boolean;
+  countdown: number;
+  /** Guided-class demo speed (1×/5×/10×). */
+  classSpeed: number;
+  /** Last activity the user logged manually, to pre-fill the next log. */
+  lastActivity: { id: string; mins: number };
+  heightUnit: 'cm' | 'ft';
+  /** Training tab filters ('' = screen default). */
+  trainingPart: string;
+  trainingCat: string;
+};
+/** Where to continue a session the user quit midway. */
+export type SessionResume = { idx: number; done: number[]; elapsedMs: number; date: string };
+/** An in-progress guided class (workout/[id]). */
+export type ClassRun = { workoutId: string; idx: number; left: number; elapsed: number; date: string };
 
 export type AppState = {
   onboarded: boolean;
@@ -58,11 +87,27 @@ export type AppState = {
   steps: Record<string, number>;
   workouts: WorkoutLog[];
   weights: WeightEntry[];
-  premium: { tier: PlanTier; months: number; since: string } | null;
+  premium: Premium | null;
+  purchases: { tier: PlanTier; months: number; date: string; amount?: number }[];
   readNotifs: string[];
   settings: Settings;
   programProgress: Record<string, number>; // completed days per program
   backup: { name: string; email: string; lastSync: string } | null;
+  /** User-edited exercise lists, keyed by session key. */
+  planEdits: Record<string, SessionItem[]>;
+  sessionResume: Record<string, SessionResume>;
+  classRun: ClassRun | null;
+  /** One-shot tips the user has dismissed. */
+  seenTips: string[];
+  /** Streak rewards the user has unlocked. */
+  unlockedRewards: string[];
+  snaps: SnapLog[];
+  coachChat: ChatMsg[];
+  recentSearches: string[];
+  favoriteFoods: string[];
+  onboardingDraft: OnboardingDraft | null;
+  /** App rating the user gave (1–5), so we don't ask again. */
+  rating: number | null;
 };
 
 export const DEFAULT_PROFILE: Profile = {
@@ -111,126 +156,203 @@ const INITIAL: AppState = {
   weights: [],
   premium: null,
   readNotifs: [],
-  settings: { mealReminders: true, waterReminders: true, weighInReminders: false, units: 'kg', language: 'English', restSeconds: 30, coachVoice: true, music: false, countdown: 10 },
+  settings: { mealReminders: true, waterReminders: true, weighInReminders: false, units: 'kg', language: 'English', restSeconds: 30, coachVoice: true, music: false, countdown: 10, classSpeed: 5, heightUnit: 'cm', lastActivity: { id: '', mins: 30 }, trainingPart: '', trainingCat: '' },
   programProgress: {},
   backup: null,
+  planEdits: {},
+  sessionResume: {},
+  classRun: null,
+  seenTips: [],
+  unlockedRewards: [],
+  snaps: [],
+  coachChat: [],
+  recentSearches: [],
+  favoriteFoods: [],
+  onboardingDraft: null,
+  rating: null,
+  purchases: [],
 };
 
 let idSeq = 0;
 export const uid = () => `${Date.now().toString(36)}${(idSeq++).toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
-/** Realistic history so the dashboard looks lived-in right after onboarding. */
-function buildDemoData(p: Profile): Pick<AppState, 'entries' | 'water' | 'steps' | 'workouts' | 'weights' | 'programProgress'> {
-  const t = todayKey();
-  const veg = p.diet === 'Vegetarian' || p.diet === 'Vegan' || p.diet === 'Jain';
-  const start = p.weightKg + (p.goal === 'gain' || p.goal === 'muscle' ? -1.8 : p.goal === 'lose' ? 2.6 : 0.4);
-  const weights: WeightEntry[] = [];
-  for (let i = 0; i <= 7; i++) {
-    const frac = i / 7;
-    const wobble = i % 2 === 0 ? 0 : 0.2;
-    const kg = i === 7 ? p.weightKg : round1(start + (p.weightKg - start) * frac + wobble);
-    weights.push({ id: uid(), date: addDays(t, -(7 - i) * 7), kg });
-  }
-  const y = addDays(t, -1);
-  const d2 = addDays(t, -2);
-  const e = (foodId: string, meal: MealKey, qty: number, date: string): FoodEntry => ({ id: uid(), foodId, meal, qty, date });
-  const entries: FoodEntry[] = [
-    e('poha', 'breakfast', 1, t),
-    e('masala-chai', 'breakfast', 1, t),
-    e('almonds', 'morningSnack', 1, t),
-    // yesterday
-    e('idli', 'breakfast', 3, y),
-    e('masala-chai', 'breakfast', 1, y),
-    e('apple', 'morningSnack', 1, y),
-    e('roti', 'lunch', 2, y),
-    e(veg ? 'rajma' : 'chicken-curry', 'lunch', 1, y),
-    e('rice', 'lunch', 0.5, y),
-    e('makhana', 'eveningSnack', 1, y),
-    e('roti', 'dinner', 2, y),
-    e('palak-paneer', 'dinner', 1, y),
-    // two days ago
-    e('oats', 'breakfast', 1, d2),
-    e('roti', 'lunch', 2, d2),
-    e('dal', 'lunch', 1, d2),
-    e('mix-veg', 'lunch', 1, d2),
-    e('samosa', 'eveningSnack', 1, d2),
-    e('veg-pulao', 'dinner', 1, d2),
-    e('curd', 'dinner', 1, d2),
-  ];
-  const stepVals = [6840, 9120, 5310, 10450, 7980, 8650];
-  const steps: Record<string, number> = { [t]: 4286 };
-  stepVals.forEach((v, i) => (steps[addDays(t, -(6 - i))] = v));
+/** Drop malformed records (bad dates, NaN numbers) that would crash screens or skew totals. */
+const isDate = (d: unknown): d is string => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d);
+const isNum = (n: unknown): n is number => typeof n === 'number' && Number.isFinite(n);
+export function sanitize(s: AppState): AppState {
   return {
-    weights,
-    entries,
-    steps,
-    water: { [t]: 3, [y]: 7, [d2]: 8 },
-    workouts: [
-      ...[1, 2].map((day) => {
-        const sess = programDay(p.program, day);
-        const st = sessionStats(sess);
-        return { id: uid(), sessionKey: sess.key, title: `${sess.subtitle.split(' · ')[0]} · Day ${day}`, emoji: sess.emoji, minutes: st.minutes, kcal: st.kcal, date: addDays(t, day - 3) };
-      }),
-      { id: uid(), workoutId: 'morning-yoga', title: 'Morning Yoga Flow', emoji: '🧘', minutes: 20, kcal: 90, date: y },
-      { id: uid(), workoutId: 'brisk-walk', title: 'Brisk Walk', emoji: '🚶', minutes: 30, kcal: 140, date: addDays(t, -9) },
-    ],
-    programProgress: { [p.program]: 2 },
+    ...s,
+    entries: s.entries.filter((e) => e && typeof e.id === 'string' && typeof e.foodId === 'string' && isDate(e.date) && isNum(e.qty) && e.qty > 0),
+    workouts: s.workouts.filter((w) => w && typeof w.id === 'string' && isDate(w.date) && isNum(w.minutes) && isNum(w.kcal)),
+    weights: s.weights.filter((w) => w && typeof w.id === 'string' && isDate(w.date) && isNum(w.kg) && w.kg > 0),
+    readNotifs: s.readNotifs.filter((x) => typeof x === 'string'),
+    coachChat: s.coachChat.filter((m) => m && typeof m.text === 'string' && (m.from === 'bot' || m.from === 'user')).slice(-MAX_CHAT),
+    recentSearches: s.recentSearches.filter((x) => typeof x === 'string').slice(0, MAX_RECENT),
+    favoriteFoods: s.favoriteFoods.filter((x) => typeof x === 'string'),
+    premium: s.premium && typeof s.premium.since === 'string' && isNum(s.premium.months) ? s.premium : null,
+    classRun: s.classRun && typeof s.classRun.workoutId === 'string' && isNum(s.classRun.idx) ? s.classRun : null,
+    rating: isNum(s.rating) ? s.rating : null,
+    backup: s.backup && typeof s.backup === 'object' ? s.backup : null,
+    onboardingDraft:
+      s.onboardingDraft && typeof s.onboardingDraft.step === 'string' ? { ...s.onboardingDraft, p: mergeTyped(DEFAULT_PROFILE, s.onboardingDraft.p) } : null,
+    planEdits: Object.fromEntries(
+      Object.entries(s.planEdits)
+        .filter(([, items]) => Array.isArray(items))
+        .map(([k, items]) => [k, items.filter((it) => it && EXERCISE_IDS.has(it.exerciseId))]),
+    ),
   };
 }
 
-const STORAGE_KEY = 'fitora-state-v1';
+const MAX_CHAT = 100;
+const MAX_RECENT = 8;
+const clampWater = (n: number) => Math.max(0, Math.min(16, Math.round(n)));
+const EXERCISE_IDS = new Set(EXERCISES.map((e) => e.id));
+const SAVE_DELAY = 300;
 
 function useAppStore() {
   const [state, setState] = useState<AppState>(INITIAL);
   const [hydrated, setHydrated] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const latest = useRef(state);
+  const dirty = useRef(false);
+  // If storage couldn't be read, never write: saving INITIAL would erase the user's real data.
+  const loadFailed = useRef(false);
+  latest.current = state;
+
+  const flush = useCallback(() => {
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = null;
+    if (!dirty.current || loadFailed.current) return;
+    dirty.current = false;
+    saveState(latest.current).catch((e) => {
+      dirty.current = true;
+      console.warn('[store] save failed', e);
+    });
+  }, []);
 
   useEffect(() => {
-    AsyncStorage.getItem(STORAGE_KEY)
-      .then((raw) => {
-        if (raw) {
-          const saved = JSON.parse(raw);
-          setState({ ...INITIAL, ...saved, profile: { ...DEFAULT_PROFILE, ...saved.profile }, settings: { ...INITIAL.settings, ...saved.settings } });
-        }
+    loadState(INITIAL)
+      .then((saved) => setState(sanitize(saved)))
+      .catch((e) => {
+        loadFailed.current = true;
+        console.warn('[store] load failed', e);
       })
-      .catch(() => {})
       .finally(() => setHydrated(true));
   }, []);
 
   useEffect(() => {
     if (!hydrated) return;
+    dirty.current = true;
     if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => {
-      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(state)).catch(() => {});
-    }, 300);
-  }, [state, hydrated]);
+    saveTimer.current = setTimeout(flush, SAVE_DELAY);
+  }, [state, hydrated, flush]);
+
+  // Write immediately when the app is backgrounded or the tab is hidden, so a kill can't drop the last change.
+  useEffect(() => {
+    const sub = RNAppState.addEventListener('change', (s) => s !== 'active' && flush());
+    const onHide = () => flush();
+    if (Platform.OS === 'web' && typeof window !== 'undefined') window.addEventListener('pagehide', onHide);
+    return () => {
+      sub.remove();
+      if (Platform.OS === 'web' && typeof window !== 'undefined') window.removeEventListener('pagehide', onHide);
+      flush();
+    };
+  }, [flush]);
 
   const update = useCallback((fn: (s: AppState) => AppState) => setState(fn), []);
 
   const actions = useMemo(
     () => ({
+      /**
+       * Save onboarding answers. Never wipes logs: a re-onboard (after log out / restart) keeps all history,
+       * and only a fresh user gets their onboarding weight as the first weigh-in.
+       */
       completeOnboarding: (p: Profile) =>
         update((s) => {
-          const demo = buildDemoData(p);
-          return { ...INITIAL, ...demo, backup: s.backup, profile: { ...p, startWeightKg: demo.weights[0]?.kg ?? p.weightKg }, onboarded: true, settings: { ...INITIAL.settings, ...s.settings, mealReminders: p.notifications } };
+          const fresh = s.weights.length === 0;
+          const weights = fresh ? [{ id: uid(), date: todayKey(), kg: round1(p.weightKg) }] : s.weights;
+          const startWeightKg = fresh ? p.weightKg : (s.profile.startWeightKg || p.weightKg);
+          return { ...s, weights, profile: { ...p, startWeightKg }, onboarded: true, onboardingDraft: null };
         }),
       restartOnboarding: () => update((s) => ({ ...s, onboarded: false })),
+      /** Returning user on this device: go straight back in with their saved data. */
+      logIn: () => update((s) => ({ ...s, onboarded: true, onboardingDraft: null })),
+      saveOnboardingDraft: (d: OnboardingDraft) => update((s) => ({ ...s, onboardingDraft: d })),
+      clearOnboardingDraft: () => update((s) => ({ ...s, onboardingDraft: null })),
+      setRating: (n: number) => update((s) => ({ ...s, rating: Math.max(1, Math.min(5, Math.round(n))) })),
       resetAll: () => update(() => INITIAL),
       updateProfile: (patch: Partial<Profile>) => update((s) => ({ ...s, profile: { ...s.profile, ...patch } })),
       updateSettings: (patch: Partial<Settings>) => update((s) => ({ ...s, settings: { ...s.settings, ...patch } })),
 
       addFood: (foodId: string, meal: MealKey, qty: number, date = todayKey()) =>
-        update((s) => ({ ...s, entries: [...s.entries, { id: uid(), foodId, meal, qty, date }] })),
-      updateFood: (id: string, patch: Partial<FoodEntry>) =>
-        update((s) => ({ ...s, entries: s.entries.map((e) => (e.id === id ? { ...e, ...patch } : e)) })),
+        update((s) => (Number.isFinite(qty) && qty > 0 ? { ...s, entries: [...s.entries, { id: uid(), foodId, meal, qty, date }] } : s)),
+      updateFood: (id: string, patch: Partial<Omit<FoodEntry, 'id'>>) =>
+        update((s) => {
+          if (patch.qty !== undefined && !(Number.isFinite(patch.qty) && patch.qty > 0)) return s;
+          return { ...s, entries: s.entries.map((e) => (e.id === id ? { ...e, ...patch } : e)) };
+        }),
       removeFood: (id: string) => update((s) => ({ ...s, entries: s.entries.filter((e) => e.id !== id) })),
+      /** Undo a delete: put the original entry back at its old position (same id). */
+      restoreFood: (e: FoodEntry, index: number) =>
+        update((s) => {
+          if (s.entries.some((x) => x.id === e.id)) return s;
+          const entries = [...s.entries];
+          entries.splice(Math.max(0, Math.min(index, entries.length)), 0, e);
+          return { ...s, entries };
+        }),
+      /** Copy every entry from one day to another; no-op when the target day already has food (prevents double copies). */
+      copyDay: (from: string, to: string) =>
+        update((s) => {
+          if (from === to || s.entries.some((e) => e.date === to)) return s;
+          const copies = s.entries.filter((e) => e.date === from).map(({ snapId: _snap, ...e }) => ({ ...e, id: uid(), date: to }));
+          return copies.length ? { ...s, entries: [...s.entries, ...copies] } : s;
+        }),
+      /** Log a snapped meal and all its items in one atomic update. */
+      logSnap: (snap: Omit<SnapLog, 'id'>) =>
+        update((s) => {
+          const id = uid();
+          const items = snap.items.filter((i) => i.qty > 0);
+          if (!items.length) return s;
+          const entries = items.map((i) => ({ id: uid(), foodId: i.foodId, qty: i.qty, meal: snap.meal, date: snap.date, snapId: id }));
+          return { ...s, snaps: [{ ...snap, items, id }, ...s.snaps], entries: [...s.entries, ...entries] };
+        }),
+      toggleFavorite: (foodId: string) =>
+        update((s) => ({ ...s, favoriteFoods: s.favoriteFoods.includes(foodId) ? s.favoriteFoods.filter((f) => f !== foodId) : [foodId, ...s.favoriteFoods] })),
+      addRecentSearch: (q: string) =>
+        update((s) => {
+          const t = q.trim();
+          if (!t) return s;
+          return { ...s, recentSearches: [t, ...s.recentSearches.filter((x) => x.toLowerCase() !== t.toLowerCase())].slice(0, MAX_RECENT) };
+        }),
+      clearRecentSearches: () => update((s) => ({ ...s, recentSearches: [] })),
+      addChatMessage: (m: Omit<ChatMsg, 'id' | 'at'>) =>
+        update((s) => ({ ...s, coachChat: [...s.coachChat, { ...m, id: uid(), at: Date.now() }].slice(-MAX_CHAT) })),
+      clearChat: () => update((s) => ({ ...s, coachChat: [] })),
 
       setWater: (glasses: number, date = todayKey()) =>
-        update((s) => ({ ...s, water: { ...s.water, [date]: Math.max(0, Math.min(16, glasses)) } })),
-      addSteps: (n: number, date = todayKey()) => update((s) => ({ ...s, steps: { ...s.steps, [date]: (s.steps[date] ?? 0) + n } })),
+        update((s) => ({ ...s, water: { ...s.water, [date]: clampWater(glasses) } })),
+      /** Relative change computed from the latest state, so rapid taps never drop a glass. */
+      addWater: (delta: number, date = todayKey()) => update((s) => ({ ...s, water: { ...s.water, [date]: clampWater((s.water[date] ?? 0) + delta) } })),
+      addSteps: (n: number, date = todayKey()) => update((s) => ({ ...s, steps: { ...s.steps, [date]: Math.max(0, Math.round((s.steps[date] ?? 0) + n)) } })),
+      setSteps: (n: number, date = todayKey()) => update((s) => ({ ...s, steps: { ...s.steps, [date]: Math.max(0, Math.round(n)) } })),
 
-      logWorkout: (w: Omit<WorkoutLog, 'id'>) => update((s) => ({ ...s, workouts: [{ ...w, id: uid() }, ...s.workouts] })),
-      removeWorkout: (id: string) => update((s) => ({ ...s, workouts: s.workouts.filter((w) => w.id !== id) })),
+      /** Returns the new log id so callers can undo it. `date` defaults to the moment of logging. */
+      logWorkout: (w: Omit<WorkoutLog, 'id' | 'date'> & { date?: string }) => {
+        const id = uid();
+        update((s) => ({ ...s, workouts: [{ ...w, id, date: w.date ?? todayKey() }, ...s.workouts] }));
+        return id;
+      },
+      /** Deleting the log for the latest completed program day also rolls the program back. */
+      removeWorkout: (id: string) =>
+        update((s) => {
+          const gone = s.workouts.find((w) => w.id === id);
+          const workouts = s.workouts.filter((w) => w.id !== id);
+          const programProgress = { ...s.programProgress };
+          const [kind, pid, d] = gone?.sessionKey?.split(':') ?? [];
+          const day = Number(d);
+          if (kind === 'program' && day === programProgress[pid] && !workouts.some((w) => w.sessionKey === gone?.sessionKey)) programProgress[pid] = day - 1;
+          return { ...s, workouts, programProgress };
+        }),
 
       addWeight: (kg: number, date = todayKey()) =>
         update((s) => {
@@ -252,14 +374,39 @@ function useAppStore() {
           const progress = { ...s.programProgress };
           const [kind, pid, day] = w.sessionKey.split(':');
           if (kind === 'program' && Number(day) === (progress[pid] ?? 0) + 1) progress[pid] = Number(day);
-          return { ...s, workouts: [log, ...s.workouts], programProgress: progress };
+          const { [w.sessionKey]: _done, ...sessionResume } = s.sessionResume;
+          return { ...s, workouts: [log, ...s.workouts], programProgress: progress, sessionResume };
         }),
+      /** Save (or with null, reset) the user's edited exercise list for a session. */
+      setPlanEdit: (key: string, items: SessionItem[] | null) =>
+        update((s) => {
+          const { [key]: _old, ...planEdits } = s.planEdits;
+          return { ...s, planEdits: items ? { ...planEdits, [key]: items } : planEdits };
+        }),
+      saveResume: (key: string, r: Omit<SessionResume, 'date'>) =>
+        update((s) => ({ ...s, sessionResume: { ...s.sessionResume, [key]: { ...r, date: todayKey() } } })),
+      clearResume: (key: string) =>
+        update((s) => {
+          if (!(key in s.sessionResume)) return s;
+          const { [key]: _old, ...sessionResume } = s.sessionResume;
+          return { ...s, sessionResume };
+        }),
+      saveClassRun: (r: Omit<ClassRun, 'date'> | null) => update((s) => ({ ...s, classRun: r ? { ...r, date: todayKey() } : null })),
+      markTipSeen: (id: string) => update((s) => (s.seenTips.includes(id) ? s : { ...s, seenTips: [...s.seenTips, id] })),
+      unlockReward: (id: string) => update((s) => (s.unlockedRewards.includes(id) ? s : { ...s, unlockedRewards: [...s.unlockedRewards, id] })),
       setProgram: (program: ProgramId) => update((s) => ({ ...s, profile: { ...s.profile, program } })),
       resetProgram: (program: ProgramId) => update((s) => ({ ...s, programProgress: { ...s.programProgress, [program]: 0 } })),
       setBackup: (backup: AppState['backup']) => update((s) => ({ ...s, backup })),
 
-      subscribe: (tier: PlanTier, months: number) => update((s) => ({ ...s, premium: { tier, months, since: todayKey() } })),
-      cancelPremium: () => update((s) => ({ ...s, premium: null })),
+      /** Renewing the same active tier extends it; a new tier starts today. */
+      subscribe: (tier: PlanTier, months: number, amount?: number) =>
+        update((s) => {
+          const today = todayKey();
+          const extend = s.premium && s.premium.tier === tier && isPremiumActive(s.premium, today);
+          const premium: Premium = extend ? { tier, since: s.premium!.since, months: s.premium!.months + months } : { tier, months, since: today };
+          return { ...s, premium, purchases: [...s.purchases, { tier, months, date: today, amount }] };
+        }),
+      cancelPremium: () => update((s) => (s.premium ? { ...s, premium: { ...s.premium, cancelledAt: todayKey() } } : s)),
       markNotifsRead: (ids: string[]) => update((s) => ({ ...s, readNotifs: Array.from(new Set([...s.readNotifs, ...ids])) })),
     }),
     [update],
@@ -267,7 +414,7 @@ function useAppStore() {
 
   const t = useMemo(() => targets(state.profile), [state.profile]);
 
-  return { state, hydrated, targets: t, ...actions };
+  return { state, hydrated, targets: t, flush, ...actions };
 }
 
 type Store = ReturnType<typeof useAppStore>;
@@ -282,6 +429,14 @@ export function useStore() {
   const s = useContext(Ctx);
   if (!s) throw new Error('useStore outside provider');
   return s;
+}
+
+/** Premium is active until its paid period ends (also after a cancel). */
+export function isPremiumActive(premium: Premium | null, today = todayKey()) {
+  if (!premium) return false;
+  const end = parseKey(premium.since);
+  end.setMonth(end.getMonth() + premium.months);
+  return parseKey(today) < end;
 }
 
 /** Nutrition totals for a day, overall and per meal. */

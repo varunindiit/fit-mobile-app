@@ -1,8 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Extrapolation,
@@ -25,7 +25,7 @@ import { scheduleOnRN } from 'react-native-worklets';
 import { ExerciseArt } from '@/components/program/ExerciseArt';
 import { ExerciseSheet } from '@/components/program/ExerciseSheet';
 import { GradientButton, PRIMARY_COLORS } from '@/components/program/GradientButton';
-import { editedPlans, findSession, itemLabel, planItems, programFlags, resumePoints, sessionMeta } from '@/components/program/session';
+import { findSession, itemLabel, planItems, sessionMeta } from '@/components/program/session';
 import { WorkoutSettingsSheet } from '@/components/program/WorkoutSettingsSheet';
 import { Button, Card, EmptyState, enter, Header, IconTile, layoutTransition, nativeOnly, ListRow, PressableScale, Screen, SectionTitle, Sheet, T, tap, useToast, type IconName } from '@/components/ui';
 import { exerciseById, sessionStats, type Session, type SessionItem } from '@/data/program';
@@ -48,7 +48,8 @@ const ctlIn = nativeOnly(ZoomIn.duration(MOTION.base));
 const ctlOut = nativeOnly(ZoomOut.duration(MOTION.fast));
 
 export default function ProgramDayScreen() {
-  const { key } = useLocalSearchParams<{ key?: string }>();
+  const { key: rawKey } = useLocalSearchParams<{ key?: string | string[] }>();
+  const key = Array.isArray(rawKey) ? rawKey[0] : rawKey;
   const session = useMemo(() => findSession(String(key ?? '')), [key]);
   if (!session)
     return (
@@ -70,42 +71,45 @@ const rowKeys = (items: SessionItem[]) => {
 };
 
 function DayPlan({ session }: { session: Session }) {
-  const { state, completeSession } = useStore();
+  const { state, completeSession, setPlanEdit, clearResume, markTipSeen } = useStore();
   const toast = useToast();
   const insets = useSafeAreaInsets();
   const meta = sessionMeta(session);
   const HERO = insets.top + 236;
 
-  const [items, setItems] = useState<SessionItem[]>(() => planItems(session));
+  const [items, setItems] = useState<SessionItem[]>(() => planItems(session, state.planEdits));
   const [editing, setEditing] = useState(false);
-  const [tip, setTip] = useState(() => !programFlags.tipShown && !session.restDay);
+  const [tip, setTip] = useState(() => !state.seenTips.includes('plan-edit') && !session.restDay);
   const [sheetIdx, setSheetIdx] = useState<number | null>(null);
   const [more, setMore] = useState(false);
   const [settings, setSettings] = useState(false);
-  const [resumeAt, setResumeAt] = useState(0);
   const [solid, setSolid] = useState(false);
   const y = useSharedValue(0);
   const solidSV = useSharedValue(false);
   const tipP = useSharedValue(0);
+  const firstItems = useRef(true);
+  const restMarked = useRef(false);
 
   useEffect(() => {
     if (!tip) return;
-    programFlags.tipShown = true;
+    markTipSeen('plan-edit');
     tipP.set(withDelay(450, withSpring(1, { damping: 13, stiffness: 190, mass: 0.8 })));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Keep the edited plan in the in-memory store so the player uses it.
+  // Persist plan edits (skipping the initial load) so the player and later visits use them.
   useEffect(() => {
-    if (JSON.stringify(items) === JSON.stringify(session.items)) editedPlans.delete(session.key);
-    else editedPlans.set(session.key, items);
-  }, [items, session]);
+    if (firstItems.current) {
+      firstItems.current = false;
+      return;
+    }
+    setPlanEdit(session.key, JSON.stringify(items) === JSON.stringify(session.items) ? null : items);
+  }, [items, session, setPlanEdit]);
 
-  useFocusEffect(
-    useCallback(() => {
-      setResumeAt(Math.min(resumePoints.get(session.key) ?? 0, planItems(session).length - 1));
-    }, [session]),
-  );
+  const resume = state.sessionResume[session.key];
+  const resumeAt = resume ? Math.max(0, Math.min(resume.idx, items.length - 1)) : 0;
+  const canResume = !!resume && (resumeAt > 0 || resume.done.length > 0);
+  const resumePct = resume ? Math.min(100, Math.round((resume.done.length / items.length) * 100)) : 0;
 
   const stats = sessionStats({ ...session, items }, state.settings.restSeconds);
   const done = meta.program ? state.programProgress[meta.program.id] ?? 0 : 0;
@@ -144,8 +148,7 @@ function DayPlan({ session }: { session: Session }) {
   const remove = (i: number) => {
     if (items.length <= 1) return toast('Keep at least one exercise', 'alert-circle');
     setItems((list) => list.filter((_, k) => k !== i));
-    resumePoints.delete(session.key);
-    setResumeAt(0);
+    clearResume(session.key);
   };
   const adjust = (i: number, dir: 1 | -1) =>
     setItems((list) =>
@@ -157,18 +160,16 @@ function DayPlan({ session }: { session: Session }) {
     );
   const resetPlan = () => {
     setItems(session.items);
-    resumePoints.delete(session.key);
-    setResumeAt(0);
+    clearResume(session.key);
   };
-  const start = (resume = false) => {
-    if (!resume) {
-      resumePoints.delete(session.key);
-      setResumeAt(0);
-    }
-    router.push({ pathname: '/player', params: resume ? { key: session.key, resume: '1' } : { key: session.key } });
+  const start = (cont = false) => {
+    if (!cont) clearResume(session.key);
+    router.push({ pathname: '/player', params: cont ? { key: session.key, resume: '1' } : { key: session.key } });
   };
   const markRest = () => {
-    if (!meta.program) return;
+    if (!meta.program || meta.day === undefined || restMarked.current) return;
+    if (meta.day !== done + 1) return toast(`Finish Day ${done + 1} first`, 'information-circle');
+    restMarked.current = true;
     completeSession({ sessionKey: session.key, title: `${meta.program.title} · Day ${meta.day} (Rest)`, emoji: '😴', minutes: 0, kcal: 0 });
     toast(`Day ${meta.day} rest complete — see you tomorrow!`, 'moon');
     goBack();
@@ -362,7 +363,7 @@ function DayPlan({ session }: { session: Session }) {
               <Text style={s.doneText}>Done</Text>
             </PressableScale>
           </Animated.View>
-        ) : resumeAt > 0 ? (
+        ) : canResume ? (
           <Animated.View entering={nativeOnly(FadeIn.duration(MOTION.base))} style={{ flexDirection: 'row', gap: 10 }}>
             <PressableScale
               scaleTo={0.96}
@@ -375,7 +376,7 @@ function DayPlan({ session }: { session: Session }) {
               <Ionicons name="refresh" size={17} color={C.text} />
               <Text style={s.restartText}>Restart</Text>
             </PressableScale>
-            <GradientButton title={`Continue · ${Math.round((resumeAt / items.length) * 100)}% done`} onPress={() => start(true)} style={{ flex: 1 }} />
+            <GradientButton title={`Continue · ${resumePct}% done`} onPress={() => start(true)} style={{ flex: 1 }} />
           </Animated.View>
         ) : (
           <GradientButton title={completed ? 'START AGAIN' : 'START'} icon="play" onPress={() => start(false)} />

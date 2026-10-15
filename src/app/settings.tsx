@@ -4,11 +4,11 @@ import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
-import { AboutSheet, ConnectedAppsCard, GroupLabel, HelpSheet, RemindersCard, shared, tint, UnitsRow } from '@/components/profile/shared';
+import { AboutSheet, ConnectedAppsCard, fmtFull, GroupLabel, HelpSheet, planEnd, RemindersCard, shared, tint, UnitsRow } from '@/components/profile/shared';
 import { LanguageSheet, WorkoutSettingsSheet } from '@/components/profile/sheets';
 import { Card, Divider, enter, Header, ListRow, Pill, Screen, Toggle, useToast } from '@/components/ui';
 import { NOTIFICATIONS } from '@/data/notifications';
-import { useStore } from '@/lib/store';
+import { isPremiumActive, useStore } from '@/lib/store';
 import { C } from '@/theme';
 
 export default function SettingsScreen() {
@@ -16,7 +16,8 @@ export default function SettingsScreen() {
   const toast = useToast();
   const [sheet, setSheet] = useState<null | 'help' | 'about' | 'workout' | 'language'>(null);
   const unread = NOTIFICATIONS.filter((n) => !state.readNotifs.includes(n.id)).length;
-  const premium = state.premium;
+  const premium = isPremiumActive(state.premium) ? state.premium : null;
+  const planName = premium ? `Fitora ${premium.tier === 'pro' ? 'Pro' : 'Smart'}` : '';
   const push = state.profile.notifications;
   const setPush = (v: boolean) => {
     updateProfile({ notifications: v });
@@ -78,8 +79,10 @@ export default function SettingsScreen() {
               iconColor={C.warning}
               iconBg={C.warningSoft}
               title="Subscription"
-              subtitle={premium ? `Fitora ${premium.tier === 'pro' ? 'Pro' : 'Smart'} · active` : 'Free plan'}
-              right={premium ? <Pill text="ACTIVE" icon="checkmark" color={C.primaryDark} bg={C.primarySoft} /> : undefined}
+              subtitle={
+                !premium ? 'Free plan' : premium.cancelledAt ? `${planName} · Cancelled · active till ${fmtFull(planEnd(premium.since, premium.months))}` : `${planName} · active`
+              }
+              right={premium && !premium.cancelledAt ? <Pill text="ACTIVE" icon="checkmark" color={C.primaryDark} bg={C.primarySoft} /> : undefined}
               onPress={() => router.push('/plans')}
             />
             <Divider style={shared.inset} />

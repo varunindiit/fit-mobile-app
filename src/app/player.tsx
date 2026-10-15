@@ -3,7 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { BackHandler, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { AppState, BackHandler, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, { cancelAnimation, Easing, useAnimatedProps, useAnimatedStyle, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
@@ -11,7 +11,7 @@ import Svg, { Circle } from 'react-native-svg';
 import { ExerciseArt } from '@/components/program/ExerciseArt';
 import { ExerciseSheet } from '@/components/program/ExerciseSheet';
 import { GradientButton, PRIMARY_COLORS } from '@/components/program/GradientButton';
-import { findSession, fmtClock, itemLabel, logTitle, planItems, resumePoints, sessionMeta } from '@/components/program/session';
+import { findSession, fmtClock, itemLabel, logTitle, planItems, sessionMeta } from '@/components/program/session';
 import { Dialog, EASE_OUT, EmptyState, Header, IconButton, PressableScale, Screen, tap, useToast } from '@/components/ui';
 import { exerciseById, sessionStats, type Session } from '@/data/program';
 import { useStore } from '@/lib/store';
@@ -22,9 +22,12 @@ const GLASS = 'rgba(255,255,255,0.12)';
 const GLASS_BORDER = 'rgba(255,255,255,0.16)';
 
 export default function PlayerScreen() {
-  const { key, resume } = useLocalSearchParams<{ key?: string; resume?: string }>();
+  const params = useLocalSearchParams<{ key?: string | string[]; resume?: string | string[] }>();
+  const key = Array.isArray(params.key) ? params.key[0] : params.key;
+  const resume = Array.isArray(params.resume) ? params.resume[0] : params.resume;
+  const { state } = useStore();
   const session = useMemo(() => findSession(String(key ?? '')), [key]);
-  if (!session || session.restDay || planItems(session).length === 0)
+  if (!session || session.restDay || planItems(session, state.planEdits).length === 0)
     return (
       <Screen>
         <Header title="Workout" />
@@ -35,26 +38,27 @@ export default function PlayerScreen() {
 }
 
 function Player({ session, resume }: { session: Session; resume: boolean }) {
-  const { state, completeSession, updateSettings } = useStore();
+  const { state, completeSession, updateSettings, saveResume, clearResume } = useStore();
   const toast = useToast();
   const insets = useSafeAreaInsets();
   const { height: winH } = useWindowDimensions();
 
-  const [items] = useState(() => planItems(session));
+  const [items] = useState(() => planItems(session, state.planEdits));
   const n = items.length;
-  const [startIdx] = useState(() => (resume ? Math.max(0, Math.min(n - 1, resumePoints.get(session.key) ?? 0)) : 0));
+  const [saved] = useState(() => (resume ? state.sessionResume[session.key] : undefined));
+  const [startIdx] = useState(() => (saved ? Math.max(0, Math.min(n - 1, saved.idx)) : 0));
   const [readyTotal] = useState(() => Math.max(3, state.settings.countdown));
   const [idx, setIdx] = useState(startIdx);
   const [phase, setPhase] = useState<Phase>('ready');
   const [left, setLeft] = useState(readyTotal);
   const [restTotal, setRestTotal] = useState(state.settings.restSeconds);
-  const [done, setDone] = useState<number[]>(() => Array.from({ length: startIdx }, (_, i) => i));
+  const [done, setDone] = useState<number[]>(() => (saved ? saved.done.filter((i) => Number.isInteger(i) && i >= 0 && i < n) : []));
   const [paused, setPaused] = useState(false);
   const [info, setInfo] = useState<number | null>(null);
   const [askQuit, setAskQuit] = useState(false);
 
-  const finished = useRef(false);
-  const activeMs = useRef(0);
+  const finished = useRef(false); // also set when quitting, so nothing re-saves progress afterwards
+  const activeMs = useRef(saved && Number.isFinite(saved.elapsedMs) ? saved.elapsedMs : 0);
   const lastTs = useRef(0); // set on mount by the active-time effect below
   const fade = useSharedValue(1);
 
@@ -73,6 +77,32 @@ function Player({ session, resume }: { session: Session; resume: boolean }) {
     if (halted) activeMs.current += Date.now() - lastTs.current;
     else lastTs.current = Date.now();
   }, [halted]);
+
+  // Persist progress as it happens, so a crash or app kill can still continue from here.
+  useEffect(() => {
+    if (finished.current) return;
+    saveResume(session.key, { idx, done, elapsedMs: activeMs.current + (halted ? 0 : Date.now() - lastTs.current) });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [idx, done]);
+
+  // Pause when the app leaves the foreground (and save elapsed time); un-freeze non-exercise countdowns on return.
+  const live = useRef({ idx, done, phase, timed, halted });
+  useEffect(() => {
+    live.current = { idx, done, phase, timed, halted };
+  });
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (st) => {
+      if (finished.current) return;
+      if (st === 'active') {
+        if (!(live.current.phase === 'work' && live.current.timed)) setPaused(false);
+        return;
+      }
+      setPaused(true);
+      const { idx: i, done: d, halted: h } = live.current;
+      saveResume(session.key, { idx: i, done: d, elapsedMs: activeMs.current + (h ? 0 : Date.now() - lastTs.current) });
+    });
+    return () => sub.remove();
+  }, [session.key, saveResume]);
 
   // 1s real-time ticker for get-ready, rest and timed exercises.
   useEffect(() => {
@@ -101,9 +131,19 @@ function Player({ session, resume }: { session: Session; resume: boolean }) {
     setPaused(false);
   };
 
+  const leave = () => {
+    if (router.canGoBack()) router.back();
+    else router.replace({ pathname: '/program-day', params: { key: session.key } });
+  };
+
   const finish = (count: number) => {
     if (finished.current) return;
     finished.current = true;
+    if (count === 0) {
+      clearResume(session.key);
+      toast('No exercises completed — nothing was logged', 'information-circle');
+      return leave();
+    }
     const ms = activeMs.current + (halted ? 0 : Date.now() - lastTs.current);
     const minutes = Math.max(1, Math.round(ms / 60000));
     const kcal = Math.max(1, Math.round((sessionStats({ ...session, items }, state.settings.restSeconds).kcal * count) / n));
@@ -111,7 +151,6 @@ function Player({ session, resume }: { session: Session; resume: boolean }) {
     const prev = meta.program ? state.programProgress[meta.program.id] ?? 0 : 0;
     const advanced = !!meta.program && meta.day === prev + 1;
     completeSession({ sessionKey: session.key, title: logTitle(session), emoji: session.emoji, minutes, kcal });
-    resumePoints.delete(session.key);
     router.replace({ pathname: '/streak', params: { key: session.key, kcal: String(kcal), minutes: String(minutes), exercises: String(Math.max(1, count)), advanced: advanced ? '1' : '0' } });
   };
 
@@ -147,12 +186,13 @@ function Player({ session, resume }: { session: Session; resume: boolean }) {
   const requestQuit = () => setAskQuit(true);
   const quit = () => {
     setAskQuit(false);
-    if (idx > 0) {
-      resumePoints.set(session.key, idx);
+    finished.current = true;
+    // The quit dialog halts the clock, so activeMs already holds the elapsed time.
+    if (idx > 0 || done.length > 0) {
+      saveResume(session.key, { idx, done, elapsedMs: activeMs.current });
       toast('Progress saved — continue anytime', 'bookmark');
-    } else resumePoints.delete(session.key);
-    if (router.canGoBack()) router.back();
-    else router.replace({ pathname: '/program-day', params: { key: session.key } });
+    } else clearResume(session.key);
+    leave();
   };
 
   // Android hardware back asks before quitting.

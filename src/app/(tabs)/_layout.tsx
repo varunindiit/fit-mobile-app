@@ -211,7 +211,7 @@ const QUICK: {
 
 export default function TabsLayout() {
   const [open, setOpen] = useState(false);
-  const { state, setWater } = useStore();
+  const { state, targets, addWater } = useStore();
   const toast = useToast();
 
   const pick = (key: string) => {
@@ -238,9 +238,15 @@ export default function TabsLayout() {
         });
       if (key === "ria") router.push("/coach");
       if (key === "water") {
-        const n = (state.water[todayKey()] ?? 0) + 1;
-        setWater(n);
-        toast(`Added a glass of water · ${n} of 8 today`, "water");
+        const today = todayKey();
+        const n = Math.min(16, (state.water[today] ?? 0) + 1);
+        addWater(1, today);
+        toast(
+          targets.water > 0
+            ? `Added a glass of water · ${n} of ${targets.water} today`
+            : `Added a glass of water · ${n} today`,
+          "water",
+        );
       }
     }, 250);
   };

@@ -40,8 +40,9 @@ import { foodById, MEALS } from '@/data/foods';
 import { NOTIFICATIONS } from '@/data/notifications';
 import { PLAN_TIERS } from '@/data/plans';
 import { programById, programDay, sessionStats } from '@/data/program';
-import { fmtDate, kmFromSteps, todayKey } from '@/lib/calc';
-import { burnedOn, dayTotals, useStore, weekProgress, workoutStreak } from '@/lib/store';
+import { fmtDate, kmFromSteps } from '@/lib/calc';
+import { burnedOn, dayTotals, isPremiumActive, useStore, weekProgress, workoutStreak } from '@/lib/store';
+import { useToday } from '@/lib/useToday';
 import { C, G, MOTION, R, shadow, shadowSm } from '@/theme';
 
 const HERO_IMAGE = require('@/assets/images/home-hero.jpg');
@@ -79,12 +80,12 @@ const RIA_CHIPS: { label: string; icon: IconName }[] = [
 ];
 
 export default function Home() {
-  const { state, targets, setWater, addSteps } = useStore();
+  const { state, targets, setWater, addWater, addSteps } = useStore();
   const toast = useToast();
   const insets = useSafeAreaInsets();
   const [tip, setTip] = useState<(typeof TIPS)[number] | null>(null);
   const [syncing, setSyncing] = useState(false);
-  const today = todayKey();
+  const today = useToday();
   const p = state.profile;
   const first = p.name.split(' ')[0] || 'there';
 
@@ -103,7 +104,7 @@ export default function Home() {
   const start = p.startWeightKg || p.weightKg;
   const weightProgress = tracksWeight ? Math.abs(start - p.weightKg) / Math.max(0.1, Math.abs(start - p.targetKg)) : 1;
   const proteinGap = Math.max(0, targets.protein - total.protein);
-  const premiumTier = state.premium ? PLAN_TIERS.find((x) => x.id === state.premium!.tier) : null;
+  const premiumTier = isPremiumActive(state.premium) ? PLAN_TIERS.find((x) => x.id === state.premium!.tier) : null;
   const todaysWorkout = state.workouts.find((w) => w.date === today);
   const streak = workoutStreak(state);
   const program = programById(p.program);
@@ -168,11 +169,19 @@ export default function Home() {
   const heroTitle = doneToday ? `Day ${doneDays} complete!` : nextSession.restDay ? 'Recovery day' : `Ready for Day ${nextDay}?`;
   const heroSub = doneToday ? 'Workout complete · see you tomorrow' : nextSession.restDay ? 'Light stretching & a walk count too' : `${nextStats.exercises} exercises · ${nextStats.minutes} min · ~${nextStats.kcal} kcal`;
 
+  // Simulated health sync: one pending sync at a time, cancelled if Home unmounts.
+  const syncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (syncTimer.current) clearTimeout(syncTimer.current);
+  }, []);
   const sync = () => {
+    if (syncTimer.current) return;
     setSyncing(true);
-    setTimeout(() => {
+    const day = today;
+    syncTimer.current = setTimeout(() => {
+      syncTimer.current = null;
       const n = 300 + Math.round(Math.random() * 600);
-      addSteps(n);
+      addSteps(n, day);
       setSyncing(false);
       toast(`Synced ${n.toLocaleString('en-IN')} new steps`, 'footsteps');
     }, 1100);
@@ -483,13 +492,13 @@ export default function Home() {
                   {water >= targets.water ? 'Daily goal reached' : `${targets.water - water} more to go`}
                 </Text>
               </View>
-              <IconButton icon="remove" bg={C.waterSoft} color={C.water} onPress={() => setWater(water - 1)} />
+              <IconButton icon="remove" bg={C.waterSoft} color={C.water} onPress={() => addWater(-1, today)} />
               <IconButton
                 icon="add"
                 bg={C.water}
                 color={C.white}
                 onPress={() => {
-                  setWater(water + 1);
+                  addWater(1, today);
                   if (water + 1 === targets.water) toast('Water goal reached!', 'trophy');
                 }}
               />
@@ -502,7 +511,7 @@ export default function Home() {
                   filled={i < water}
                   onPress={() => {
                     tap();
-                    setWater(i + 1 === water ? i : i + 1);
+                    setWater(i + 1 === water ? i : i + 1, today);
                   }}
                 />
               ))}

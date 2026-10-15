@@ -324,12 +324,20 @@ function Cta({ children }: { children: React.ReactNode }) {
 
 /* ---------------- 22 · Paywall ---------------- */
 
-export function Paywall({ male, gaining, onSkip, onSubscribe }: { male: boolean; gaining: boolean; onSkip: () => void; onSubscribe: (tier: PlanTier, months: number) => void }) {
+/** `onPaid` records the purchase the moment payment succeeds; `onDone` leaves after the welcome dialog. */
+export function Paywall({ male, gaining, onSkip, onPaid, onDone }: { male: boolean; gaining: boolean; onSkip: () => void; onPaid: (tier: PlanTier, months: number, amount: number) => void; onDone: () => void }) {
   const [tier, setTier] = useState<PlanTier>('smart');
   const [months, setMonths] = useState(DEFAULT_MONTHS);
   const [loading, setLoading] = useState(false);
   const [confirm, setConfirm] = useState(false);
   const { plan, dur } = planFor(tier, months);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
   return (
     <View style={st.paywall}>
       <StatusBar style="light" />
@@ -363,8 +371,12 @@ export function Paywall({ male, gaining, onSkip, onSubscribe }: { male: boolean;
           title={`CONTINUE · ${formatINR(dur.price)}`}
           loading={loading}
           onPress={() => {
+            if (loading || confirm) return;
+            // Demo payment succeeds instantly: save it now so leaving or killing the app can't lose it.
+            onPaid(tier, dur.months, dur.price);
             setLoading(true);
             setTimeout(() => {
+              if (!mounted.current) return;
               setLoading(false);
               setConfirm(true);
             }, 900);
@@ -386,7 +398,7 @@ export function Paywall({ male, gaining, onSkip, onSubscribe }: { male: boolean;
         confirm="Let's go"
         onConfirm={() => {
           setConfirm(false);
-          onSubscribe(tier, dur.months);
+          onDone();
         }}
       />
     </View>

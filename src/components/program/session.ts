@@ -1,14 +1,8 @@
 import { FOCUS_SESSIONS, PROGRAM_DAYS, PROGRAMS, programById, sessionByKey, type Session, type SessionItem } from '@/data/program';
 import { pad } from '@/lib/calc';
 
-/** In-memory (per app session) plan edits, keyed by session key — the player reads the edited list. */
-export const editedPlans = new Map<string, SessionItem[]>();
-/** Index of the exercise to continue from after the user quit a session midway. */
-export const resumePoints = new Map<string, number>();
-/** One-shot UI flags (e.g. the "customize your plan" tooltip). */
-export const programFlags = { tipShown: false };
-
-export const planItems = (s: Session) => editedPlans.get(s.key) ?? s.items;
+/** The session's exercise list, with the user's saved edits (store `planEdits`) applied. */
+export const planItems = (s: Session, planEdits: Record<string, SessionItem[]>) => (planEdits[s.key]?.length ? planEdits[s.key] : s.items);
 
 /** Like sessionByKey, but rejects malformed program keys (unknown plan / out-of-range day). */
 export function findSession(key: string): Session | undefined {

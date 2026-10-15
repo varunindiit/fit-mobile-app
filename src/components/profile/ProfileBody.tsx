@@ -34,7 +34,7 @@ import { NOTIFICATIONS } from '@/data/notifications';
 import { PLAN_TIERS } from '@/data/plans';
 import { PROGRAM_DAYS, programById } from '@/data/program';
 import { bmiLabel, cmToFtIn } from '@/lib/calc';
-import { useStore, workoutStreak } from '@/lib/store';
+import { isPremiumActive, useStore, workoutStreak } from '@/lib/store';
 import { C, R, shadowSm } from '@/theme';
 import { BackupCard } from './backup';
 import {
@@ -73,6 +73,10 @@ const DIALOGS = {
   logout: { icon: '👋', title: 'Log out of Fitora?', text: 'You can log back in anytime with your phone number. Your data stays on this device.', confirm: 'Log out', danger: true },
 };
 
+/** Onboarding diet card that matches a diet preference, so both fields stay in sync. */
+const dietTypeFor = (diet: string, prev: string) =>
+  diet === 'Vegetarian' || diet === 'Vegan' ? diet : diet === 'Non-vegetarian' ? (prev === 'Meat-based' ? prev : 'Regular diet') : 'Other';
+
 /** Settings row with a tinted icon tile. */
 function Row({ icon, color, bg, title, subtitle, onPress, right }: { icon: IconName; color: string; bg?: string; title: string; subtitle?: string; onPress: () => void; right?: ReactNode }) {
   return <ListRow icon={icon} iconColor={color} iconBg={bg ?? tint(color)} title={title} subtitle={subtitle} onPress={onPress} right={right} />;
@@ -94,8 +98,9 @@ export function ProfileBody({ mode }: { mode: 'tab' | 'stack' }) {
   const goal = goalSummary(p, t, units);
   const restrictions = realRestrictions(p.restrictions);
   const conditions = realConditions(p.conditions);
-  const premium = state.premium;
+  const premium = isPremiumActive(state.premium) ? state.premium : null;
   const tier = premium ? PLAN_TIERS.find((x) => x.id === premium.tier) : null;
+  const planTill = premium ? fmtFull(planEnd(premium.since, premium.months)) : '';
   const condOptions = Array.from(new Set([...CONDITIONS, ...conditions]));
   const program = programById(p.program);
   const done = Math.min(PROGRAM_DAYS, state.programProgress[program.id] ?? 0);
@@ -253,8 +258,10 @@ export function ProfileBody({ mode }: { mode: 'tab' | 'stack' }) {
                 </View>
                 {premium && tier ? (
                   <>
-                    <Text style={st.premTitle}>{tier.name.replace('Fitora ', '')} · Active</Text>
-                    <Text style={st.premSub}>Valid till {fmtFull(planEnd(premium.since, premium.months))}</Text>
+                    <Text style={st.premTitle}>
+                      {tier.name.replace('Fitora ', '')} · {premium.cancelledAt ? 'Cancelled' : 'Active'}
+                    </Text>
+                    <Text style={st.premSub}>{premium.cancelledAt ? `Cancelled · active till ${planTill}` : `Valid till ${planTill}`}</Text>
                     <View style={st.premCta}>
                       <Text style={st.premCtaText}>Manage plan</Text>
                       <Ionicons name="arrow-forward" size={13} color={C.navy} />
@@ -317,7 +324,7 @@ export function ProfileBody({ mode }: { mode: 'tab' | 'stack' }) {
             <Divider style={shared.inset} />
             <Row icon="sparkles" color={C.ai} bg={C.aiSoft} title="Ask Ria" subtitle="Your AI nutrition coach" onPress={() => router.push('/coach')} />
             <Divider style={shared.inset} />
-            <Row icon="diamond" color={C.warning} bg={C.warningSoft} title="Plans" subtitle={premium ? `${tier?.name ?? 'Premium'} · active` : 'Smart & Pro · up to 62% off'} onPress={() => router.push('/plans')} />
+            <Row icon="diamond" color={C.warning} bg={C.warningSoft} title="Plans" subtitle={premium ? (premium.cancelledAt ? `Cancelled · active till ${planTill}` : `${tier?.name ?? 'Premium'} · active`) : 'Smart & Pro · up to 62% off'} onPress={() => router.push('/plans')} />
           </Card>
         </Animated.View>
 
@@ -325,7 +332,7 @@ export function ProfileBody({ mode }: { mode: 'tab' | 'stack' }) {
         <Animated.View entering={enter(5)}>
           <GroupLabel title="Support us" />
           <Card style={shared.listCard}>
-            <Row icon="star" color={C.warning} bg={C.warningSoft} title="Rate us" onPress={() => setSheet('rate')} />
+            <Row icon="star" color={C.warning} bg={C.warningSoft} title="Rate us" subtitle={state.rating ? `You rated us ${state.rating} star${state.rating === 1 ? '' : 's'}` : undefined} onPress={() => setSheet('rate')} />
             <Divider style={shared.inset} />
             <Row icon="share-social" color={C.water} bg={C.waterSoft} title="Share with friends" onPress={() => toast('Invite link copied to clipboard', 'share-social')} />
             <Divider style={shared.inset} />
@@ -365,7 +372,7 @@ export function ProfileBody({ mode }: { mode: 'tab' | 'stack' }) {
             subtitle={d.sub}
             selected={p.diet === d.value}
             onPress={() => {
-              updateProfile({ diet: d.value });
+              updateProfile({ diet: d.value, dietType: dietTypeFor(d.value, p.dietType) });
               toast(`Diet set to ${d.value}`, 'leaf');
               setTimeout(close, 250);
             }}

@@ -3,14 +3,14 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
-import { BackHandler, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { AppState, BackHandler, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, ZoomIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 
 import { Button, Card, Dialog, EmptyState, enter, Header, nativeOnly, IconButton, IconTile, PressableScale, Ring, Screen, SectionTitle, T, tap, useToast, type IconName } from '@/components/ui';
 import { workoutById, type Workout } from '@/data/fitness';
-import { pad, todayKey } from '@/lib/calc';
+import { pad } from '@/lib/calc';
 import { useStore } from '@/lib/store';
 import { C, glow, MOTION, R, shadow, shadowSm } from '@/theme';
 import { Glyph } from '@/components/Glyph';
@@ -40,7 +40,8 @@ function advance(r: Run, real: number, speed: number, w: Workout): Run {
 }
 
 export default function WorkoutScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id: rawId } = useLocalSearchParams<{ id: string | string[] }>();
+  const id = Array.isArray(rawId) ? rawId[0] : rawId;
   const w = workoutById(String(id ?? ''));
   if (!w)
     return (
@@ -53,7 +54,7 @@ export default function WorkoutScreen() {
 }
 
 function WorkoutFlow({ w }: { w: Workout }) {
-  const { state, logWorkout } = useStore();
+  const { state, logWorkout, removeWorkout, saveClassRun, updateSettings } = useStore();
   const toast = useToast();
   const insets = useSafeAreaInsets();
   const n = w.exercises.length;
@@ -62,16 +63,19 @@ function WorkoutFlow({ w }: { w: Workout }) {
   const [phase, setPhase] = useState<Phase>('overview');
   const [run, setRun] = useState<Run>(() => freshRun(w));
   const [paused, setPaused] = useState(false);
-  const [speed, setSpeed] = useState(5);
+  const speed = SPEEDS.includes(state.settings.classSpeed) ? state.settings.classSpeed : 5;
   const [askEnd, setAskEnd] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
   const wasPaused = useRef(false);
+  const loggedId = useRef<string | null>(null);
+  const finishing = useRef(false);
 
+  const saved = state.classRun?.workoutId === w.id && state.classRun.idx >= 0 && state.classRun.idx < n ? state.classRun : null;
   const timesDone = state.workouts.filter((x) => x.workoutId === w.id).length;
   const cur = w.exercises[run.idx];
   const doneSec = w.exercises.slice(0, run.idx).reduce((a, e) => a + e.seconds, 0) + (cur.seconds - run.left);
   const frac = Math.min(1, doneSec / total);
-  const liveKcal = Math.round(w.kcal * frac);
+  const liveKcal = Math.round(w.kcal * Math.min(1, run.elapsed / total)); // skipped time earns nothing
 
   // Ticker — delta-time based so throttled web tabs stay accurate.
   useEffect(() => {
@@ -91,14 +95,40 @@ function WorkoutFlow({ w }: { w: Workout }) {
     if (phase === 'player' && run.idx > 0) tap();
   }, [run.idx, phase]);
 
-  const finish = (completed: boolean) => {
-    const f = completed ? 1 : frac;
-    setResult({
+  // Keep the in-progress run so the class can be continued after leaving or an app kill.
+  useEffect(() => {
+    if (phase !== 'player' || finishing.current) return;
+    saveClassRun({ workoutId: w.id, idx: run.idx, left: run.left, elapsed: run.elapsed });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, run.idx, paused]);
+
+  // Pause when the app leaves the foreground (the pause also saves the run).
+  useEffect(() => {
+    if (phase !== 'player') return;
+    const sub = AppState.addEventListener('change', (st) => st !== 'active' && setPaused(true));
+    return () => sub.remove();
+  }, [phase]);
+
+  /** Credit is proportional to time actually exercised (`elapsed`), so skipping ahead never earns full credit. */
+  const finish = (reachedEnd: boolean) => {
+    if (finishing.current) return;
+    finishing.current = true;
+    saveClassRun(null);
+    const f = Math.min(1, run.elapsed / total);
+    const completed = reachedEnd && run.elapsed >= total - 0.5;
+    if (run.elapsed < 20) {
+      setPhase('overview');
+      toast('Too short to log — nothing was saved', 'stop-circle');
+      return;
+    }
+    const r: Result = {
       completed,
       kcal: completed ? w.kcal : Math.max(1, Math.round(w.kcal * f)),
       minutes: completed ? w.minutes : Math.max(1, Math.round(w.minutes * f)),
-      done: completed ? n : run.idx,
-    });
+      done: reachedEnd ? n : run.idx,
+    };
+    loggedId.current = logWorkout({ workoutId: w.id, title: w.title, emoji: w.emoji, minutes: r.minutes, kcal: r.kcal });
+    setResult(r);
     setPhase('done');
   };
 
@@ -110,8 +140,10 @@ function WorkoutFlow({ w }: { w: Workout }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [run.finished]);
 
-  const start = () => {
-    setRun(freshRun(w));
+  const start = (from?: Run) => {
+    finishing.current = false;
+    loggedId.current = null;
+    setRun(from ?? freshRun(w));
     setPaused(false);
     setResult(null);
     setPhase('player');
@@ -134,6 +166,7 @@ function WorkoutFlow({ w }: { w: Workout }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, paused]);
 
+  // Skipped time never counts toward `elapsed` (and so never toward credit).
   const skip = () =>
     setRun((r) => {
       if (r.prep > 0) return { ...r, prep: 0 };
@@ -143,9 +176,20 @@ function WorkoutFlow({ w }: { w: Workout }) {
 
   const save = () => {
     if (!result) return;
-    logWorkout({ workoutId: w.id, title: w.title, emoji: w.emoji, minutes: result.minutes, kcal: result.kcal, date: todayKey() });
     toast(`Saved to activity log · ${result.kcal} kcal burned`, 'flame');
     goBack();
+  };
+  const discard = () => {
+    if (loggedId.current) removeWorkout(loggedId.current);
+    loggedId.current = null;
+    toast('Workout discarded', 'trash');
+    goBack();
+  };
+  const resumeRun = () => {
+    if (!saved) return;
+    const ex = w.exercises[saved.idx];
+    const left = Number.isFinite(saved.left) && saved.left > 0 && saved.left <= ex.seconds ? saved.left : ex.seconds;
+    start({ idx: saved.idx, left, elapsed: Number.isFinite(saved.elapsed) ? Math.max(0, saved.elapsed) : 0, prep: PREP, finished: false });
   };
 
   const tooEarly = run.elapsed < 20;
@@ -183,9 +227,9 @@ function WorkoutFlow({ w }: { w: Workout }) {
             </Animated.View>
           )}
           <Animated.View entering={enter(4)} style={{ alignSelf: 'stretch' }}>
-            <Button title="Save to activity log" icon="checkmark-circle" onPress={save} style={{ marginTop: 28 }} />
-            <Button title="Do it again" icon="refresh" variant="outline" onPress={start} style={{ marginTop: 10 }} />
-            <Button title="Close without saving" variant="ghost" onPress={goBack} style={{ marginTop: 4 }} />
+            <Button title="Done" icon="checkmark-circle" onPress={save} style={{ marginTop: 28 }} />
+            <Button title="Do it again" icon="refresh" variant="outline" onPress={() => start()} style={{ marginTop: 10 }} />
+            <Button title="Discard this workout" variant="ghost" onPress={discard} style={{ marginTop: 4 }} />
           </Animated.View>
         </ScrollView>
       </Screen>
@@ -212,7 +256,7 @@ function WorkoutFlow({ w }: { w: Workout }) {
             accessibilityLabel={`Demo speed ${speed}x`}
             onPress={() => {
               tap();
-              setSpeed((s) => SPEEDS[(SPEEDS.indexOf(s) + 1) % SPEEDS.length]);
+              updateSettings({ classSpeed: SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length] });
             }}
             style={st.speed}>
             <Ionicons name="speedometer-outline" size={13} color={C.white} />
@@ -298,7 +342,7 @@ function WorkoutFlow({ w }: { w: Workout }) {
           text={
             tooEarly
               ? 'You’ve only just started, so nothing will be saved.'
-              : `You’ve done ${clock(run.elapsed, true)} and burned about ${liveKcal} kcal. We’ll show your summary so you can save it.`
+              : `You’ve done ${clock(run.elapsed, true)} and burned about ${liveKcal} kcal. It will be saved to your activity log.`
           }
           confirm="End workout"
           cancel="Keep going"
@@ -310,6 +354,7 @@ function WorkoutFlow({ w }: { w: Workout }) {
           onConfirm={() => {
             setAskEnd(false);
             if (tooEarly) {
+              saveClassRun(null);
               setPhase('overview');
               toast('Workout ended', 'stop-circle');
             } else finish(false);
@@ -408,12 +453,19 @@ function WorkoutFlow({ w }: { w: Workout }) {
           </Animated.View>
           <Animated.View entering={enter(3)} style={st.tip}>
             <IconTile icon="bulb" color={C.warning} bg={C.warningSoft} size={34} />
-            <Text style={[T.small, { flex: 1 }]}>Keep water nearby and stop if you feel dizzy or any sharp pain. Demo runs at 5× speed — tap the speed badge to change it.</Text>
+            <Text style={[T.small, { flex: 1 }]}>Keep water nearby and stop if you feel dizzy or any sharp pain. Demo runs at {speed}× speed — tap the speed badge to change it.</Text>
           </Animated.View>
         </View>
       </ScrollView>
       <View style={[st.sticky, { paddingBottom: Math.max(insets.bottom, 12) }]}>
-        <Button title="Start workout" icon="play" onPress={start} style={{ backgroundColor: w.color, borderColor: w.color, ...glow(w.color) }} />
+        {saved ? (
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <Button title="Restart" icon="refresh" variant="outline" onPress={() => start()} style={{ flex: 1 }} />
+            <Button title={`Continue · ${Math.round(Math.min(1, saved.elapsed / total) * 100)}%`} icon="play" onPress={resumeRun} style={{ flex: 2, backgroundColor: w.color, borderColor: w.color, ...glow(w.color) }} />
+          </View>
+        ) : (
+          <Button title="Start workout" icon="play" onPress={() => start()} style={{ backgroundColor: w.color, borderColor: w.color, ...glow(w.color) }} />
+        )}
       </View>
     </View>
   );

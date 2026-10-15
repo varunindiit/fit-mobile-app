@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
+import { Redirect, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo, useState } from 'react';
 import { BackHandler, Pressable, ScrollView, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
@@ -13,11 +13,10 @@ import { BodyShape, SHAPES, bodyFat } from '@/components/onboarding/BodyShape';
 import { IMG } from '@/components/onboarding/assets';
 import { Analysis, Intro, Motivation, Paywall, PlanResult, Welcome } from '@/components/onboarding/FullScreens';
 import { GoalCurve } from '@/components/onboarding/GoalCurve';
-import { ChoiceRow, GUTTER, OnbHeader, Photo, QTitle, StepSlider, TipCard, UnitToggle, fromUnit, stepIn, toUnit, useOn, type WeightUnit } from '@/components/onboarding/kit';
+import { ChoiceRow, GUTTER, OnbHeader, PACES, Photo, QTitle, StepSlider, TipCard, UnitToggle, fromUnit, stepIn, toUnit, useOn, type WeightUnit } from '@/components/onboarding/kit';
 import { RulerPicker } from '@/components/onboarding/RulerPicker';
 import { YearWheel } from '@/components/onboarding/YearWheel';
 import { Button, Dialog, EASE_OUT, nativeOnly, PressableScale, tap, useToast, type IconName } from '@/components/ui';
-import type { PlanTier } from '@/data/plans';
 import { bmi, bmiLabel, cmToFtIn, targets } from '@/lib/calc';
 import { DEFAULT_PROFILE, useStore, type Goal, type Profile } from '@/lib/store';
 import { BRAND, C, G, MOTION, R, glow, shadowLg, shadowSm } from '@/theme';
@@ -73,21 +72,13 @@ const DIETS: { t: string; img: number; hero: number; diet: string }[] = [
   { t: 'Regular diet', img: IMG.dietRegular, hero: IMG.diet, diet: 'Non-vegetarian' },
   { t: 'Vegetarian', img: IMG.dietVegetarian, hero: IMG.dietHeroVegetarian, diet: 'Vegetarian' },
   { t: 'Vegan', img: IMG.dietVegan, hero: IMG.dietHeroVegan, diet: 'Vegan' },
-  { t: 'Other', img: IMG.dietOther, hero: IMG.dietHeroOther, diet: '' },
+  { t: 'Other', img: IMG.dietOther, hero: IMG.dietHeroOther, diet: 'Other' },
 ];
 const REWARDS: { t: string; img: number; imgMale: number }[] = [
   { t: 'Treat myself to a nice meal', img: IMG.rewardMeal, imgMale: IMG.rewardMealMale },
   { t: 'Buy new gym clothes', img: IMG.rewardClothes, imgMale: IMG.rewardClothesMale },
   { t: 'Take a trip somewhere', img: IMG.rewardTrip, imgMale: IMG.rewardTripMale },
   { t: 'Get a makeover', img: IMG.rewardMakeover, imgMale: IMG.rewardMakeoverMale },
-];
-/** Goal pace, kg per week, Easy → Master. */
-const PACES: { v: number; icon: IconName; note: string }[] = [
-  { v: 0.25, icon: 'walk-outline', note: 'Slow and steady. Very easy to stick with.' },
-  { v: 0.4, icon: 'thumbs-up-outline', note: 'Good choice! This level is easy for most people. Friendly for beginners.' },
-  { v: 0.5, icon: 'barbell-outline', note: 'Recommended. The best balance of speed and comfort.' },
-  { v: 0.75, icon: 'flash-outline', note: 'Faster results. Needs consistent effort every week.' },
-  { v: 1, icon: 'flame-outline', note: 'Aggressive pace. Best for experienced, disciplined people.' },
 ];
 const BENEFITS_LEFT = ['Slow transformation', 'Lack of personalization', 'Missing expertise', 'Limited progress'];
 const BENEFITS_RIGHT = ['Faster results', 'Tailored for you', 'Expert guidance', 'Boosted progress'];
@@ -96,42 +87,58 @@ const toggleIn = (list: string[], v: string) => (list.includes(v) ? list.filter(
 const yearNow = new Date().getFullYear();
 const YEARS = Array.from({ length: 78 }, (_, i) => yearNow - 90 + i); // ages 13–90
 
-const goalFor = (p: Profile): Goal => (p.targetKg < p.weightKg - 0.05 ? 'lose' : p.targetKg > p.weightKg + 0.05 ? 'gain' : 'maintain');
+/** Same weight: a leaner target body is a health/recomp goal, a bulkier one is muscle building. */
+const goalFor = (p: Profile): Goal =>
+  p.targetKg < p.weightKg - 0.05
+    ? 'lose'
+    : p.targetKg > p.weightKg + 0.05
+      ? 'gain'
+      : p.targetShape > p.bodyShape
+        ? 'muscle'
+        : p.targetShape < p.bodyShape
+          ? 'healthy'
+          : 'maintain';
 
-/** Final profile: derived fields the rest of the app reads (goal, age, weekly goal, motivations). */
+/** Final profile: derived fields the rest of the app reads (goal, age, weekly goal). */
 function finalize(p: Profile): Profile {
   return {
     ...p,
     goal: goalFor(p),
     age: Math.max(13, yearNow - p.birthYear),
     weeklyGoal: Math.max(2, Math.min(6, 7 - p.restDays.length)),
-    motivations: p.rewards,
   };
 }
 
 /* ---------------- Screen ---------------- */
 
-// Survives remounts (e.g. a reload mid-onboarding) so answers and position are never lost.
-let resume: { p: Profile; step: StepId; genderPicked: boolean } | null = null;
-
 export default function Onboarding() {
-  const { state, completeOnboarding, subscribe, updateSettings } = useStore();
+  const { state, completeOnboarding, logIn, subscribe, updateSettings, saveOnboardingDraft } = useStore();
   const toast = useToast();
-  const [p, setP] = useState<Profile>(() => resume?.p ?? { ...DEFAULT_PROFILE, ...state.profile });
+  // The saved draft survives reloads and app kills, so answers and position are never lost.
+  const [draft] = useState(() => state.onboardingDraft);
+  // Only an already-onboarded user arriving here (not one finishing right now) is sent back to the app.
+  const [wasOnboarded] = useState(state.onboarded);
+  const [p, setP] = useState<Profile>(() => draft?.p ?? { ...DEFAULT_PROFILE, ...state.profile });
   // Updater form reads the latest answers, so rapid taps on multi-selects never drop a choice.
   const set = (patch: Partial<Profile> | ((d: Profile) => Partial<Profile>)) => setP((d) => ({ ...d, ...(typeof patch === 'function' ? patch(d) : patch) }));
-  const [step, setStep] = useState<StepId>(() => (resume?.step === 'analysis' ? 'result' : resume?.step) ?? 'intro');
+  const [step, setStep] = useState<StepId>(() => {
+    const s = draft?.step as StepId | undefined;
+    if (s === 'analysis') return 'result';
+    return s && STEPS.includes(s) ? s : 'intro';
+  });
   // Nothing is pre-selected on a fresh start; once picked, going back shows the choice.
-  const [genderPicked, setGenderPicked] = useState(() => resume?.genderPicked ?? false);
+  const [genderPicked, setGenderPicked] = useState(() => draft?.genderPicked ?? false);
   const [login, setLogin] = useState(false);
   const [dir, setDir] = useState<1 | -1>(1);
   const units: WeightUnit = state.settings.units;
   const setUnits = (u: WeightUnit) => updateSettings({ units: u });
-  const [heightUnit, setHeightUnit] = useState<'cm' | 'ft'>('cm');
+  const heightUnit = state.settings.heightUnit;
+  const setHeightUnit = (u: 'cm' | 'ft') => updateSettings({ heightUnit: u });
 
   useEffect(() => {
-    resume = { p, step, genderPicked };
-  }, [p, step, genderPicked]);
+    if (wasOnboarded) return;
+    saveOnboardingDraft({ p, step, genderPicked });
+  }, [p, step, genderPicked, wasOnboarded, saveOnboardingDraft]);
 
   const go = (to: StepId, d: 1 | -1) => {
     setDir(d);
@@ -157,10 +164,9 @@ export default function Onboarding() {
     return () => sub.remove();
   });
 
-  const finish = (plan?: { tier: PlanTier; months: number }) => {
-    resume = null;
+  /** completeOnboarding also clears the saved draft. */
+  const finish = () => {
     completeOnboarding(finalize(p));
-    if (plan) subscribe(plan.tier, plan.months);
     router.replace('/(tabs)');
     setTimeout(() => toast(`Welcome to ${BRAND}! Your plan is ready`, 'sparkles'), 400);
   };
@@ -178,6 +184,8 @@ export default function Onboarding() {
 
   const final = useMemo(() => finalize(p), [p]);
 
+  if (wasOnboarded) return <Redirect href="/(tabs)" />;
+
   if (step === 'intro')
     return (
       <>
@@ -192,8 +200,9 @@ export default function Onboarding() {
           onCancel={() => setLogin(false)}
           onConfirm={() => {
             setLogin(false);
-            resume = null;
-            completeOnboarding(finalize(p));
+            // A returning user on this device goes straight back in with their saved logs and profile.
+            if (state.weights.length || state.entries.length) logIn();
+            else completeOnboarding(finalize(p));
             router.replace('/(tabs)');
             setTimeout(() => toast('Welcome back!', 'person-circle'), 400);
           }}
@@ -204,7 +213,7 @@ export default function Onboarding() {
   if (step === 'motivation') return <Motivation male={p.gender === 'male'} onNext={next} />;
   if (step === 'analysis') return <Analysis p={final} units={units} onDone={next} />;
   if (step === 'result') return <PlanResult p={final} units={units} onBack={back} onNext={next} />;
-  if (step === 'paywall') return <Paywall male={p.gender === 'male'} gaining={final.goal === 'gain'} onSkip={() => finish()} onSubscribe={(tier, months) => finish({ tier, months })} />;
+  if (step === 'paywall') return <Paywall male={p.gender === 'male'} gaining={final.goal === 'gain'} onSkip={finish} onPaid={subscribe} onDone={finish} />;
 
   const qIndex = QUESTIONS.indexOf(step);
   const cta = step === 'gender' ? null : 'Next';

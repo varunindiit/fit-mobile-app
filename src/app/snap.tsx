@@ -19,7 +19,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { CheckMark, EmojiTile, fmtNum, fmtQty, goBack, isDateKey, isMeal, MealChips, MiniMacro, RiaNote, ScoreRing } from '@/components/food/shared';
+import { CheckMark, EmojiTile, fmtNum, fmtQty, goBack, isDateKey, isMeal, MealChips, MiniMacro, notFuture, RiaNote, ScoreRing } from '@/components/food/shared';
 import { Button, CountUp, enter, fadeEnter, IconButton, IconTile, nativeOnly, Pill, PressableScale, ProgressBar, Sheet, T, tap, useToast, type IconName } from '@/components/ui';
 import { foodById, mealLabel, SNAP_SAMPLES, type MealKey } from '@/data/foods';
 import { currentMeal, relDay, round1, todayKey } from '@/lib/calc';
@@ -43,7 +43,7 @@ const confidence = (id: string) => 89 + ((id.length * 7 + id.charCodeAt(0)) % 10
 
 export default function SnapScreen() {
   const p = useLocalSearchParams<{ meal?: string; date?: string }>();
-  const { addFood } = useStore();
+  const { logSnap } = useStore();
   const toast = useToast();
   const insets = useSafeAreaInsets();
   const reduce = useReducedMotion();
@@ -55,12 +55,13 @@ export default function SnapScreen() {
   const [items, setItems] = useState<Item[]>([]);
   const [meal, setMeal] = useState<MealKey>(isMeal(p.meal) ? p.meal : (currentMeal() as MealKey));
   const [tips, setTips] = useState(false);
-  const date = isDateKey(p.date) ? p.date : todayKey();
+  const date = isDateKey(p.date) ? notFuture(p.date) : todayKey();
   const scan = useSharedValue(0);
   const shot = useSharedValue(0);
   const swap = useSharedValue(1);
   const pulse = useSharedValue(0);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const logged = useRef(false);
   const sample = SNAP_SAMPLES[sampleIdx];
   const frame = Math.round(Math.min(width - 48, height * 0.46, 380));
 
@@ -145,8 +146,11 @@ export default function SnapScreen() {
     const verdict = score >= 8 ? 'Well balanced meal. Nice work!' : score >= 5 ? 'Decent meal. Add veggies or protein to balance it.' : 'Heavy meal. Go lighter at your next one.';
     const setItem = (idx: number, patch: Partial<Item>) => setItems((list) => list.map((it, i) => (i === idx ? { ...it, ...patch } : it)));
     const log = () => {
-      sel.forEach((i) => addFood(i.foodId, meal, i.qty, date));
-      toast(`Logged ${sel.length} item${sel.length > 1 ? 's' : ''} to ${mealLabel(meal)} · ${fmtNum(tot.kcal)} kcal`, 'camera');
+      const picked = sel.filter((i) => foodById(i.foodId) && i.qty > 0);
+      if (logged.current || !picked.length) return;
+      logged.current = true;
+      logSnap({ date, meal, title: sample.title, score, kcal: Math.round(tot.kcal), items: picked.map((i) => ({ foodId: i.foodId, qty: i.qty })) });
+      toast(`Logged ${picked.length} item${picked.length > 1 ? 's' : ''} to ${mealLabel(meal)} · ${fmtNum(tot.kcal)} kcal`, 'camera');
       goBack();
     };
 

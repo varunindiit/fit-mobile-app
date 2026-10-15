@@ -6,11 +6,15 @@ import Animated, { ZoomIn } from 'react-native-reanimated';
 
 import { Chip, nativeOnly, Ring, type IconName } from '@/components/ui';
 import { MEALS, type Food, type MealKey } from '@/data/foods';
+import { dateKey, parseKey, todayKey } from '@/lib/calc';
 import { C, MOTION, R } from '@/theme';
 import { Glyph } from '@/components/Glyph';
 
 export const isMeal = (m?: string | string[]): m is MealKey => typeof m === 'string' && MEALS.some((x) => x.key === m);
-export const isDateKey = (d?: string | string[]): d is string => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d);
+/** A real calendar day in `YYYY-MM-DD` form (rejects e.g. 2025-02-31). */
+export const isDateKey = (d?: string | string[]): d is string => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d) && dateKey(parseKey(d)) === d;
+/** Food can't be logged in the future: later dates fall back to today. */
+export const notFuture = (d: string, today = todayKey()) => (d > today ? today : d);
 
 /** 1 → "1", 1.5 → "1.5", 0.25 → "0.25" */
 export const fmtQty = (q: number) => String(Math.round(q * 100) / 100);

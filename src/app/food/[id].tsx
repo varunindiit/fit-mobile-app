@@ -1,12 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInDown, FadeOutUp, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 
-import { fmtNum, fmtQty, foodBg, goBack, isDateKey, isMeal, MealChips, RiaNote, scaled, scoreColor, ScoreRing, scoreWord, TYPE_META, VegDot } from '@/components/food/shared';
+import { fmtNum, fmtQty, foodBg, goBack, isDateKey, isMeal, MealChips, notFuture, RiaNote, scaled, scoreColor, ScoreRing, scoreWord, TYPE_META, VegDot } from '@/components/food/shared';
 import { Button, Card, Chip, CountUp, Dialog, Divider, EASE_OUT, EmptyState, enter, Header, layoutTransition, nativeOnly, Pill, PressableScale, ProgressBar, Ring, Screen, Stepper, T, tap, useToast } from '@/components/ui';
 import { foodById, mealLabel, type Food, type MealKey } from '@/data/foods';
 import { currentMeal, relDay, round1, todayKey } from '@/lib/calc';
@@ -44,17 +44,22 @@ function insight(f: Food) {
 
 export default function FoodDetailScreen() {
   const p = useLocalSearchParams<{ id: string; meal?: string; date?: string; entryId?: string }>();
-  const { state, targets, addFood, updateFood, removeFood } = useStore();
+  const { state, targets, addFood, updateFood, removeFood, toggleFavorite } = useStore();
   const toast = useToast();
   const insets = useSafeAreaInsets();
   const food = foodById(String(p.id ?? ''));
   const entry = p.entryId ? state.entries.find((e) => e.id === p.entryId) : undefined;
-  const [isEdit] = useState(!!entry);
+  // Edit mode comes from the route, so a missing entry shows "not found" instead of silently becoming Add.
+  const isEdit = !!p.entryId;
   const [qty, setQty] = useState(entry?.qty ?? 1);
   const [meal, setMeal] = useState<MealKey>(entry?.meal ?? (isMeal(p.meal) ? p.meal : (currentMeal() as MealKey)));
   const [more, setMore] = useState(false);
   const [confirm, setConfirm] = useState(false);
-  const date = entry?.date ?? (isDateKey(p.date) ? p.date : todayKey());
+  // Double-submit guard: one add/save/remove per visit; `leaving` keeps the screen intact while it closes.
+  const submitted = useRef(false);
+  const [leaving, setLeaving] = useState(false);
+  const date = entry?.date ?? (isDateKey(p.date) ? notFuture(p.date) : todayKey());
+  const favourite = !!food && state.favoriteFoods.includes(food.id);
 
   const eaten = dayTotals(state.entries, date).total.kcal;
   const burned = burnedOn(state, date).total;
@@ -64,6 +69,13 @@ export default function FoodDetailScreen() {
       <Screen>
         <Header title="Food" />
         <EmptyState icon="fast-food-outline" title="Food not found" text="We couldn't find this item. It may have been removed from the database." action="Go back" onAction={goBack} />
+      </Screen>
+    );
+  if (isEdit && !entry && !leaving)
+    return (
+      <Screen>
+        <Header title="Edit entry" />
+        <EmptyState icon="document-outline" title="Entry not found" text="This diary entry no longer exists. It may have been removed." action="Go back" onAction={goBack} />
       </Screen>
     );
 
@@ -82,22 +94,35 @@ export default function FoodDetailScreen() {
   const tm = TYPE_META[food.type];
   const sc = scoreColor(food.score);
 
+  const claim = () => {
+    if (submitted.current) return false;
+    submitted.current = true;
+    setLeaving(true);
+    return true;
+  };
   const add = () => {
+    if (!claim()) return;
     addFood(food.id, meal, qty, date);
     toast(`Added ${food.name} to ${mealLabel(meal)}`);
     goBack();
   };
   const save = () => {
-    if (!entry) return add();
+    if (!entry || !claim()) return;
     updateFood(entry.id, { qty, meal });
     toast(`Updated ${food.name} · ${fmtQty(qty)} × in ${mealLabel(meal)}`);
     goBack();
   };
   const remove = () => {
     setConfirm(false);
-    if (entry) removeFood(entry.id);
+    if (!entry || !claim()) return;
+    removeFood(entry.id);
     toast(`Removed ${food.name}`, 'trash');
     setTimeout(goBack, 120);
+  };
+  const toggleFav = () => {
+    tap();
+    toggleFavorite(food.id);
+    toast(favourite ? `Removed ${food.name} from favourites` : `Saved ${food.name} to favourites`, favourite ? 'heart-dislike-outline' : 'heart');
   };
 
   return (
@@ -140,7 +165,14 @@ export default function FoodDetailScreen() {
                 </Text>
                 <Text style={[st.scoreWord, { color: sc }]}>{scoreWord(food.score)}</Text>
               </View>
-              <Ionicons name="heart" size={18} color={sc} />
+              <Pressable
+                hitSlop={10}
+                onPress={toggleFav}
+                accessibilityRole="button"
+                accessibilityLabel={favourite ? 'Remove from favourites' : 'Add to favourites'}
+                accessibilityState={{ selected: favourite }}>
+                <Ionicons name={favourite ? 'heart' : 'heart-outline'} size={22} color={favourite ? C.danger : C.muted} />
+              </Pressable>
             </View>
             <View style={st.riaRule} />
             <Text style={st.riaText}>{insight(food)}</Text>

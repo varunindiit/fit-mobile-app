@@ -4,10 +4,19 @@ import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, { FadeInRight, interpolateColor, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 
-import { EASE_OUT, nativeOnly, PressableScale, tap } from '@/components/ui';
+import { EASE_OUT, nativeOnly, PressableScale, tap, type IconName } from '@/components/ui';
 import { C, MOTION, R, shadowSm } from '@/theme';
 
 export const GUTTER = 20;
+
+/** Goal pace, kg per week, Easy → Master. Shared by onboarding and Edit goals. */
+export const PACES: { v: number; icon: IconName; note: string }[] = [
+  { v: 0.25, icon: 'walk-outline', note: 'Slow and steady. Very easy to stick with.' },
+  { v: 0.4, icon: 'thumbs-up-outline', note: 'Good choice! This level is easy for most people. Friendly for beginners.' },
+  { v: 0.5, icon: 'barbell-outline', note: 'Recommended. The best balance of speed and comfort.' },
+  { v: 0.75, icon: 'flash-outline', note: 'Faster results. Needs consistent effort every week.' },
+  { v: 1, icon: 'flame-outline', note: 'Aggressive pace. Best for experienced, disciplined people.' },
+];
 
 /** Step content entrance: a short slide in the direction of travel. Starts slightly visible so there is no blank frame. */
 export const stepIn = (dir: number) =>
@@ -370,5 +379,6 @@ export type WeightUnit = 'kg' | 'lb';
 const LB_PER_KG = 2.20462;
 const r1 = (n: number) => Math.round(n * 10) / 10;
 export const toUnit = (kg: number, u: WeightUnit) => r1(u === 'lb' ? kg * LB_PER_KG : kg);
-export const fromUnit = (v: number, u: WeightUnit) => r1(u === 'lb' ? v / LB_PER_KG : v);
+/** Full precision so kg → lb → kg round-trips don't drift; round only for display. */
+export const fromUnit = (v: number, u: WeightUnit) => (u === 'lb' ? v / LB_PER_KG : v);
 export const fmtWeight = (kg: number, u: WeightUnit, digits = 1) => `${toUnit(kg, u).toFixed(digits)} ${u}`;

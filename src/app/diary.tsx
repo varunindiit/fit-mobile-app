@@ -17,11 +17,12 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { EmojiTile, fmtNum, fmtQty, isDateKey, MiniMacro } from '@/components/food/shared';
+import { EmojiTile, fmtNum, fmtQty, isDateKey, MiniMacro, notFuture } from '@/components/food/shared';
 import { Button, Card, CountUp, Divider, EASE_OUT, enter, IconButton, IconTile, layoutTransition, MacroBar, nativeOnly, PressableScale, ProgressBar, Ring, Screen, T, tap, useToast, type IconName } from '@/components/ui';
 import { foodById, MEALS, mealLabel, type MealKey } from '@/data/foods';
-import { addDays, currentMeal, dayShort, fmtDate, parseKey, relDay, todayKey } from '@/lib/calc';
+import { addDays, currentMeal, dayShort, fmtDate, parseKey, relDay } from '@/lib/calc';
 import { burnedOn, dayTotals, useStore, type FoodEntry } from '@/lib/store';
+import { useToday } from '@/lib/useToday';
 import { C, G, MOTION, R, shadow, shadowLg, shadowSm } from '@/theme';
 
 const dayTitle = (k: string) => {
@@ -31,20 +32,21 @@ const dayTitle = (k: string) => {
 const LIST = layoutTransition;
 
 export default function DiaryScreen() {
-  const { state, targets, removeFood, addFood } = useStore();
+  const { state, targets, removeFood, restoreFood, copyDay } = useStore();
   const toast = useToast();
   const params = useLocalSearchParams<{ date?: string }>();
-  const today = todayKey();
-  const [date, setDate] = useState(isDateKey(params.date) ? params.date : today);
+  const today = useToday();
+  const [date, setDate] = useState(isDateKey(params.date) ? notFuture(params.date, today) : today);
   const [collapsed, setCollapsed] = useState<Partial<Record<MealKey, boolean>>>({});
-  const [undo, setUndo] = useState<FoodEntry | null>(null);
+  const [undo, setUndo] = useState<{ entry: FoodEntry; index: number } | null>(null);
   const undoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const copiedFor = useRef<string | null>(null);
 
   // Follow a new `date` param (derived during render instead of a setState-in-effect).
   const [seenParam, setSeenParam] = useState(params.date);
   if (params.date !== seenParam) {
     setSeenParam(params.date);
-    if (isDateKey(params.date)) setDate(params.date);
+    if (isDateKey(params.date)) setDate(notFuture(params.date, today));
   }
   useEffect(() => () => {
     if (undoTimer.current) clearTimeout(undoTimer.current);
@@ -53,7 +55,7 @@ export default function DiaryScreen() {
   const { total, byMeal } = useMemo(() => dayTotals(state.entries, date), [state.entries, date]);
   const dayEntries = useMemo(() => state.entries.filter((e) => e.date === date), [state.entries, date]);
   const prevDate = addDays(date, -1);
-  const prevEntries = useMemo(() => state.entries.filter((e) => e.date === prevDate), [state.entries, prevDate]);
+  const prevEntries = useMemo(() => state.entries.filter((e) => e.date === prevDate && foodById(e.foodId)), [state.entries, prevDate]);
   const burned = burnedOn(state, date).total;
   const goal = targets.budget + burned;
   const remaining = Math.round(goal - total.kcal);
@@ -75,20 +77,25 @@ export default function DiaryScreen() {
   });
 
   const remove = (e: FoodEntry) => {
+    const index = state.entries.findIndex((x) => x.id === e.id);
+    if (index < 0) return;
     removeFood(e.id);
-    setUndo(e);
+    setUndo({ entry: e, index });
     if (undoTimer.current) clearTimeout(undoTimer.current);
     undoTimer.current = setTimeout(() => setUndo(null), 4000);
   };
   const restore = () => {
     if (!undo) return;
     tap();
-    addFood(undo.foodId, undo.meal, undo.qty, undo.date);
-    toast(`Restored ${foodById(undo.foodId)?.name ?? 'item'}`, 'arrow-undo');
+    restoreFood(undo.entry, undo.index);
+    toast(`Restored ${foodById(undo.entry.foodId)?.name ?? 'item'}`, 'arrow-undo');
     setUndo(null);
   };
   const copyPrev = () => {
-    prevEntries.forEach((e) => addFood(e.foodId, e.meal, e.qty, date));
+    // One copy per day: copyDay itself is a no-op once the day has food, this also stops a double toast.
+    if (copiedFor.current === date || dayEntries.length > 0) return;
+    copiedFor.current = date;
+    copyDay(prevDate, date);
     const kcal = prevEntries.reduce((a, e) => a + (foodById(e.foodId)?.kcal ?? 0) * e.qty, 0);
     toast(`Copied ${prevEntries.length} items · ${fmtNum(kcal)} kcal`, 'copy');
   };
@@ -129,7 +136,7 @@ export default function DiaryScreen() {
                 <Text style={st.weekLabel}>
                   {fmtDate(week[0])} – {fmtDate(week[6])}
                 </Text>
-                <IconButton icon="chevron-forward" size={18} bg={C.surfaceAlt} style={st.weekNav} onPress={() => setDate(addDays(date, 7))} />
+                <IconButton icon="chevron-forward" size={18} bg={C.surfaceAlt} style={st.weekNav} onPress={() => setDate(notFuture(addDays(date, 7), today))} />
               </View>
               <WeekStrip
                 week={week}
@@ -226,7 +233,7 @@ export default function DiaryScreen() {
 
           {/* Meals */}
           {MEALS.map((m, mi) => {
-            const entries = dayEntries.filter((e) => e.meal === m.key);
+            const entries = dayEntries.filter((e) => e.meal === m.key && foodById(e.foodId));
             const t = byMeal[m.key];
             const kcal = t?.kcal ?? 0;
             const rec = Math.round((targets.budget * m.share) / 10) * 10;
@@ -358,7 +365,7 @@ export default function DiaryScreen() {
             <Ionicons name="trash" size={15} color={C.white} />
           </View>
           <Text style={st.undoText} numberOfLines={1}>
-            Removed {foodById(undo.foodId)?.name ?? 'item'} from {mealLabel(undo.meal)}
+            Removed {foodById(undo.entry.foodId)?.name ?? 'item'} from {mealLabel(undo.entry.meal)}
           </Text>
           <PressableScale hitSlop={10} scaleTo={0.92} onPress={restore} style={st.undoBtn} accessibilityRole="button">
             <Ionicons name="arrow-undo" size={14} color={C.gold} />
@@ -394,7 +401,7 @@ function WeekStrip({ week, date, today, logged, onPick }: { week: string[]; date
         const sel = d === date;
         const isToday = d === today;
         return (
-          <Pressable key={d} onPress={() => onPick(d)} style={st.day} accessibilityRole="button" accessibilityState={{ selected: sel }}>
+          <Pressable key={d} onPress={() => onPick(d)} disabled={d > today} style={st.day} accessibilityRole="button" accessibilityState={{ selected: sel, disabled: d > today }}>
             <Text style={[st.dayName, sel && { color: 'rgba(255,255,255,0.8)' }]}>{dayShort(d)}</Text>
             <Text style={[st.dayNum, sel && { color: C.white }, d > today && !sel && { color: C.muted }]}>{parseKey(d).getDate()}</Text>
             <View
