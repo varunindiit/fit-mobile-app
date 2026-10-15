@@ -2,15 +2,18 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View, type ViewStyle } from 'react-native';
-import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
+import Animated, { FadeIn, FadeOut, useAnimatedScrollHandler, useSharedValue } from 'react-native-reanimated';
 
 import { longestStreak, WeekStrip } from '@/components/charts/Calendar';
 import { fromUnit, toUnit } from '@/components/onboarding/kit';
 import { BarChart, fmtNum, GoalLegend, LineChart } from '@/components/charts/Charts';
-import { Button, Card, Chip, CountUp, Dialog, EmptyState, enter, fadeEnter, IconButton, IconTile, layoutTransition, nativeOnly, Pill, PressableScale, ProgressBar, Screen, ScreenTitle, SectionTitle, Segmented, Sheet, T, tap, useToast, type IconName } from '@/components/ui';
+import { HeaderAction, HeaderActions, TabHeader, TabHeaderText } from '@/components/TabHeader';
+import { NOTIFICATIONS } from '@/data/notifications';
+import { Button, Card, Chip, CountUp, Dialog, EmptyState, enter, fadeEnter, IconButton, IconTile, layoutTransition, nativeOnly, Pill, PressableScale, ProgressBar, Screen, SectionTitle, Segmented, Sheet, T, tap, useToast, type IconName } from '@/components/ui';
 import { addDays, bmi, bmiLabel, dayShort, fmtDate, kmFromSteps, parseKey, relDay, round1, todayKey } from '@/lib/calc';
 import { burnedOn, dayTotals, useStore, weekProgress, workoutDays, workoutStreak, type WeightEntry } from '@/lib/store';
-import { C, glow, MOTION, R, shadow, shadowSm } from '@/theme';
+import { C, G, glow, MOTION, R, shadow, shadowSm } from '@/theme';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const fmtFull = (d: Date) => `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
@@ -24,6 +27,13 @@ export default function ReportsScreen() {
   const toast = useToast();
   const { log } = useLocalSearchParams<{ log?: string }>();
   const [tab, setTab] = useState<'steps' | 'calories'>('steps');
+
+  // Header: collapses to a compact row on scroll
+  const scrollY = useSharedValue(0);
+  const onScroll = useAnimatedScrollHandler((e) => {
+    scrollY.set(e.contentOffset.y);
+  });
+  const unread = NOTIFICATIONS.filter((n) => !state.readNotifs.includes(n.id)).length;
 
   // Totals + history
   const totals = state.workouts.reduce((a, w) => ({ n: a.n + 1, kcal: a.kcal + w.kcal, min: a.min + w.minutes }), { n: 0, kcal: 0, min: 0 });
@@ -64,13 +74,31 @@ export default function ReportsScreen() {
 
   return (
     <Screen>
-      <ScrollView contentContainerStyle={st.content} showsVerticalScrollIndicator={false}>
-        <Animated.View entering={enter(0)}>
-          <ScreenTitle title="Reports" subtitle="Your training, weight & activity" style={{ marginBottom: 12 }} />
-        </Animated.View>
-
+      <TabHeader
+        scrollY={scrollY}
+        eyebrow="Training · Weight · Activity"
+        title="Reports"
+        compact={
+          <>
+            <LinearGradient colors={G.deep} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.headBadge}>
+              <Ionicons name="stats-chart" size={17} color={C.white} />
+            </LinearGradient>
+            <TabHeaderText
+              title="Reports"
+              sub={`${totals.n} workout${totals.n === 1 ? '' : 's'}${latest ? ` · ${toUnit(latest.kg, units).toFixed(1)} ${units}` : ''}`}
+            />
+          </>
+        }
+        right={
+          <HeaderActions>
+            <HeaderAction icon="flame" color={C.accent} label={`Workout streak: ${streak}`} href="/history" count={streak} />
+            <HeaderAction icon="notifications-outline" label={unread ? `Notifications, ${unread} unread` : 'Notifications'} href="/notifications" badge={unread} />
+          </HeaderActions>
+        }
+      />
+      <Animated.ScrollView onScroll={onScroll} scrollEventThrottle={16} contentContainerStyle={st.content} showsVerticalScrollIndicator={false}>
         {/* Totals */}
-        <Animated.View entering={enter(1)} style={st.kpis}>
+        <Animated.View entering={enter(0)} style={[st.kpis, { marginTop: 6 }]}>
           <Kpi icon="trophy" color={C.primaryDark} bg={C.primarySoft} value={totals.n} label="Workout" />
           <Kpi icon="flame" color={C.accent} bg={C.accentSoft} value={totals.kcal} label="Kcal" />
           <Kpi icon="time" color={C.water} bg={C.waterSoft} value={totals.min} label="Time (min)" />
@@ -159,7 +187,7 @@ export default function ReportsScreen() {
             {tab === 'steps' ? <StepsView /> : <CaloriesView />}
           </Animated.View>
         </Animated.View>
-      </ScrollView>
+      </Animated.ScrollView>
 
       <Sheet visible={sheet} onClose={() => setSheet(false)} title="Log weight" scroll>
         <View style={st.kgPanel}>
@@ -567,6 +595,7 @@ const cardBase: ViewStyle = { backgroundColor: C.card, borderRadius: R.lg, borde
 
 const st = StyleSheet.create({
   content: { paddingHorizontal: 16, paddingBottom: 40 },
+  headBadge: { width: 38, height: 38, borderRadius: 19, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
   kpis: { flexDirection: 'row', gap: 10 },
   kpi: { ...cardBase, flex: 1, padding: 14, gap: 2 },
   kpiValue: { ...T.num, fontSize: 22, marginTop: 10 },
