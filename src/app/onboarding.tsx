@@ -161,6 +161,8 @@ export default function Onboarding() {
   // Nothing is pre-selected on a fresh start; once picked, going back shows the choice.
   const [genderPicked, setGenderPicked] = useState(() => draft?.genderPicked ?? false);
   const [login, setLogin] = useState(false);
+  // True while the before/after divider is held, so the step's ScrollView doesn't move with the finger.
+  const [dragging, setDragging] = useState(false);
   const [dir, setDir] = useState<1 | -1>(1);
   const units: WeightUnit = state.settings.units;
   const setUnits = (u: WeightUnit) => updateSettings({ units: u });
@@ -491,10 +493,10 @@ export default function Onboarding() {
       }
       case 'preview':
         return (
-          <Body>
+          <Body scroll={!dragging}>
             <QTitle text={`Meet the *new you* your ${BRAND} plan is built for`} sub="Drag the slider to compare today with your goal." />
             <Rise i={1} style={{ paddingHorizontal: GUTTER, marginTop: 20 }}>
-              <BeforeAfter before={p.bodyShape} after={p.targetShape} gender={p.gender} />
+              <BeforeAfter before={p.bodyShape} after={p.targetShape} gender={p.gender} onDrag={setDragging} />
             </Rise>
             <View style={st.statRow}>
               <Rise i={2} style={{ flex: 1 }}>
@@ -678,9 +680,9 @@ export default function Onboarding() {
 /* ---------------- Building blocks ---------------- */
 
 /** Scrollable step body with consistent top/bottom spacing. */
-function Body({ children }: { children: React.ReactNode }) {
+function Body({ children, scroll = true }: { children: React.ReactNode; scroll?: boolean }) {
   return (
-    <ScrollView contentContainerStyle={{ paddingTop: 10, paddingBottom: 28 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+    <ScrollView scrollEnabled={scroll} contentContainerStyle={{ paddingTop: 10, paddingBottom: 28 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
       {children}
     </ScrollView>
   );

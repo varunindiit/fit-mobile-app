@@ -211,10 +211,18 @@ function DayPlan({ session }: { session: Session }) {
                 </View>
                 <Text style={s.levelText}>{meta.level}</Text>
               </View>
+              {meta.program && meta.day !== undefined && (
+                <View style={s.journey}>
+                  <View style={s.journeyTrack}>
+                    <View style={[s.journeyFill, { width: `${Math.min(100, (done / 30) * 100)}%` }]} />
+                  </View>
+                  <Text style={s.journeyText}>{done}/30 days</Text>
+                </View>
+              )}
               {completed && (
                 <View style={s.doneBadge}>
                   <Ionicons name="checkmark-circle" size={14} color={C.white} />
-                  <Text style={s.doneBadgeText}>Completed</Text>
+                  <Text style={s.doneBadgeText}>Done · nice work</Text>
                 </View>
               )}
             </View>
@@ -230,23 +238,21 @@ function DayPlan({ session }: { session: Session }) {
           ) : (
             <>
               <Animated.View entering={enter(0)}>
-                <Card style={s.stats}>
-                  <Stat icon="list" color={C.primaryDark} bg={C.primarySoft} value={`${stats.exercises}`} label="Exercises" />
-                  <View style={s.statDiv} />
-                  <Stat icon="time" color={C.water} bg={C.waterSoft} value={`${stats.minutes}`} unit=" min" label="Time" />
-                  <View style={s.statDiv} />
-                  <Stat icon="flame" color={C.accent} bg={C.accentSoft} value={`${stats.kcal}`} unit=" kcal" label="Calories (≈)" />
-                </Card>
+                <View style={s.stats}>
+                  <Stat icon="body" color={C.primaryDark} bg={C.primarySoft} value={`${stats.exercises}`} label="Moves" />
+                  <Stat icon="time" color={C.water} bg={C.waterSoft} value={`${stats.minutes}`} unit=" min" label="Duration" />
+                  <Stat icon="flame" color={C.accent} bg={C.accentSoft} value={`~${stats.kcal}`} unit=" kcal" label="Est. burn" />
+                </View>
               </Animated.View>
 
               <Animated.View entering={enter(1)}>
                 <Card style={s.settingsCard}>
-                  <ListRow icon="options" iconBg={C.accentSoft} iconColor={C.accent} title="Workout settings" subtitle="Music, coach, timer & more" onPress={() => setSettings(true)} />
+                  <ListRow icon="options" iconBg={C.accentSoft} iconColor={C.accent} title="Tune your workout" subtitle="Rest time, countdown, coach & music" onPress={() => setSettings(true)} />
                 </Card>
               </Animated.View>
 
               <Animated.View entering={enter(2)} style={s.exHead}>
-                <Text style={s.exTitle}>Exercises</Text>
+                <Text style={s.exTitle}>Your routine</Text>
                 <View style={s.countPill}>
                   <Text style={s.countText}>{items.length}</Text>
                 </View>
@@ -267,8 +273,8 @@ function DayPlan({ session }: { session: Session }) {
                     <View style={{ flexDirection: 'row', gap: 12 }}>
                       <IconTile icon="create-outline" size={42} />
                       <View style={{ flex: 1 }}>
-                        <Text style={s.tipTitle}>{"Don't like some exercises?"}</Text>
-                        <Text style={s.tipText}>Tap here to customize your workout plan just the way you like it!</Text>
+                        <Text style={s.tipTitle}>Make it yours</Text>
+                        <Text style={s.tipText}>Tap the pencil to remove moves or change reps and time.</Text>
                       </View>
                     </View>
                     <Button title="Got it" small onPress={dismissTip} style={{ marginTop: 14 }} />
@@ -276,11 +282,18 @@ function DayPlan({ session }: { session: Session }) {
                 )}
               </Animated.View>
 
-              <View style={{ gap: 10 }}>
+              <View>
                 {items.map((it, i) => {
                   const ex = exerciseById(it.exerciseId);
                   return (
-                    <Animated.View key={keys[i]} entering={enter(i + 3)} exiting={rowOut} layout={rowLayout}>
+                    <Animated.View key={keys[i]} entering={enter(i + 3)} exiting={rowOut} layout={rowLayout} style={s.step}>
+                      {/* Timeline rail: numbered stop, joined to its neighbours */}
+                      <View style={s.rail}>
+                        <View style={[s.railLine, i === 0 && { top: '50%' }, i === items.length - 1 && { bottom: '50%' }]} />
+                        <View style={s.railDot}>
+                          <Text style={s.railNum}>{i + 1}</Text>
+                        </View>
+                      </View>
                       <PressableScale
                         scaleTo={0.98}
                         accessibilityRole="button"
@@ -288,7 +301,7 @@ function DayPlan({ session }: { session: Session }) {
                           tap();
                           setSheetIdx(i);
                         }}
-                        style={s.row}>
+                        style={[s.row, { flex: 1 }]}>
                         {editing && (
                           <Animated.View entering={ctlIn} exiting={ctlOut}>
                             <Pressable hitSlop={8} accessibilityLabel={`Remove ${ex.name}`} onPress={() => remove(i)} style={s.minus}>
@@ -380,7 +393,7 @@ function DayPlan({ session }: { session: Session }) {
             <GradientButton title={`Continue · ${resumePct}% done`} onPress={() => start(true)} style={{ flex: 1 }} />
           </Animated.View>
         ) : (
-          <GradientButton title={completed ? 'START AGAIN' : 'START'} icon="play" onPress={() => start(false)} />
+          <GradientButton title={completed ? 'Do it again' : `Let's go · ${stats.minutes} min`} icon="play" onPress={() => start(false)} />
         )}
       </View>
 
@@ -409,9 +422,11 @@ function DayPlan({ session }: { session: Session }) {
 
 function Stat({ icon, color, bg, value, unit, label }: { icon: IconName; color: string; bg: string; value: string; unit?: string; label: string }) {
   return (
-    <View style={{ flex: 1, alignItems: 'center', gap: 6 }}>
-      <IconTile icon={icon} color={color} bg={bg} size={34} />
-      <View style={{ alignItems: 'center' }}>
+    <View style={[s.statTile, { backgroundColor: bg }]}>
+      <View style={s.statIcon}>
+        <Ionicons name={icon} size={16} color={color} />
+      </View>
+      <View style={{ alignItems: 'flex-start' }}>
         <Text style={s.statVal} numberOfLines={1} adjustsFontSizeToFit>
           {value}
           {unit && <Text style={s.statUnit}>{unit}</Text>}
@@ -483,19 +498,24 @@ const s = StyleSheet.create({
   eyebrow: { color: C.white, fontSize: 12, fontWeight: '700', letterSpacing: 0.2 },
   heroTitle: { color: C.white, fontSize: 36, fontWeight: '800', letterSpacing: -1, marginTop: 10 },
   levelRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 },
+  journey: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12 },
+  journeyTrack: { flex: 1, maxWidth: 150, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.25)', overflow: 'hidden' },
+  journeyFill: { height: '100%', borderRadius: 3, backgroundColor: C.white },
+  journeyText: { color: 'rgba(255,255,255,0.9)', fontSize: 12, fontWeight: '700', fontVariant: ['tabular-nums'] },
   levelText: { color: C.white, fontSize: 14, fontWeight: '600' },
   doneBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', marginTop: 10, backgroundColor: 'rgba(255,255,255,0.22)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: R.pill },
   doneBadgeText: { color: C.white, fontSize: 12, fontWeight: '700' },
   heroDisc: { position: 'absolute', right: 0, top: 4, width: 104, height: 104, borderRadius: 52, backgroundColor: 'rgba(255,255,255,0.16)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.24)', alignItems: 'center', justifyContent: 'center' },
   body: { marginTop: -28, backgroundColor: C.bg, borderTopLeftRadius: R.xl, borderTopRightRadius: R.xl, paddingHorizontal: 16, paddingTop: 18 },
-  stats: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14 },
-  statDiv: { width: StyleSheet.hairlineWidth * 2, height: 44, backgroundColor: C.borderSoft },
-  statVal: { fontSize: 19, fontWeight: '800', color: C.text, fontVariant: ['tabular-nums'], letterSpacing: -0.4 },
+  stats: { flexDirection: 'row', gap: 10 },
+  statTile: { flex: 1, padding: 12, borderRadius: R.lg, gap: 10 },
+  statIcon: { width: 30, height: 30, borderRadius: 15, backgroundColor: C.card, alignItems: 'center', justifyContent: 'center' },
+  statVal: { fontSize: 20, fontWeight: '900', color: C.text, fontVariant: ['tabular-nums'], letterSpacing: -0.5 },
   statUnit: { fontSize: 12, fontWeight: '600', color: C.textSoft, letterSpacing: 0 },
-  statLabel: { fontSize: 11, color: C.muted, fontWeight: '600', marginTop: 1 },
+  statLabel: { fontSize: 11.5, color: C.textSoft, fontWeight: '700', marginTop: 1 },
   settingsCard: { marginTop: 10, paddingVertical: 2, paddingHorizontal: 10 },
   exHead: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 24, marginBottom: 12, zIndex: 20 },
-  exTitle: { fontSize: 18, fontWeight: '700', color: C.text, letterSpacing: -0.3 },
+  exTitle: { fontSize: 20, fontWeight: '800', color: C.text, letterSpacing: -0.4 },
   countPill: { minWidth: 26, height: 22, paddingHorizontal: 7, borderRadius: R.pill, backgroundColor: C.primarySoft, alignItems: 'center', justifyContent: 'center' },
   countText: { fontSize: 12, fontWeight: '700', color: C.primaryDark, fontVariant: ['tabular-nums'] },
   resetText: { color: C.primary, fontWeight: '700', fontSize: 14 },
@@ -505,7 +525,12 @@ const s = StyleSheet.create({
   tipArrow: { position: 'absolute', top: -7, right: 16, width: 16, height: 16, backgroundColor: C.card, transform: [{ rotate: '45deg' }], borderRadius: 3 },
   tipTitle: { fontSize: 15, fontWeight: '700', color: C.text },
   tipText: { fontSize: 13, color: C.textSoft, lineHeight: 18, marginTop: 3 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 10, paddingRight: 14, backgroundColor: C.card, borderRadius: R.md, borderWidth: StyleSheet.hairlineWidth, borderColor: C.borderSoft, ...shadowSm },
+  step: { flexDirection: 'row', alignItems: 'stretch', gap: 10 },
+  rail: { width: 26, alignItems: 'center', justifyContent: 'center' },
+  railLine: { position: 'absolute', top: 0, bottom: 0, width: 2, borderRadius: 1, backgroundColor: C.primaryTint },
+  railDot: { width: 26, height: 26, borderRadius: 13, backgroundColor: C.primaryDark, alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: C.bg },
+  railNum: { fontSize: 11, fontWeight: '900', color: C.white, fontVariant: ['tabular-nums'] },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 10, paddingRight: 14, marginVertical: 5, backgroundColor: C.card, borderRadius: R.lg, borderWidth: StyleSheet.hairlineWidth, borderColor: C.borderSoft, ...shadowSm },
   rowName: { fontSize: 15, fontWeight: '700', color: C.text, letterSpacing: -0.2 },
   amount: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', marginTop: 6, backgroundColor: C.primarySoft, paddingHorizontal: 8, paddingVertical: 3, borderRadius: R.pill },
   amountText: { fontSize: 12, fontWeight: '700', color: C.primaryDark, fontVariant: ['tabular-nums'] },

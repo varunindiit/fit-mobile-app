@@ -15,7 +15,7 @@ const EDGE = 0.06; // the divider never fully hides either side
  * Before/after comparison: the goal photo fills the frame and the current one is revealed up to a
  * draggable divider. On arrival the divider sweeps once to show it can be moved, then rests in the middle.
  */
-export function BeforeAfter({ before, after, gender }: { before: number; after: number; gender: 'male' | 'female' | 'other' }) {
+export function BeforeAfter({ before, after, gender, onDrag }: { before: number; after: number; gender: 'male' | 'female' | 'other'; /** Fires true on touch down and false on release, so a parent ScrollView can stop scrolling while the divider moves. */ onDrag?: (active: boolean) => void }) {
   const [w, setW] = useState(0);
   const x = useSharedValue(0);
   const ref = useRef<View>(null);
@@ -50,6 +50,7 @@ export function BeforeAfter({ before, after, gender }: { before: number; after: 
       onResponderGrant={(e) => {
         const px = e.nativeEvent.pageX;
         touched.current = true;
+        onDrag?.(true);
         tap();
         ref.current?.measureInWindow((ox) => {
           originX.current = ox;
@@ -57,6 +58,8 @@ export function BeforeAfter({ before, after, gender }: { before: number; after: 
         });
       }}
       onResponderMove={(e) => move(e.nativeEvent.pageX)}
+      onResponderRelease={() => onDrag?.(false)}
+      onResponderTerminate={() => onDrag?.(false)}
       accessibilityLabel={`Before: ${b.range} body fat. After: ${a.range} body fat.`}>
       {w > 0 && (
         <>

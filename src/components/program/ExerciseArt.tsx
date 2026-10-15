@@ -6,14 +6,13 @@ import Animated, { cancelAnimation, Easing, useAnimatedStyle, useReducedMotion, 
 
 import { Glyph } from '@/components/Glyph';
 import { EXERCISE_ART, EXERCISE_ART_B } from '@/components/glyphs';
-import { C } from '@/theme';
 
 const ART: [string, string] = ['#F6FBF8', '#E1F2EA'];
 /** 2-frame rep loop: hold each pose, then a quick cross-fade — reads like a GIF. */
 const HOLD = 420;
 const SWAP = 160;
 
-/** Illustration tile: the exercise's 3D figure (or its emoji glyph) standing on a soft mint mat, optionally with a looping "rep" motion
+/** Illustration tile: the exercise's 3D figure (or its emoji glyph), optionally with a looping "rep" motion
  *  (2-frame pose swap when a second keyframe exists, gentle breathing for static holds). */
 export function ExerciseArt({ id, emoji, size = 64, width, height, animated = false, radius, style }: { id?: string; emoji: string; size?: number; width?: DimensionValue; height?: number; animated?: boolean; radius?: number; style?: ViewStyle }) {
   const h = height ?? size;
@@ -46,16 +45,10 @@ export function ExerciseArt({ id, emoji, size = 64, width, height, animated = fa
     return { opacity: 1, transform: [{ translateY: -lift * v }, { scale: 1 + 0.07 * v }, { rotate: `${-3 + 6 * v}deg` }] };
   });
   const figureB = useAnimatedStyle(() => ({ opacity: loop ? t.get() : 0 }));
-  const shade = useAnimatedStyle(() => {
-    const v = loop && mode !== 'frames' ? t.get() : 0;
-    return { opacity: 1 - 0.45 * v, transform: [{ scaleX: 1 - 0.28 * v }] };
-  });
 
   const fs = Math.round(h * 0.48);
   const figH = Math.round(h * 0.8);
-  const matBottom = Math.round(h * 0.13);
-  const matH = Math.max(4, Math.round(h * 0.065));
-  const shadowW = Math.round(h * 0.42);
+  const figBottom = Math.round(h * 0.1);
 
   return (
     <LinearGradient colors={ART} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={[{ width: width ?? size, height: h, borderRadius: radius ?? Math.min(28, Math.round(h * 0.22)), overflow: 'hidden' }, style]}>
@@ -65,11 +58,7 @@ export function ExerciseArt({ id, emoji, size = 64, width, height, animated = fa
           <View style={[s.bubble, { width: h * 0.3, height: h * 0.3, borderRadius: h * 0.15, top: h * 0.2, left: -h * 0.1 }]} />
         </>
       )}
-      <View style={[s.mat, { bottom: matBottom, height: matH }]} />
-      <View style={[s.figure, { bottom: matBottom + matH - 2 }]}>
-        <Animated.View style={[s.shadow, { width: shadowW, height: Math.max(4, h * 0.05), borderRadius: shadowW }, shade]} />
-      </View>
-      <View style={[s.figure, { bottom: matBottom + matH * 0.6 }]}>
+      <View style={[s.figure, { bottom: figBottom }]}>
         <Animated.View style={figure}>
           {art ? <Image source={art} style={{ width: figH, height: figH }} contentFit="contain" /> : <Glyph emoji={emoji} size={Math.round(fs * 1.25)} />}
         </Animated.View>
@@ -85,8 +74,6 @@ export function ExerciseArt({ id, emoji, size = 64, width, height, animated = fa
 
 const s = StyleSheet.create({
   bubble: { position: 'absolute', backgroundColor: 'rgba(255,255,255,0.7)' },
-  mat: { position: 'absolute', left: '9%', right: '9%', borderRadius: 99, backgroundColor: C.primaryTint },
-  shadow: { backgroundColor: 'rgba(19,35,31,0.12)' },
   figure: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
   frameB: { position: 'absolute', top: 0, left: 0, right: 0, alignItems: 'center' },
 });
