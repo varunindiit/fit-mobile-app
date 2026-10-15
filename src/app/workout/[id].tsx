@@ -393,7 +393,7 @@ function WorkoutFlow({ w }: { w: Workout }) {
             </View>
           </View>
           <Animated.View entering={nativeOnly(ZoomIn.duration(MOTION.enter))} style={st.heroDisc}>
-            <Glyph emoji={w.emoji} src={WORKOUT_ART[w.id]} size={74} />
+            <Glyph emoji={w.emoji} src={WORKOUT_ART[w.id]} size={WORKOUT_ART[w.id] ? 100 : 74} />
           </Animated.View>
           <Text style={st.heroTitle}>{w.title}</Text>
           <Text style={st.heroCoach}>{coachText}</Text>

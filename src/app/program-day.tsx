@@ -219,7 +219,7 @@ function DayPlan({ session }: { session: Session }) {
               )}
             </View>
             <Animated.View style={[s.heroDisc, heroArt]}>
-              <Glyph emoji={session.emoji} src={sessionArt(session.key)} size={74} />
+              <Glyph emoji={session.emoji} src={sessionArt(session.key)} size={sessionArt(session.key) ? 120 : 74} />
             </Animated.View>
           </Animated.View>
         </LinearGradient>

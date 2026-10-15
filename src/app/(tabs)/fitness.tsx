@@ -207,7 +207,7 @@ export default function TrainingScreen() {
                   <Text style={st.dayMeta}>{finished ? 'You finished all 30 days!' : session.restDay ? 'Rest day · recover & stretch' : `${stats.exercises} exercises · ${stats.minutes} min · ${stats.kcal} kcal`}</Text>
                 </View>
                 <View style={st.heroDisc}>
-                  <Glyph emoji={finished ? '🏆' : session.emoji} src={finished ? undefined : sessionArt(session.key)} size={64} />
+                  <Glyph emoji={finished ? '🏆' : session.emoji} src={finished ? undefined : sessionArt(session.key)} size={!finished && sessionArt(session.key) ? 106 : 64} />
                 </View>
               </View>
               <View style={st.daysRow}>

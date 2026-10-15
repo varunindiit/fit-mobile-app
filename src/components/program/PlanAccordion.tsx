@@ -81,7 +81,7 @@ function PlanCard({ p, open, done, cta, onChange, onStart }: { p: Program; open:
             <Animated.View entering={bodyIn} exiting={bodyOut}>
               <View style={s.artRow}>
                 <View style={s.emojiDisc}>
-                  <Glyph emoji={p.emoji} src={PROGRAM_ART[p.id]} size={70} />
+                  <Glyph emoji={p.emoji} src={PROGRAM_ART[p.id]} size={PROGRAM_ART[p.id] ? 110 : 70} />
                 </View>
                 <View style={s.users}>
                   <Ionicons name="people" size={14} color={C.white} />
