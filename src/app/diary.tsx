@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Extrapolation,
   FadeIn,
@@ -138,10 +138,10 @@ export default function DiaryScreen() {
                 </Text>
                 <IconButton icon="chevron-forward" size={18} bg={C.surfaceAlt} style={st.weekNav} onPress={() => setDate(notFuture(addDays(date, 7), today))} />
               </View>
-              <WeekStrip
-                week={week}
+              <WeekPager
                 date={date}
                 today={today}
+                earliest={state.entries.reduce((m, e) => (e.date < m ? e.date : m), date)}
                 logged={loggedDays}
                 onPick={(d) => {
                   tap();
@@ -374,6 +374,57 @@ export default function DiaryScreen() {
         </Animated.View>
       )}
     </Screen>
+  );
+}
+
+const weekOf = (k: string) => addDays(k, -((parseKey(k).getDay() + 6) % 7));
+const weeksBetween = (a: string, b: string) => Math.round((parseKey(b).getTime() - parseKey(a).getTime()) / (7 * 864e5));
+
+/** Horizontally swipeable weeks (paging), ending at the current week so the future can't be reached. */
+function WeekPager({ date, today, earliest, logged, onPick }: { date: string; today: string; earliest: string; logged: Set<string>; onPick: (d: string) => void }) {
+  const [w, setW] = useState(0);
+  const listRef = useRef<FlatList<string>>(null);
+  const first = weekOf([earliest, addDays(today, -364)].sort()[0]);
+  const weeks = useMemo(() => Array.from({ length: weeksBetween(first, weekOf(today)) + 1 }, (_, i) => addDays(first, i * 7)), [first, today]);
+  const idx = weeksBetween(first, weekOf(date));
+
+  // Keep the visible page in sync when the date changes from the arrows / Today button.
+  const shownIdx = useRef(idx);
+  useEffect(() => {
+    if (!w || shownIdx.current === idx) return;
+    shownIdx.current = idx;
+    listRef.current?.scrollToOffset({ offset: idx * w, animated: true });
+  }, [idx, w]);
+
+  return (
+    <View onLayout={(e) => setW(e.nativeEvent.layout.width)}>
+      {w > 0 && (
+        <FlatList
+          ref={listRef}
+          data={weeks}
+          keyExtractor={(k) => k}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          initialScrollIndex={idx}
+          getItemLayout={(_, i) => ({ length: w, offset: w * i, index: i })}
+          extraData={[date, logged]}
+          initialNumToRender={3}
+          windowSize={3}
+          onMomentumScrollEnd={(e) => {
+            const i = Math.round(e.nativeEvent.contentOffset.x / w);
+            if (i === shownIdx.current || i < 0 || i >= weeks.length) return;
+            shownIdx.current = i;
+            onPick(notFuture(addDays(date, (i - idx) * 7), today));
+          }}
+          renderItem={({ item }) => (
+            <View style={{ width: w }}>
+              <WeekStrip week={Array.from({ length: 7 }, (_, i) => addDays(item, i))} date={date} today={today} logged={logged} onPick={onPick} />
+            </View>
+          )}
+        />
+      )}
+    </View>
   );
 }
 
