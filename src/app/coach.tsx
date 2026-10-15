@@ -184,7 +184,7 @@ function reply(raw: string, c: Ctx): Reply {
     const pr = c.program;
     if (c.programDone >= PROGRAM_DAYS)
       return {
-        text: `You've completed all ${PROGRAM_DAYS} days of ${pr.title}! Time to level up — try the next program on the Training tab.`,
+        text: `You've completed all ${PROGRAM_DAYS} days of ${pr.title}! Time to level up — try the next program on the Workout tab.`,
         action: { label: 'Browse programs', icon: 'barbell', href: '/fitness' },
       };
     const day = c.programDone + 1;
@@ -192,7 +192,7 @@ function reply(raw: string, c: Ctx): Reply {
     if (s.restDay)
       return {
         text: `Day ${day} of ${pr.title} is a rest day\n\nRecovery is when your core actually gets stronger. Go for a gentle walk, stretch, and aim for 7–8 hours of sleep tonight.`,
-        action: { label: 'Open Training', icon: 'barbell', href: '/fitness' },
+        action: { label: 'Open Workout', icon: 'barbell', href: '/fitness' },
       };
     const stats = sessionStats(s, c.rest);
     const list = s.items

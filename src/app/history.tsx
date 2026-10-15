@@ -126,7 +126,7 @@ export default function HistoryScreen() {
                   {sel > today ? (
                     <EmptyState icon="calendar-outline" title="Nothing planned yet" text="This day is still ahead of you." />
                   ) : sel === today ? (
-                    <EmptyState icon="barbell-outline" title="No workouts yet today" text="Start your daily challenge to keep your streak alive." action="Go to Training" onAction={() => router.navigate('/fitness')} />
+                    <EmptyState icon="barbell-outline" title="No workouts yet today" text="Start your daily challenge to keep your streak alive." action="Go to Workout" onAction={() => router.navigate('/fitness')} />
                   ) : (
                     <EmptyState icon="moon-outline" title="Rest day" text="No workouts were logged on this day." />
                   )}
@@ -137,7 +137,7 @@ export default function HistoryScreen() {
         ) : groups.length === 0 ? (
           <Animated.View key={`empty:${prefix}`} entering={fadeEnter()} style={{ marginTop: 12 }}>
             <Card style={{ paddingVertical: 0 }}>
-              <EmptyState icon="calendar-clear-outline" title={`No workouts in ${MONTH_NAMES[m]}`} text="Workouts you complete will show up here." action={atCurrent ? 'Go to Training' : undefined} onAction={() => router.navigate('/fitness')} />
+              <EmptyState icon="calendar-clear-outline" title={`No workouts in ${MONTH_NAMES[m]}`} text="Workouts you complete will show up here." action={atCurrent ? 'Go to Workout' : undefined} onAction={() => router.navigate('/fitness')} />
             </Card>
           </Animated.View>
         ) : (

@@ -139,7 +139,7 @@ export default function TrainingScreen() {
       <TabHeader
         scrollY={scrollY}
         eyebrow={finished ? `${program.title} · all 30 days done` : `${program.title} · day ${day} of 30`}
-        title="Training"
+        title="Workout"
         compact={
           <>
             <LinearGradient colors={G.deep} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.dayBadge}>

@@ -76,15 +76,15 @@ export default function ReportsScreen() {
     <Screen>
       <TabHeader
         scrollY={scrollY}
-        eyebrow="Training · Weight · Activity"
-        title="Reports"
+        eyebrow="Workouts · Weight · Activity"
+        title="Analytics"
         compact={
           <>
             <LinearGradient colors={G.deep} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.headBadge}>
               <Ionicons name="stats-chart" size={17} color={C.white} />
             </LinearGradient>
             <TabHeaderText
-              title="Reports"
+              title="Analytics"
               sub={`${totals.n} workout${totals.n === 1 ? '' : 's'}${latest ? ` · ${toUnit(latest.kg, units).toFixed(1)} ${units}` : ''}`}
             />
           </>
@@ -568,7 +568,7 @@ function CaloriesView() {
             </Text>
           </View>
         </View>
-        <Button title="Open food diary" icon="book-outline" variant="secondary" small onPress={() => router.navigate('/diary')} style={{ marginTop: 14 }} />
+        <Button title="Open food diary" icon="book-outline" variant="secondary" small onPress={() => router.navigate('/diet')} style={{ marginTop: 14 }} />
       </Card>
     </>
   );

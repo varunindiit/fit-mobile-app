@@ -17,9 +17,10 @@ const TABS: Record<
   { label: string; icon: IconName; iconOn: IconName }
 > = {
   index: { label: "Home", icon: "home-outline", iconOn: "home" },
-  fitness: { label: "Training", icon: "barbell-outline", iconOn: "barbell" },
+  fitness: { label: "Workout", icon: "barbell-outline", iconOn: "barbell" },
+  diet: { label: "Diet", icon: "nutrition-outline", iconOn: "nutrition" },
   progress: {
-    label: "Reports",
+    label: "Analytics",
     icon: "stats-chart-outline",
     iconOn: "stats-chart",
   },
@@ -110,6 +111,7 @@ export default function TabsLayout() {
     <Tabs screenOptions={{ headerShown: false, animation: "none" }} tabBar={(p: any) => <TabBar {...p} />}>
       <Tabs.Screen name="index" />
       <Tabs.Screen name="fitness" />
+      <Tabs.Screen name="diet" />
       <Tabs.Screen name="progress" />
       <Tabs.Screen name="me" />
     </Tabs>

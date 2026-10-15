@@ -316,7 +316,7 @@ export default function Home() {
             over={over}
             status={status}
             macros={{ carbs: [total.carbs, targets.carbs], protein: [total.protein, targets.protein], fat: [total.fat, targets.fat], fiber: [total.fiber, targets.fiber] }}
-            onPress={() => router.push('/diary')}
+            onPress={() => router.navigate('/diet')}
           />
         </Animated.View>
 
@@ -416,7 +416,7 @@ export default function Home() {
 
         {/* Meals */}
         <Animated.View entering={enter(5)}>
-          <SectionTitle title="Today's meals" action="View diary" onAction={() => router.push('/diary')} />
+          <SectionTitle title="Today's meals" action="View diary" onAction={() => router.navigate('/diet')} />
           <Card style={{ paddingVertical: 4, paddingHorizontal: 0 }}>
             {MEALS.map((m, i) => {
               const kcal = Math.round(byMeal[m.key]?.kcal ?? 0);
@@ -426,7 +426,7 @@ export default function Home() {
               const logged = kcal > 0;
               return (
                 <View key={m.key}>
-                  <Pressable onPress={() => router.push('/diary')} style={({ pressed }) => [st.meal, pressed && { backgroundColor: C.surfaceAlt }]}>
+                  <Pressable onPress={() => router.navigate('/diet')} style={({ pressed }) => [st.meal, pressed && { backgroundColor: C.surfaceAlt }]}>
                     <View>
                       <IconTile icon={m.icon as IconName} size={42} color={tint.color} bg={tint.bg} />
                       {logged && (
