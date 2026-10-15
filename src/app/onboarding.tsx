@@ -11,16 +11,22 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { BodyShape, SHAPES, bodyFat } from '@/components/onboarding/BodyShape';
 import { IMG } from '@/components/onboarding/assets';
 import { Analysis, Intro, LoginSheet, Motivation, Paywall, PlanResult, Welcome } from '@/components/onboarding/FullScreens';
+import { ActivityCards, ActivityHero, StepGoal, type ActivityOption } from '@/components/onboarding/Activity';
+import { BeforeAfter } from '@/components/onboarding/BeforeAfter';
+import { BenefitsHero, CompareTable } from '@/components/onboarding/Benefits';
 import { BmiGauge } from '@/components/onboarding/BmiGauge';
+import { IntensityList, StoryGrid, type IntensityOption, type StoryOption } from '@/components/onboarding/Choices';
 import { GoalCurve } from '@/components/onboarding/GoalCurve';
 import { HeightStage } from '@/components/onboarding/HeightStage';
-import { ChoiceRow, GUTTER, OnbHeader, PACES, Photo, QTitle, StepSlider, TipCard, UnitToggle, fromUnit, stepIn, toUnit, useOn, type WeightUnit } from '@/components/onboarding/kit';
+import { ChoiceRow, GUTTER, OnbHeader, PACES, Photo, QTitle, StepSlider, UnitToggle, fromUnit, stepIn, toUnit, useOn, type WeightUnit } from '@/components/onboarding/kit';
+import { PacePicker } from '@/components/onboarding/PacePicker';
+import { MAX_REST, RestPlanner } from '@/components/onboarding/RestPlanner';
 import { RulerPicker } from '@/components/onboarding/RulerPicker';
 import { YearWheel } from '@/components/onboarding/YearWheel';
-import { Button, EASE_OUT, nativeOnly, PressableScale, tap, useToast, type IconName } from '@/components/ui';
-import { bmi, bmiLabel, targets } from '@/lib/calc';
+import { Button, CountUp, EASE_OUT, nativeOnly, PressableScale, tap, useToast, type IconName } from '@/components/ui';
+import { bmi, bmiLabel, dateKey, fmtDate, targets } from '@/lib/calc';
 import { DEFAULT_PROFILE, isPremiumActive, useStore, type Goal, type Profile } from '@/lib/store';
-import { BRAND, C, G, MOTION, R, glow, shadowLg, shadowSm } from '@/theme';
+import { BRAND, C, MOTION, R, shadowSm } from '@/theme';
 
 /* ---------------- Flow ---------------- */
 
@@ -57,15 +63,22 @@ const QUESTIONS = STEPS.filter((s) => SECTION[s]);
 
 /* ---------------- Options ---------------- */
 
-const EXPERIENCE = ['I tried but lost motivation', 'I succeeded but regained weight', 'Achieved but plateaued', 'Still trying', 'This is my first time'];
-const LEVELS: { t: string; icon: IconName; program: Profile['program']; detail: string }[] = [
-  { t: 'Easy to start', icon: 'happy-outline', program: 'belly', detail: 'Gentle, beginner-friendly sessions to build the habit without burning out.' },
-  { t: 'Break a light sweat', icon: 'water-outline', program: 'abs', detail: "We'll tailor effective workouts with the right intensity just for you!" },
-  { t: 'A bit challenging', icon: 'flame-outline', program: 'sixpack', detail: 'Higher-volume training that pushes you a little further every week.' },
+// `v` is the stored answer (kept stable so saved profiles still match); `t` is what the screen shows.
+const EXPERIENCE: StoryOption[] = [
+  { v: 'I tried but lost motivation', t: 'Lost motivation', s: 'Started strong, then it faded', icon: 'battery-dead-outline', reply: "Totally normal. We'll keep it fun with small wins you can feel every day." },
+  { v: 'I succeeded but regained weight', t: 'It came back', s: 'Lost the weight, then regained it', icon: 'repeat-outline', reply: "We'll build habits that stick around long after you reach your goal." },
+  { v: 'Achieved but plateaued', t: 'Hit a plateau', s: 'Progress suddenly stopped', icon: 'pause-circle-outline', reply: 'A fresh routine and a clear weekly pace are a great way to get moving again.' },
+  { v: 'Still trying', t: 'Still at it', s: "I'm working on it right now", icon: 'trending-down-outline', reply: "Love the effort. Let's give it a clear plan so every week counts." },
+  { v: 'This is my first time', t: 'First time', s: 'Starting fresh, no history yet', icon: 'rocket-outline', reply: "Perfect place to start. We'll guide you one simple step at a time." },
 ];
-const ACTIVITY: { t: string; s: string; v: Profile['activity'] }[] = [
-  { t: 'I do some light physical activity', s: '(such as casual walks)', v: 'light' },
-  { t: 'I spend much of the day sitting', s: '(such as desk work)', v: 'sedentary' },
+const LEVELS: (IntensityOption & { program: Profile['program'] })[] = [
+  { v: 'Easy to start', t: 'Ease into it', tag: 'Beginner · low intensity', bars: 1, program: 'belly', detail: 'Gentle sessions that build the habit without wearing you out.' },
+  { v: 'Break a light sweat', t: 'Break a sweat', tag: 'Intermediate · moderate', bars: 2, program: 'abs', detail: 'Steady, effective workouts at an intensity that suits you.' },
+  { v: 'A bit challenging', t: 'Push me', tag: 'Advanced · high intensity', bars: 3, program: 'sixpack', detail: 'Higher-volume training that takes you a little further every week.' },
+];
+const ACTIVITY: ActivityOption<Profile['activity']>[] = [
+  { v: 'light', t: 'Lightly active', s: 'Casual walks and daily errands', icon: 'walk-outline' },
+  { v: 'sedentary', t: 'Mostly sitting', s: 'Desk work, long hours at a screen', icon: 'laptop-outline' },
 ];
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const DIETS: { t: string; img: number; hero: number; diet: string }[] = [
@@ -85,8 +98,6 @@ const GENDERS: { v: 'male' | 'female'; label: string; icon: IconName; img: numbe
   { v: 'male', label: 'Male', icon: 'male', img: IMG.genderMale },
   { v: 'female', label: 'Female', icon: 'female', img: IMG.genderFemale },
 ];
-const BENEFITS_LEFT =['Slow transformation', 'Lack of personalization', 'Missing expertise', 'Limited progress'];
-const BENEFITS_RIGHT = ['Faster results', 'Tailored for you', 'Expert guidance', 'Boosted progress'];
 
 /** Age bracket for the birth step: how the plan adapts. */
 const ageGroup = (age: number): { title: string; icon: IconName; note: string } =>
@@ -469,28 +480,21 @@ export default function Onboarding() {
       case 'preview':
         return (
           <Body>
-            <QTitle text={`See incredible changes with your personal ${BRAND} plan!`} />
-            <View style={st.previewRow}>
-              <Rise i={1} style={st.previewCard}>
-                <BodyShape level={p.bodyShape} gender={p.gender} style={st.previewArt} />
-                <Text style={st.previewLabel}>Before</Text>
+            <QTitle text={`Meet the *new you* your ${BRAND} plan is built for`} sub="Drag the slider to compare today with your goal." />
+            <Rise i={1} style={{ paddingHorizontal: GUTTER, marginTop: 20 }}>
+              <BeforeAfter before={p.bodyShape} after={p.targetShape} gender={p.gender} />
+            </Rise>
+            <View style={st.statRow}>
+              <Rise i={2} style={{ flex: 1 }}>
+                <StatTile icon="flame-outline" label="Body fat" from={bodyFat(p.bodyShape, p.gender).range} to={bodyFat(p.targetShape, p.gender).range} />
               </Rise>
-              <Animated.View entering={nativeOnly(ZoomIn.duration(MOTION.enter).delay(420))} style={st.previewArrow}>
-                <Ionicons name="arrow-forward" size={18} color={C.white} />
-              </Animated.View>
-              <Rise i={3} style={[st.previewCard, st.previewCardOn]}>
-                <BodyShape level={p.targetShape} gender={p.gender} style={st.previewArt} />
-                <View style={st.previewTag}>
-                  <Text style={[st.previewLabel, { color: C.white, marginTop: 0 }]}>After</Text>
-                </View>
+              <Rise i={3} style={{ flex: 1 }}>
+                <StatTile icon="scale-outline" label={`Weight (${units})`} from={toUnit(p.weightKg, units).toFixed(1)} to={toUnit(p.targetKg, units).toFixed(1)} />
               </Rise>
             </View>
-            <Rise i={4} style={{ paddingHorizontal: GUTTER, marginTop: 18 }}>
-              <TipCard icon="trending-up" tone="good">
-                <Text style={st.tipText}>
-                  From <Text style={st.bold}>{bodyFat(p.bodyShape, p.gender).range}</Text> to <Text style={st.bold}>{bodyFat(p.targetShape, p.gender).range}</Text> body fat with a plan built around your answers.
-                </Text>
-              </TipCard>
+            <Rise i={4} style={st.privacy}>
+              <Ionicons name="sparkles" size={12} color={C.primary} />
+              <Text style={st.privacyText}>Your plan is built around your answers</Text>
             </Rise>
           </Body>
         );
@@ -498,29 +502,47 @@ export default function Onboarding() {
         const pi = Math.max(0, PACES.findIndex((x) => x.v === p.pace));
         const pace = PACES[pi];
         const t = targets({ ...p, goal: goalFor(p) });
+        const goalText = `${toUnit(p.targetKg, units).toFixed(1)} ${units}`;
+        const sameYear = t.goalDate.getFullYear() === new Date().getFullYear();
+        const dateText = `${fmtDate(dateKey(t.goalDate))}${sameYear ? '' : ` ${t.goalDate.getFullYear()}`}`;
         return (
           <Body>
-            <QTitle text="How fast do you want to reach your goal?" />
-            <Rise i={1} style={[st.card, { marginHorizontal: GUTTER, marginTop: 20, paddingTop: 16 }]}>
-              <GoalCurve from={toUnit(p.weightKg, units)} to={toUnit(p.targetKg, units)} fromText={`${toUnit(p.weightKg, units).toFixed(1)} ${units}`} toText={`${toUnit(p.targetKg, units).toFixed(1)} ${units}`} height={130} />
+            <QTitle text="Choose your *pace* to the goal" sub="Faster isn't always better — pick what you can stick to." />
+            <Rise i={1} style={st.paceHero}>
+              <View style={st.paceHeroTop}>
+                <View style={{ flex: 1 }}>
+                  <Text style={st.eyebrow}>{t.weeks === 0 ? 'YOUR GOAL' : 'ESTIMATED GOAL DATE'}</Text>
+                  <Animated.Text key={dateText + t.weeks} entering={nativeOnly(FadeInDown.duration(MOTION.base).easing(EASE_OUT))} style={st.goalDate}>
+                    {t.weeks === 0 ? 'Maintain' : dateText}
+                  </Animated.Text>
+                  <Text style={st.goalSub}>{t.weeks === 0 ? `Hold steady at ${goalText}` : `Reach ${goalText}`}</Text>
+                </View>
+                {t.weeks > 0 && (
+                  <Animated.View key={t.weeks} entering={nativeOnly(ZoomIn.duration(MOTION.base))} style={st.weeksPill}>
+                    <Text style={st.weeksNum}>{t.weeks}</Text>
+                    <Text style={st.weeksLabel}>{t.weeks === 1 ? 'week' : 'weeks'}</Text>
+                  </Animated.View>
+                )}
+              </View>
+              <GoalCurve from={toUnit(p.weightKg, units)} to={toUnit(p.targetKg, units)} fromText={`${toUnit(p.weightKg, units).toFixed(1)} ${units}`} toText={goalText} height={110} />
             </Rise>
-            <Rise i={2} style={{ alignItems: 'center', marginTop: 18 }}>
-              <Animated.Text key={t.weeks} entering={nativeOnly(ZoomIn.duration(MOTION.base))} style={st.weeks}>
-                {t.weeks === 0 ? 'Maintain' : `${t.weeks} Week${t.weeks === 1 ? '' : 's'}`}
-              </Animated.Text>
-              <Text style={st.paceKg}>
-                {toUnit(pace.v, units)} {units} per week
-              </Text>
+            <Rise i={2} style={{ paddingHorizontal: GUTTER, marginTop: 18 }}>
+              <PacePicker value={pi} onChange={(i) => set({ pace: PACES[i].v })} units={units} />
             </Rise>
-            <Rise i={3} style={{ paddingHorizontal: GUTTER, marginTop: 12 }}>
-              <TipCard icon={pace.icon}>
-                <Animated.Text key={pi} entering={nativeOnly(FadeInDown.duration(MOTION.base))} style={st.tipText}>
-                  {pace.note}
-                </Animated.Text>
-              </TipCard>
-            </Rise>
-            <Rise i={4} style={{ marginTop: 20 }}>
-              <StepSlider count={PACES.length} value={pi} onChange={(i) => set({ pace: PACES[i].v })} left="Easy" right="Master" />
+            <Rise i={3} style={{ paddingHorizontal: GUTTER, marginTop: 14 }}>
+              <View style={st.insight}>
+                <View style={[st.insightIcon, { backgroundColor: C.primarySoft }]}>
+                  <Ionicons name={pace.icon} size={18} color={C.primaryDark} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Animated.Text key={pi} entering={nativeOnly(FadeIn.duration(MOTION.base))} style={st.insightText}>
+                    {pace.note}
+                  </Animated.Text>
+                  <Text style={st.rangeText}>
+                    Daily calories ≈ <CountUp value={t.budget} style={st.bold} /> kcal
+                  </Text>
+                </View>
+              </View>
             </Rise>
           </Body>
         );
@@ -528,105 +550,66 @@ export default function Onboarding() {
       case 'benefits':
         return (
           <Body>
-            <QTitle text={`Discover the benefits of ${BRAND}'s program`} />
-            <View style={st.benefitRow}>
-              <Rise i={1} style={st.benefitLeft}>
-                <Image source={p.gender === 'male' ? IMG.benefitsBeforeMale : IMG.benefitsBefore} style={st.beforePhoto} contentFit="cover" contentPosition="top" />
-                <View style={st.ribbon}>
-                  <View style={[StyleSheet.absoluteFill, st.ribbonBg, { backgroundColor: '#DCDCE2' }]} />
-                  <Text style={st.ribbonGrey}>Regular{'\n'}Workout Apps</Text>
-                  <View style={[st.ribbonFold, { borderTopColor: '#B9B9C2' }]} />
-                </View>
-                <View style={st.benefitList}>
-                  {BENEFITS_LEFT.map((label, i) => (
-                    <View key={label} style={[st.benefitLine, i === BENEFITS_LEFT.length - 1 && { opacity: 0.45 }]}>
-                      <Ionicons name="close-circle" size={17} color="#CFCFD6" />
-                      <Text style={st.benefitText}>{label}</Text>
-                    </View>
-                  ))}
-                </View>
-              </Rise>
-              <Rise i={2} style={st.benefitCard}>
-                <LinearGradient colors={G.brand} style={[StyleSheet.absoluteFill, st.benefitCardBg]} />
-                <Image source={p.gender === 'male' ? IMG.benefitsMale : IMG.benefits} style={st.benefitPhoto} contentFit="contain" contentPosition="bottom" />
-                <View style={[st.ribbon, st.ribbonRight]}>
-                  <LinearGradient colors={[C.accent, C.workout]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={[StyleSheet.absoluteFill, st.ribbonBg]} />
-                  <Text style={st.ribbonTitle}>Our Program</Text>
-                  <Text style={st.ribbonSub}>Personalized Plan</Text>
-                  <View style={[st.ribbonFold, { borderTopColor: '#A8461F' }]} />
-                  <View style={st.sparkle} pointerEvents="none">
-                    {[5, 45, 85].map((deg) => (
-                      <View key={deg} style={[st.sparkleBar, { transform: [{ rotate: `${deg}deg` }, { translateY: -9 }] }]} />
-                    ))}
-                  </View>
-                </View>
-                <View style={[st.benefitList, { paddingHorizontal: 14, paddingBottom: 18 }]}>
-                  {BENEFITS_RIGHT.map((b, i) => (
-                    <View key={b} style={[st.benefitLine, i === BENEFITS_RIGHT.length - 1 && { opacity: 0.5 }]}>
-                      <View style={st.checkDot}>
-                        <Ionicons name="checkmark" size={12} color={C.primaryDark} />
-                      </View>
-                      <Text style={st.benefitCardText}>{b}</Text>
-                    </View>
-                  ))}
-                </View>
-              </Rise>
-            </View>
+            <QTitle text={`Why *${BRAND}* works for you`} sub="Everything in your plan comes from your answers." />
+            <Rise i={1} style={{ paddingHorizontal: GUTTER }}>
+              <BenefitsHero male={p.gender === 'male'} />
+            </Rise>
+            <Rise i={2} style={{ paddingHorizontal: GUTTER }}>
+              <CompareTable />
+            </Rise>
           </Body>
         );
       case 'experience':
         return (
           <Body>
-            <QTitle text="How was your last experience with weight loss?" />
-            <View style={st.list}>
-              {EXPERIENCE.map((e, i) => (
-                <Rise key={e} i={i + 1}>
-                  <ChoiceRow radio title={e} selected={p.experience === e} onPress={() => set({ experience: e })} />
-                </Rise>
-              ))}
-            </View>
+            <QTitle text="What's your *weight-loss* story so far?" sub="No judgement. It helps us plan around what got in your way." />
+            <Rise i={1} style={{ paddingHorizontal: GUTTER, marginTop: 22 }}>
+              <StoryGrid options={EXPERIENCE} value={p.experience} onChange={(experience) => set({ experience })} />
+            </Rise>
           </Body>
         );
       case 'level':
         return (
           <Body>
-            <QTitle text="Choose your preferred workout level" />
-            <View style={st.list}>
-              {LEVELS.map((l, i) => (
-                <Rise key={l.t} i={i + 1}>
-                  <ChoiceRow icon={l.icon} title={l.t} detail={l.detail} selected={p.workoutLevel === l.t} onPress={() => set({ workoutLevel: l.t, program: l.program })} />
-                </Rise>
-              ))}
-            </View>
+            <QTitle text="How hard do you want to *train*?" sub="Pick the intensity that feels right today." />
+            <Rise i={1} style={{ paddingHorizontal: GUTTER, marginTop: 22 }}>
+              <IntensityList
+                options={LEVELS}
+                value={p.workoutLevel}
+                onChange={(v) => {
+                  const l = LEVELS.find((x) => x.v === v);
+                  if (l) set({ workoutLevel: l.v, program: l.program });
+                }}
+              />
+            </Rise>
           </Body>
         );
       case 'activity':
         return (
           <Body>
-            <QTitle text="What's your activity level?" />
-            <Rise i={1} style={{ alignItems: 'center', marginTop: 16 }}>
-              <Image source={IMG.activity} style={st.activityArt} contentFit="contain" />
+            <QTitle text="What does your *everyday* look like?" sub="Not counting workouts — this shapes your daily step goal and calorie burn." />
+            <Rise i={1}>
+              <ActivityHero />
             </Rise>
-            <View style={st.list}>
-              {ACTIVITY.map((a, i) => (
-                <Rise key={a.v} i={i + 2}>
-                  <ChoiceRow radio title={a.t} sub={a.s} selected={p.activity === a.v} onPress={() => set({ activity: a.v })} />
-                </Rise>
-              ))}
-            </View>
+            <Rise i={2} style={{ paddingHorizontal: GUTTER, marginTop: 6 }}>
+              <ActivityCards options={ACTIVITY} value={p.activity} onChange={(activity) => set({ activity })} />
+            </Rise>
+            <Rise i={3} style={{ paddingHorizontal: GUTTER }}>
+              <StepGoal steps={targets(p).stepGoal} />
+            </Rise>
           </Body>
         );
       case 'rest':
         return (
           <Body>
-            <QTitle
-              text="Which days do you want to rest each week?"
-              sub={p.restDays.length ? `${7 - p.restDays.length} workout days · ${p.restDays.length} rest day${p.restDays.length === 1 ? '' : 's'}` : 'Pick at least one day to recover.'}
-            />
-            <Rise i={1} style={st.dayGrid}>
-              {DAYS.map((d) => (
-                <DayChip key={d} label={d} on={p.restDays.includes(d)} onPress={() => set((x) => ({ restDays: x.restDays.includes(d) || x.restDays.length < 5 ? toggleIn(x.restDays, d) : x.restDays }))} />
-              ))}
+            <QTitle text="Plan your *rest* days" sub="Recovery is where progress happens. Tap the days you'll take off." />
+            <Rise i={1} style={{ paddingHorizontal: GUTTER, marginTop: 22 }}>
+              <RestPlanner
+                days={DAYS}
+                value={p.restDays}
+                onChange={(restDays) => set({ restDays })}
+                onToggle={(d) => set((x) => ({ restDays: x.restDays.includes(d) || x.restDays.length < MAX_REST ? toggleIn(x.restDays, d) : x.restDays }))}
+              />
             </Rise>
           </Body>
         );
@@ -770,22 +753,6 @@ function OtherRow({ on, onPress }: { on: boolean; onPress: () => void }) {
   );
 }
 
-function DayChip({ label, on, onPress }: { label: string; on: boolean; onPress: () => void }) {
-  const p = useOn(on);
-  const box = useAnimatedStyle(() => ({
-    backgroundColor: interpolateColor(p.get(), [0, 1], [C.card, C.primary]),
-    borderColor: interpolateColor(p.get(), [0, 1], [C.border, C.primary]),
-  }));
-  const text = useAnimatedStyle(() => ({ color: interpolateColor(p.get(), [0, 1], [C.text, C.white]) }));
-  return (
-    <PressableScale scaleTo={0.95} accessibilityRole="checkbox" accessibilityState={{ checked: on }} onPress={() => { tap(); onPress(); }} style={st.dayCell}>
-      <Animated.View style={[st.day, box]}>
-        <Animated.Text style={[st.dayText, text]}>{label}</Animated.Text>
-      </Animated.View>
-    </PressableScale>
-  );
-}
-
 function RewardCard({ label, img, on, onPress }: { label: string; img: number; on: boolean; onPress: () => void }) {
   const p = useOn(on);
   const box = useAnimatedStyle(() => ({ borderColor: interpolateColor(p.get(), [0, 1], [C.border, C.primary]) }));
@@ -878,6 +845,27 @@ function TargetNote({ p, units }: { p: Profile; units: WeightUnit }) {
   );
 }
 
+/** Small from → to stat card used under the before/after comparison. */
+function StatTile({ icon, label, from, to }: { icon: IconName; label: string; from: string; to: string }) {
+  return (
+    <View style={st.stat}>
+      <View style={st.statHead}>
+        <Ionicons name={icon} size={14} color={C.primaryDark} />
+        <Text style={st.statLabel}>{label}</Text>
+      </View>
+      <Text style={st.statFrom} numberOfLines={1}>
+        {from}
+      </Text>
+      <View style={st.statToRow}>
+        <Ionicons name="arrow-forward" size={13} color={C.primary} />
+        <Text style={st.statTo} numberOfLines={1} adjustsFontSizeToFit>
+          {to}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
 /** Direction and size of the change from current to target weight, shown above the goal value. */
 function goalBadge(p: Profile, units: WeightUnit) {
   const d = toUnit(p.targetKg, units) - toUnit(p.weightKg, units);
@@ -939,44 +927,25 @@ const st = StyleSheet.create({
 
   rangeText: { fontSize: 12.5, color: C.muted, marginTop: 4, fontVariant: ['tabular-nums'] },
 
-  previewRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: GUTTER, marginTop: 24 },
-  previewCard: { flex: 1, borderRadius: R.lg, backgroundColor: C.card, borderWidth: 2, borderColor: C.border, overflow: 'hidden', alignItems: 'center', paddingBottom: 12 },
-  previewCardOn: { borderColor: C.primary },
-  previewArt: { alignSelf: 'stretch', height: 200 },
-  previewLabel: { fontSize: 14, fontWeight: '800', color: C.text, marginTop: 10 },
-  previewTag: { marginTop: 10, backgroundColor: C.primary, borderRadius: R.pill, paddingHorizontal: 16, paddingVertical: 4 },
-  previewArrow: { width: 34, height: 34, borderRadius: 17, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center', marginHorizontal: -10, zIndex: 2, borderWidth: 3, borderColor: C.bg },
+  statRow: { flexDirection: 'row', gap: 12, paddingHorizontal: GUTTER, marginTop: 14 },
+  stat: { padding: 14, borderRadius: R.lg, backgroundColor: C.card, borderWidth: 1, borderColor: C.borderSoft, ...shadowSm },
+  statHead: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  statLabel: { fontSize: 12, fontWeight: '700', color: C.textSoft },
+  statFrom: { fontSize: 13.5, fontWeight: '600', color: C.muted, marginTop: 8, textDecorationLine: 'line-through', fontVariant: ['tabular-nums'] },
+  statToRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 },
+  statTo: { flex: 1, fontSize: 19, fontWeight: '800', color: C.primaryDark, letterSpacing: -0.3, fontVariant: ['tabular-nums'] },
 
-  weeks: { fontSize: 30, fontWeight: '900', color: C.text, letterSpacing: -0.5 },
-  paceKg: { fontSize: 13, fontWeight: '600', color: C.muted, marginTop: 2 },
+  paceHero: { marginHorizontal: GUTTER, marginTop: 20, paddingTop: 18, paddingHorizontal: 16, paddingBottom: 14, borderRadius: R.xl, backgroundColor: C.card, borderWidth: 1, borderColor: C.borderSoft, ...shadowSm },
+  paceHeroTop: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 4, paddingHorizontal: 4 },
+  eyebrow: { fontSize: 11, fontWeight: '800', color: C.muted, letterSpacing: 1.4 },
+  goalDate: { fontSize: 32, fontWeight: '800', color: C.text, letterSpacing: -0.8, marginTop: 4 },
+  goalSub: { fontSize: 13, fontWeight: '600', color: C.textSoft, marginTop: 1 },
+  weeksPill: { alignItems: 'center', minWidth: 64, paddingVertical: 8, paddingHorizontal: 10, borderRadius: R.md, backgroundColor: C.primarySoft },
+  weeksNum: { fontSize: 22, fontWeight: '900', color: C.primaryDark, fontVariant: ['tabular-nums'], letterSpacing: -0.5 },
+  weeksLabel: { fontSize: 11, fontWeight: '700', color: C.primaryDark, marginTop: -2 },
 
-  benefitRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingHorizontal: GUTTER, marginTop: 22 },
-  benefitLeft: { flex: 0.9, marginTop: 74, backgroundColor: '#EFEFF3', borderRadius: R.lg, paddingBottom: 16 },
-  beforePhoto: { height: 108, borderTopLeftRadius: R.lg, borderTopRightRadius: R.lg },
-  ribbon: { marginLeft: -10, marginRight: 8, paddingHorizontal: 12, paddingVertical: 9, marginBottom: 6 },
-  ribbonRight: { marginLeft: -12, marginRight: -4, ...glow(C.workout) },
-  ribbonBg: { borderTopLeftRadius: 10, borderTopRightRadius: 12, borderBottomRightRadius: 12, transform: [{ skewX: '-6deg' }] },
-  ribbonFold: { position: 'absolute', left: 0, bottom: -9, width: 0, height: 0, borderTopWidth: 9, borderLeftWidth: 10, borderLeftColor: 'transparent' },
-  ribbonGrey: { fontSize: 14, fontWeight: '800', color: '#77777F', lineHeight: 18 },
-  ribbonTitle: { color: C.white, fontSize: 16, fontWeight: '900', fontStyle: 'italic', letterSpacing: -0.2 },
-  ribbonSub: { color: 'rgba(255,255,255,0.92)', fontSize: 11.5, fontWeight: '600', marginTop: 1 },
-  sparkle: { position: 'absolute', right: 2, top: -2, width: 0, height: 0 },
-  sparkleBar: { position: 'absolute', left: -2, top: -14, width: 4, height: 11, borderRadius: 2, backgroundColor: C.gold },
-  benefitList: { paddingHorizontal: 12, paddingTop: 10, gap: 13 },
-  benefitLine: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
-  benefitText: { flex: 1, fontSize: 12.5, fontWeight: '600', color: C.textSoft, lineHeight: 16 },
-  benefitCard: { flex: 1.1 },
-  benefitCardBg: { top: 56, borderRadius: R.lg, ...shadowLg },
-  benefitPhoto: { height: 190, marginBottom: -6 },
-  checkDot: { width: 18, height: 18, borderRadius: 9, backgroundColor: C.white, alignItems: 'center', justifyContent: 'center' },
-  benefitCardText: { color: C.white, fontSize: 13.5, fontWeight: '700', flex: 1, lineHeight: 18 },
 
-  activityArt: { width: 180, height: 160 },
 
-  dayGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 10, paddingHorizontal: GUTTER, marginTop: 26 },
-  dayCell: { width: '30%' },
-  day: { height: 52, borderRadius: R.md, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center', ...shadowSm },
-  dayText: { fontSize: 14, fontWeight: '700' },
 
   dietArt: { marginHorizontal: GUTTER, marginTop: 22, height: 300, borderRadius: R.xl, overflow: 'hidden' },
   dietTag: { position: 'absolute', borderRadius: R.pill, paddingHorizontal: 12, paddingVertical: 6, ...shadowSm },
