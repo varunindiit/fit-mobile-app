@@ -275,9 +275,6 @@ export default function PlansScreen() {
 
         {/* Sticky CTA */}
         <View style={[st.cta, { paddingBottom: Math.max(insets.bottom, 12) }]}>
-          <Text style={st.ctaNote} numberOfLines={1}>
-            {plan.name} · {dur.months} months · {formatINR(Math.round(dur.price / dur.months))}/mo · save {pctOff(dur)}%
-          </Text>
           <Button
             title={`${cta} · ${formatINR(dur.price)}`}
             variant={tier === 'pro' ? 'dark' : 'primary'}
@@ -529,7 +526,6 @@ const st = StyleSheet.create({
   dot: { height: 6, borderRadius: 3, backgroundColor: C.white },
   trust: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 18 },
   cta: { backgroundColor: C.card, paddingHorizontal: 16, paddingTop: 10, borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: C.border },
-  ctaNote: { fontSize: 12, color: C.textSoft, fontWeight: '600', textAlign: 'center', marginBottom: 8, fontVariant: ['tabular-nums'] },
   summary: { backgroundColor: C.surfaceAlt, borderRadius: R.md, padding: 14, borderWidth: StyleSheet.hairlineWidth * 2, borderColor: C.borderSoft },
   sumHead: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 },
   sumTitle: { fontSize: 16, fontWeight: '800', color: C.text },

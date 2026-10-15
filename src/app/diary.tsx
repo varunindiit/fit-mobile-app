@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { PanResponder, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Extrapolation,
   FadeIn,
@@ -16,6 +16,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 
 import { EmojiTile, fmtNum, fmtQty, isDateKey, MiniMacro, notFuture } from '@/components/food/shared';
 import { Button, Card, CountUp, Divider, EASE_OUT, enter, IconButton, IconTile, layoutTransition, MacroBar, nativeOnly, PressableScale, ProgressBar, Ring, Screen, T, tap, useToast, type IconName } from '@/components/ui';
@@ -99,6 +100,10 @@ export default function DiaryScreen() {
     const kcal = prevEntries.reduce((a, e) => a + (foodById(e.foodId)?.kcal ?? 0) * e.qty, 0);
     toast(`Copied ${prevEntries.length} items · ${fmtNum(kcal)} kcal`, 'copy');
   };
+  const pickDay = useCallback((d: string) => {
+    tap();
+    setDate(d);
+  }, []);
   const addTo = (meal: MealKey) => router.push({ pathname: '/food-search', params: { meal, date } });
 
   return (
@@ -139,14 +144,11 @@ export default function DiaryScreen() {
                 <IconButton icon="chevron-forward" size={18} bg={C.surfaceAlt} style={st.weekNav} onPress={() => setDate(notFuture(addDays(date, 7), today))} />
               </View>
               <WeekPager
+                week={week}
                 date={date}
                 today={today}
-                earliest={state.entries.reduce((m, e) => (e.date < m ? e.date : m), date)}
                 logged={loggedDays}
-                onPick={(d) => {
-                  tap();
-                  setDate(d);
-                }}
+                onPick={pickDay}
               />
             </Card>
           </Animated.View>
@@ -377,53 +379,49 @@ export default function DiaryScreen() {
   );
 }
 
-const weekOf = (k: string) => addDays(k, -((parseKey(k).getDay() + 6) % 7));
-const weeksBetween = (a: string, b: string) => Math.round((parseKey(b).getTime() - parseKey(a).getTime()) / (7 * 864e5));
+/** Week strip that follows a horizontal swipe: left → next week, right → previous week (never into the future). */
+function WeekPager({ week, date, today, logged, onPick }: { week: string[]; date: string; today: string; logged: Set<string>; onPick: (d: string) => void }) {
+  const w = useSharedValue(0);
+  const x = useSharedValue(0);
+  const canNext = week[6] < today;
 
-/** Horizontally swipeable weeks (paging), ending at the current week so the future can't be reached. */
-function WeekPager({ date, today, earliest, logged, onPick }: { date: string; today: string; earliest: string; logged: Set<string>; onPick: (d: string) => void }) {
-  const [w, setW] = useState(0);
-  const listRef = useRef<FlatList<string>>(null);
-  const first = weekOf([earliest, addDays(today, -364)].sort()[0]);
-  const weeks = useMemo(() => Array.from({ length: weeksBetween(first, weekOf(today)) + 1 }, (_, i) => addDays(first, i * 7)), [first, today]);
-  const idx = weeksBetween(first, weekOf(date));
+  const pan = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 12 && Math.abs(g.dx) > Math.abs(g.dy) * 1.5,
+        onPanResponderTerminationRequest: () => false,
+        // Rubber-band when there's no next week to go to.
+        onPanResponderMove: (_, g) => x.set(g.dx < 0 && !canNext ? g.dx * 0.25 : g.dx),
+        onPanResponderRelease: (_, g) => {
+          const width = w.get();
+          const dir = g.dx < -width / 4 || g.vx < -0.4 ? 1 : g.dx > width / 4 || g.vx > 0.4 ? -1 : 0;
+          if (dir === 0 || (dir === 1 && !canNext)) {
+            x.set(withSpring(0, MOTION.spring));
+            return;
+          }
+          // Slide the old week out, swap the date, then slide the new week in from the other side.
+          const next = notFuture(addDays(date, dir * 7), today);
+          x.set(
+            withTiming(-dir * width, { duration: MOTION.fast, easing: EASE_OUT }, (done) => {
+              if (!done) return;
+              scheduleOnRN(onPick, next);
+              x.set(dir * width);
+              x.set(withTiming(0, { duration: MOTION.base, easing: EASE_OUT }));
+            }),
+          );
+        },
+        onPanResponderTerminate: () => x.set(withSpring(0, MOTION.spring)),
+      }),
+    [x, w, canNext, date, today, onPick],
+  );
 
-  // Keep the visible page in sync when the date changes from the arrows / Today button.
-  const shownIdx = useRef(idx);
-  useEffect(() => {
-    if (!w || shownIdx.current === idx) return;
-    shownIdx.current = idx;
-    listRef.current?.scrollToOffset({ offset: idx * w, animated: true });
-  }, [idx, w]);
+  const slide = useAnimatedStyle(() => ({ transform: [{ translateX: x.get() }] }));
 
   return (
-    <View onLayout={(e) => setW(e.nativeEvent.layout.width)}>
-      {w > 0 && (
-        <FlatList
-          ref={listRef}
-          data={weeks}
-          keyExtractor={(k) => k}
-          horizontal
-          pagingEnabled
-          showsHorizontalScrollIndicator={false}
-          initialScrollIndex={idx}
-          getItemLayout={(_, i) => ({ length: w, offset: w * i, index: i })}
-          extraData={[date, logged]}
-          initialNumToRender={3}
-          windowSize={3}
-          onMomentumScrollEnd={(e) => {
-            const i = Math.round(e.nativeEvent.contentOffset.x / w);
-            if (i === shownIdx.current || i < 0 || i >= weeks.length) return;
-            shownIdx.current = i;
-            onPick(notFuture(addDays(date, (i - idx) * 7), today));
-          }}
-          renderItem={({ item }) => (
-            <View style={{ width: w }}>
-              <WeekStrip week={Array.from({ length: 7 }, (_, i) => addDays(item, i))} date={date} today={today} logged={logged} onPick={onPick} />
-            </View>
-          )}
-        />
-      )}
+    <View style={{ overflow: 'hidden' }} onLayout={(e) => w.set(e.nativeEvent.layout.width)} {...pan.panHandlers}>
+      <Animated.View style={slide}>
+        <WeekStrip week={week} date={date} today={today} logged={logged} onPick={onPick} />
+      </Animated.View>
     </View>
   );
 }

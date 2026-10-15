@@ -77,7 +77,7 @@ export function PlanPicker({ tier, months, onTier, onMonths, enterAt = 0, titleT
               <Text style={st.was}>{formatINR(dur.was)}</Text>
             </View>
             <Text style={st.priceSub}>
-              You save <Text style={st.priceSave}>{formatINR(dur.was - dur.price)}</Text> · {formatINR(Math.round(dur.price / dur.months))}/month
+              You save <Text style={st.priceSave}>{formatINR(dur.was - dur.price)}</Text>
             </Text>
           </View>
           <View style={st.offBadge}>

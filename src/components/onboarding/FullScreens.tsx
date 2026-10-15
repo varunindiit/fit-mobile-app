@@ -9,7 +9,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import Svg, { Circle } from 'react-native-svg';
 
 import { Button, CountUp, Dialog, EASE_OUT, nativeOnly, Ring, Sheet, tap, type IconName } from '@/components/ui';
-import { DEFAULT_MONTHS, pctOff, PlanPicker, planFor } from '@/components/plans/PlanPicker';
+import { DEFAULT_MONTHS, PlanPicker, planFor } from '@/components/plans/PlanPicker';
 import { formatINR, type PlanTier } from '@/data/plans';
 import { bmi, targets } from '@/lib/calc';
 import type { Profile } from '@/lib/store';
@@ -590,9 +590,6 @@ export function Paywall({ male, gaining, onSkip, onPaid, onDone }: { male: boole
         </View>
       </ScrollView>
       <Cta>
-        <Text style={st.payNote} numberOfLines={1}>
-          {plan.name} · {dur.months} months · {formatINR(Math.round(dur.price / dur.months))}/mo · save {pctOff(dur)}%
-        </Text>
         <Button
           title={`Start my plan · ${formatINR(dur.price)}`}
           icon="arrow-forward"
@@ -755,7 +752,6 @@ const st = StyleSheet.create({
   payBadge: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: C.accent, borderRadius: R.pill, paddingHorizontal: 12, paddingVertical: 6, marginBottom: 12 },
   payBadgeText: { color: C.white, fontWeight: '800', fontSize: 12 },
   payTitle: { fontSize: 30, lineHeight: 35, fontWeight: '900', color: C.text, letterSpacing: -0.8 },
-  payNote: { fontSize: 12, color: C.textSoft, fontWeight: '600', textAlign: 'center', marginBottom: 8, fontVariant: ['tabular-nums'] },
   payFoot: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, marginTop: 10 },
   payFootText: { fontSize: 11.5, color: C.textSoft, fontWeight: '600' },
 });
