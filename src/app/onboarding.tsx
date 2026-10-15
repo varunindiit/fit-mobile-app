@@ -17,6 +17,7 @@ import { ChoiceRow, GUTTER, OnbHeader, Photo, QTitle, StepSlider, TipCard, UnitT
 import { RulerPicker } from '@/components/onboarding/RulerPicker';
 import { YearWheel } from '@/components/onboarding/YearWheel';
 import { Button, Dialog, EASE_OUT, nativeOnly, PressableScale, tap, useToast, type IconName } from '@/components/ui';
+import type { PlanTier } from '@/data/plans';
 import { bmi, bmiLabel, cmToFtIn, targets } from '@/lib/calc';
 import { DEFAULT_PROFILE, useStore, type Goal, type Profile } from '@/lib/store';
 import { BRAND, C, G, MOTION, R, glow, shadowLg, shadowSm } from '@/theme';
@@ -156,10 +157,10 @@ export default function Onboarding() {
     return () => sub.remove();
   });
 
-  const finish = (premium: boolean) => {
+  const finish = (plan?: { tier: PlanTier; months: number }) => {
     resume = null;
     completeOnboarding(finalize(p));
-    if (premium) subscribe('smart', 1);
+    if (plan) subscribe(plan.tier, plan.months);
     router.replace('/(tabs)');
     setTimeout(() => toast(`Welcome to ${BRAND}! Your plan is ready`, 'sparkles'), 400);
   };
@@ -203,7 +204,7 @@ export default function Onboarding() {
   if (step === 'motivation') return <Motivation male={p.gender === 'male'} onNext={next} />;
   if (step === 'analysis') return <Analysis p={final} units={units} onDone={next} />;
   if (step === 'result') return <PlanResult p={final} units={units} onBack={back} onNext={next} />;
-  if (step === 'paywall') return <Paywall male={p.gender === 'male'} gaining={final.goal === 'gain'} onSkip={() => finish(false)} onSubscribe={() => finish(true)} />;
+  if (step === 'paywall') return <Paywall male={p.gender === 'male'} gaining={final.goal === 'gain'} onSkip={() => finish()} onSubscribe={(tier, months) => finish({ tier, months })} />;
 
   const qIndex = QUESTIONS.indexOf(step);
   const cta = step === 'gender' ? null : 'Next';

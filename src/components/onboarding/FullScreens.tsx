@@ -7,8 +7,9 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, FadeIn, FadeInDown, FadeInUp, ZoomIn, useAnimatedStyle, useReducedMotion, useSharedValue, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Button, CountUp, Dialog, EASE_OUT, nativeOnly, PressableScale, Ring, tap, type IconName } from '@/components/ui';
-import { PLAN_TIERS, formatINR } from '@/data/plans';
+import { Button, CountUp, Dialog, EASE_OUT, nativeOnly, Ring, tap, type IconName } from '@/components/ui';
+import { DEFAULT_MONTHS, pctOff, PlanPicker, planFor } from '@/components/plans/PlanPicker';
+import { formatINR, type PlanTier } from '@/data/plans';
 import { bmi, targets } from '@/lib/calc';
 import type { Profile } from '@/lib/store';
 import { C, MOTION, R, shadow, shadowSm } from '@/theme';
@@ -323,29 +324,19 @@ function Cta({ children }: { children: React.ReactNode }) {
 
 /* ---------------- 22 · Paywall ---------------- */
 
-const tier = PLAN_TIERS[0];
-const MONTHLY = Math.round(tier.durations[0].price / tier.durations[0].months);
-const PAY_FEATURES: [IconName, string][] = [
-  ['barbell-outline', 'Step-by-step workout plan'],
-  ['restaurant-outline', 'Personalized meal plan'],
-  ['trending-up-outline', 'Track progress & get support'],
-];
-
-export function Paywall({ male, gaining, onSkip, onSubscribe }: { male: boolean; gaining: boolean; onSkip: () => void; onSubscribe: () => void }) {
-  const [plan, setPlan] = useState<'trial' | 'monthly'>('trial');
+export function Paywall({ male, gaining, onSkip, onSubscribe }: { male: boolean; gaining: boolean; onSkip: () => void; onSubscribe: (tier: PlanTier, months: number) => void }) {
+  const [tier, setTier] = useState<PlanTier>('smart');
+  const [months, setMonths] = useState(DEFAULT_MONTHS);
   const [loading, setLoading] = useState(false);
   const [confirm, setConfirm] = useState(false);
-  const options: { id: 'trial' | 'monthly'; title: string; sub: string }[] = [
-    { id: 'trial', title: '7-Day Free Trial', sub: `then ${formatINR(MONTHLY)}/month after trial` },
-    { id: 'monthly', title: 'Monthly Plan', sub: `${formatINR(MONTHLY)}/month` },
-  ];
+  const { plan, dur } = planFor(tier, months);
   return (
-    <View style={st.white}>
+    <View style={st.paywall}>
       <StatusBar style="light" />
       <ScrollView contentContainerStyle={{ paddingBottom: 24 }} showsVerticalScrollIndicator={false} bounces={false}>
         <View style={st.payHero}>
           <Image source={male ? IMG.paywallMale : IMG.paywall} style={StyleSheet.absoluteFill} contentFit="cover" transition={300} />
-          <LinearGradient colors={['rgba(12,10,9,0.45)', 'rgba(12,10,9,0)', 'rgba(255,255,255,0)', C.white]} locations={[0, 0.3, 0.7, 1]} style={StyleSheet.absoluteFill} />
+          <LinearGradient colors={['rgba(12,10,9,0.45)', 'rgba(12,10,9,0)', 'rgba(255,255,255,0)', C.bg]} locations={[0, 0.3, 0.7, 1]} style={StyleSheet.absoluteFill} />
           <SafeAreaView edges={['top']} style={st.payTop}>
             <Pressable onPress={() => { tap(); onSkip(); }} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close" style={st.payClose}>
               <Ionicons name="close" size={20} color={C.white} />
@@ -361,40 +352,15 @@ export function Paywall({ male, gaining, onSkip, onSubscribe }: { male: boolean;
             GET PERSONALIZED{'\n'}
             <Text style={{ color: C.primary }}>{gaining ? 'MUSCLE-BUILDING' : 'FAT-LOSING'}</Text> PLAN!
           </Animated.Text>
-          <Animated.View entering={rise(180)} style={{ gap: 10, marginTop: 14 }}>
-            {PAY_FEATURES.map(([icon, label]) => (
-              <View key={label} style={st.payFeat}>
-                <View style={st.payFeatIcon}>
-                  <Ionicons name={icon} size={16} color={C.primaryDark} />
-                </View>
-                <Text style={st.payFeatText}>{label}</Text>
-              </View>
-            ))}
-          </Animated.View>
-          <Animated.View entering={rise(280)} style={{ gap: 10, marginTop: 20 }}>
-            {options.map((o) => {
-              const on = plan === o.id;
-              return (
-                <PressableScale key={o.id} scaleTo={0.98} accessibilityRole="radio" accessibilityState={{ checked: on }} onPress={() => { tap(); setPlan(o.id); }} style={[st.payOpt, on && st.payOptOn]}>
-                  <View style={[st.payRadio, on && { borderColor: C.primary }]}>{on && <View style={st.payDot} />}</View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={st.payOptTitle}>{o.title}</Text>
-                    <Text style={st.payOptSub}>{o.sub}</Text>
-                  </View>
-                  {o.id === 'trial' && (
-                    <View style={st.payFree}>
-                      <Text style={st.payFreeText}>FREE</Text>
-                    </View>
-                  )}
-                </PressableScale>
-              );
-            })}
-          </Animated.View>
+          <PlanPicker tier={tier} months={months} onTier={setTier} onMonths={setMonths} enterAt={1} titleTop={18} />
         </View>
       </ScrollView>
       <Cta>
+        <Text style={st.payNote} numberOfLines={1}>
+          {plan.name} · {dur.months} months · {formatINR(Math.round(dur.price / dur.months))}/mo · save {pctOff(dur)}%
+        </Text>
         <Button
-          title="CONTINUE"
+          title={`CONTINUE · ${formatINR(dur.price)}`}
           loading={loading}
           onPress={() => {
             setLoading(true);
@@ -415,12 +381,12 @@ export function Paywall({ male, gaining, onSkip, onSubscribe }: { male: boolean;
       <Dialog
         visible={confirm}
         iconName="gift"
-        title={plan === 'trial' ? 'Your free trial has started!' : `Welcome to ${tier.name}!`}
-        text={plan === 'trial' ? `Enjoy full access to ${tier.name} for 7 days. Demo mode: no payment is taken.` : 'Your monthly plan is active. Demo mode: no payment is taken.'}
+        title={`Welcome to ${plan.name}!`}
+        text={`Your ${dur.months}-month plan is active. Demo mode: no payment is taken.`}
         confirm="Let's go"
         onConfirm={() => {
           setConfirm(false);
-          onSubscribe();
+          onSubscribe(tier, dur.months);
         }}
       />
     </View>
@@ -472,23 +438,14 @@ const st = StyleSheet.create({
   resNote: { fontSize: 11, color: C.muted, textAlign: 'center', marginTop: 16, lineHeight: 15 },
   cta: { paddingHorizontal: GUTTER, paddingTop: 12, backgroundColor: C.white },
 
+  paywall: { flex: 1, backgroundColor: C.bg },
   payHero: { height: 300, backgroundColor: C.skeleton },
   payTop: { flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: 16 },
   payClose: { width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(12,10,9,0.35)', alignItems: 'center', justifyContent: 'center', marginTop: 6 },
   payBadge: { position: 'absolute', left: GUTTER, bottom: 28, flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: C.accent, borderRadius: R.pill, paddingHorizontal: 12, paddingVertical: 6 },
   payBadgeText: { color: C.white, fontWeight: '800', fontSize: 12 },
   payTitle: { fontSize: 26, lineHeight: 31, fontWeight: '900', color: C.text, letterSpacing: -0.4, fontStyle: 'italic' },
-  payFeat: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  payFeatIcon: { width: 28, height: 28, borderRadius: 14, backgroundColor: C.primarySoft, alignItems: 'center', justifyContent: 'center' },
-  payFeatText: { fontSize: 14, fontWeight: '600', color: C.text },
-  payOpt: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, borderRadius: R.md, borderWidth: 1.5, borderColor: C.border, backgroundColor: C.card },
-  payOptOn: { borderColor: C.primary, backgroundColor: C.primarySoft },
-  payRadio: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: C.border, alignItems: 'center', justifyContent: 'center' },
-  payDot: { width: 11, height: 11, borderRadius: 6, backgroundColor: C.primary },
-  payOptTitle: { fontSize: 15, fontWeight: '800', color: C.text },
-  payOptSub: { fontSize: 12.5, color: C.textSoft, marginTop: 2 },
-  payFree: { backgroundColor: C.primary, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
-  payFreeText: { color: C.white, fontSize: 11, fontWeight: '900' },
+  payNote: { fontSize: 12, color: C.textSoft, fontWeight: '600', textAlign: 'center', marginBottom: 8, fontVariant: ['tabular-nums'] },
   payFoot: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, marginTop: 10 },
   payFootText: { fontSize: 11.5, color: C.textSoft, fontWeight: '600' },
 });
