@@ -42,7 +42,7 @@ export const C = {
   navy: '#13231F',
   white: '#FFFFFF',
   overlay: 'rgba(12,10,9,0.42)',
-  /** AI (Ria) surfaces: mint fill, tinted hairline, deep text. */
+  /** AI (Saathi) surfaces: mint fill, tinted hairline, deep text. */
   ai: '#1F6B5A',
   aiSoft: '#E8F7F0',
   aiBorder: '#BFE6D4',

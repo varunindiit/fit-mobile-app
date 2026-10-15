@@ -201,7 +201,7 @@ const QUICK: {
   },
   {
     key: "ria",
-    label: "Ask Ria",
+    label: "Ask Saathi",
     hint: "AI coach",
     icon: "sparkles",
     color: C.ai,

@@ -78,7 +78,7 @@ type Ctx = ReturnType<typeof ctxOf>;
 function greeting(c: Ctx): string {
   const status = c.left >= 0 ? `${fmtNum(c.left)} kcal left` : `${fmtNum(-c.left)} kcal over`;
   const protein = c.protein < c.proteinT ? ` You still need ${c.proteinT - c.protein} g protein.` : ' Protein goal done — great job!';
-  return `Hi ${c.name}! I'm Ria, your AI nutrition coach.\n\nToday you've eaten ${fmtNum(c.eaten)} of ${fmtNum(c.budget)} kcal — ${status}.${protein}\n\nAsk me anything about food, workouts or your goal!`;
+  return `Hi ${c.name}! I'm Saathi, your AI nutrition coach.\n\nToday you've eaten ${fmtNum(c.eaten)} of ${fmtNum(c.budget)} kcal — ${status}.${protein}\n\nAsk me anything about food, workouts or your goal!`;
 }
 
 /* ---------- Canned, state-aware replies ---------- */
@@ -271,7 +271,7 @@ function reply(raw: string, c: Ctx): Reply {
     return {
       text: c.premium
         ? `You're already on Fitora ${c.premium.tier === 'pro' ? 'Pro' : 'Smart'} — enjoy unlimited chats with me!`
-        : `Fitora Smart starts at ₹1,799 for 3 months and unlocks unlimited Ria chats, Snap scans and personalised plans. Pro adds your own nutritionist and trainer.`,
+        : `Fitora Smart starts at ₹1,799 for 3 months and unlocks unlimited Saathi chats, Snap scans and personalised plans. Pro adds your own nutritionist and trainer.`,
       action: { label: 'See plans', icon: 'diamond', href: '/plans' },
     };
   }
@@ -369,7 +369,7 @@ export default function CoachScreen() {
     toast('Started a new chat', 'chatbubbles');
   };
 
-  // While Ria is "typing", hold back the reply that was already saved.
+  // While Saathi is "typing", hold back the reply that was already saved.
   const msgs = typing ? state.coachChat.slice(0, -1) : state.coachChat;
 
   const canSend = !!input.trim() && !typing;
@@ -387,7 +387,7 @@ export default function CoachScreen() {
             <View style={st.online} />
           </View>
           <View>
-            <Text style={st.title}>Ria · AI Coach</Text>
+            <Text style={st.title}>Saathi · AI Coach</Text>
             <Text style={st.status}>{typing ? 'typing…' : 'Online · replies instantly'}</Text>
           </View>
         </View>
@@ -407,7 +407,7 @@ export default function CoachScreen() {
             <Ionicons name="diamond" size={12} color={C.gold} />
           </View>
           <Text style={st.upsellText} numberOfLines={1}>
-            Free preview · Unlimited Ria with Fitora Smart
+            Free preview · Unlimited Saathi with Fitora Smart
           </Text>
           <Text style={st.upsellCta}>Upgrade</Text>
         </PressableScale>
@@ -479,7 +479,7 @@ export default function CoachScreen() {
               onChangeText={setInput}
               onFocus={() => setFocused(true)}
               onBlur={() => setFocused(false)}
-              placeholder="Ask Ria anything…"
+              placeholder="Ask Saathi anything…"
               placeholderTextColor={C.muted}
               style={[st.input, webNoOutline]}
               returnKeyType="send"
@@ -496,7 +496,7 @@ export default function CoachScreen() {
         visible={confirmClear}
         iconName="chatbubbles"
         title="Start a new chat?"
-        text="This clears your conversation with Ria."
+        text="This clears your conversation with Saathi."
         confirm="New chat"
         cancel="Cancel"
         onConfirm={clear}

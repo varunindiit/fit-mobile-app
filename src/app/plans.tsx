@@ -122,7 +122,7 @@ export default function PlansScreen() {
             </Animated.View>
             <Animated.View entering={enter(1)}>
               <Text style={st.heroTitle}>Fitora Premium</Text>
-              <Text style={st.heroSub}>Reach your goal faster with Ria AI and real Indian nutrition experts.</Text>
+              <Text style={st.heroSub}>Reach your goal faster with Saathi AI and real Indian nutrition experts.</Text>
               <View style={st.proof}>
                 <View style={st.stars}>
                   {[0, 1, 2, 3, 4].map((i) => (
@@ -167,13 +167,13 @@ export default function PlansScreen() {
 
             <PlanPicker tier={tier} months={months} onTier={setTier} onMonths={setMonths} enterAt={3} titleTop={premium ? 24 : 22} />
 
-            {/* Ria (Smart) */}
+            {/* Saathi (Smart) */}
             {tier === 'smart' && (
               <Animated.View entering={nativeOnly(FadeIn.duration(MOTION.base))}>
                 <Card style={st.ria} onPress={() => router.push('/coach')}>
                   <IconTile icon="sparkles" color={C.ai} bg={C.card} size={46} />
                   <View style={{ flex: 1 }}>
-                    <Text style={[st.coachName, { color: C.ai }]}>Meet Ria, your AI coach</Text>
+                    <Text style={[st.coachName, { color: C.ai }]}>Meet Saathi, your AI coach</Text>
                     <Text style={[T.small, { color: C.ai }]}>Instant answers on food, workouts and cravings — 24×7.</Text>
                   </View>
                   <View style={st.tryPill}>
@@ -363,7 +363,7 @@ export default function PlansScreen() {
         visible={askCancel}
         icon="😢"
         title={`Cancel Fitora ${premium?.tier === 'pro' ? 'Pro' : 'Smart'}?`}
-        text={`You keep premium until ${premium ? fmtFull(planEnd(premium.since, premium.months)) : 'your plan ends'}, then lose Ria's unlimited chats and personalised plans. This is a demo, so nothing is charged or refunded.`}
+        text={`You keep premium until ${premium ? fmtFull(planEnd(premium.since, premium.months)) : 'your plan ends'}, then lose Saathi's unlimited chats and personalised plans. This is a demo, so nothing is charged or refunded.`}
         confirm="Cancel plan"
         cancel="Keep plan"
         danger
@@ -474,7 +474,7 @@ function Success({ tier, months }: { tier: PlanTier; months: number }) {
         )}
         <Animated.View entering={enter(7)} style={{ alignSelf: 'stretch' }}>
           <Button title="Start exploring" variant="dark" style={st.sBtn} textStyle={{ color: C.navy }} onPress={() => router.replace('/(tabs)')} />
-          <Button title="Say hi to Ria" variant="ghost" textStyle={{ color: C.white }} style={{ marginTop: 6, alignSelf: 'stretch' }} onPress={() => router.replace('/coach')} />
+          <Button title="Say hi to Saathi" variant="ghost" textStyle={{ color: C.white }} style={{ marginTop: 6, alignSelf: 'stretch' }} onPress={() => router.replace('/coach')} />
         </Animated.View>
       </ScrollView>
     </LinearGradient>

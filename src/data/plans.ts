@@ -15,7 +15,7 @@ export const PLAN_TIERS: {
     color: '#0EA472',
     features: [
       'Unlimited Snap meal scans',
-      'Ria AI coach, 24×7',
+      'Saathi AI coach, 24×7',
       'Personalised meal & workout plans',
       'Smart insights on every meal',
       'Ad-free experience',

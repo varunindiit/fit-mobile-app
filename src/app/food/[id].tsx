@@ -155,7 +155,7 @@ export default function FoodDetailScreen() {
           {date !== todayKey() && <Pill text={`Logging for ${relDay(date)}`} icon="calendar-outline" color={C.accent} bg={C.card} style={{ alignSelf: 'center', marginTop: 12 }} />}
         </Animated.View>
 
-        {/* Health score + Ria */}
+        {/* Health score + Saathi */}
         <Animated.View entering={enter(1)}>
           <RiaNote style={{ marginTop: 14 }}>
             <View style={st.scoreRow}>

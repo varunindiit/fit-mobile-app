@@ -40,7 +40,7 @@ import { foodById, MEALS } from '@/data/foods';
 import { NOTIFICATIONS } from '@/data/notifications';
 import { PLAN_TIERS } from '@/data/plans';
 import { programById, programDay, sessionStats } from '@/data/program';
-import { fmtDate, kmFromSteps } from '@/lib/calc';
+import { dayShort, fmtDate, kmFromSteps } from '@/lib/calc';
 import { burnedOn, dayTotals, isPremiumActive, useStore, weekProgress, workoutStreak } from '@/lib/store';
 import { useToday } from '@/lib/useToday';
 import { C, G, MOTION, R, shadow, shadowSm } from '@/theme';
@@ -75,8 +75,8 @@ const MEAL_TINT: Record<string, { color: string; bg: string; bar: string }> = {
 const TIP_W = 248;
 const TIP_TAG: Record<string, string> = { nutrition: 'Nutrition', 'pie-chart': 'Portions', walk: 'Activity', moon: 'Sleep' };
 const RIA_CHIPS: { label: string; icon: IconName; q?: string }[] = [
-  { label: 'Chat with Ria', icon: 'chatbubble-ellipses-outline' },
-  { label: 'Meal ideas', icon: 'sparkles', q: 'What should I eat next?' },
+  { label: 'Ask Saathi', icon: 'chatbubble-ellipses-outline' },
+  { label: 'What should I eat?', icon: 'restaurant-outline', q: 'What should I eat next?' },
 ];
 
 export default function Home() {
@@ -158,7 +158,10 @@ export default function Home() {
       transform: [{ translateY: y < 0 ? -y / 2 : -y * 0.45 }, { scale: y < 0 ? 1 + -y / heroH : 1 }],
     };
   });
-  const barStyle = useAnimatedStyle(() => ({ opacity: interpolate(scrollY.get(), [barAt - 40, barAt], [0, 1], Extrapolation.CLAMP) }));
+  const barStyle = useAnimatedStyle(() => {
+    const v = interpolate(scrollY.get(), [barAt - 40, barAt], [0, 1], Extrapolation.CLAMP);
+    return { opacity: v, transform: [{ translateY: (1 - v) * -10 }] };
+  });
   // Light status bar over the photo, dark once the compact bar is showing; reset when leaving the tab.
   useFocusEffect(
     useCallback(() => {
@@ -166,8 +169,8 @@ export default function Home() {
       return () => setStatusBarStyle('dark');
     }, [solid]),
   );
-  const heroTitle = doneToday ? `Day ${doneDays} complete!` : nextSession.restDay ? 'Recovery day' : `Ready for Day ${nextDay}?`;
-  const heroSub = doneToday ? 'Workout complete · see you tomorrow' : nextSession.restDay ? 'Light stretching & a walk count too' : `${nextStats.exercises} exercises · ${nextStats.minutes} min · ~${nextStats.kcal} kcal`;
+  const heroTitle = doneToday ? `Day ${doneDays} crushed!` : nextSession.restDay ? 'Rest & recharge' : `Day ${nextDay} is waiting`;
+  const heroSub = doneToday ? 'Great work today. See you tomorrow.' : nextSession.restDay ? 'A light stretch or easy walk still counts.' : `${nextStats.exercises} moves · ${nextStats.minutes} min · ~${nextStats.kcal} kcal`;
 
   // Simulated health sync: one pending sync at a time, cancelled if Home unmounts.
   const syncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -247,7 +250,7 @@ export default function Home() {
               </Text>
             </View>
             <Text style={st.hello} numberOfLines={1}>
-              Hi, {first}
+              {p.name ? `Hey, ${first}` : 'Welcome back'}
             </Text>
           </View>
           <PressableScale
@@ -268,34 +271,36 @@ export default function Home() {
           <IconButton icon="notifications-outline" color={C.white} bg={GLASS} style={st.glassBtn} badge={unread} onPress={() => router.push('/notifications')} />
         </Animated.View>
 
-        {/* Today's workout, on the photo */}
+        {/* Today's workout: glass card on the photo */}
         <Animated.View entering={enter(1)} style={st.heroCopy}>
-          <View style={st.heroPill}>
-            <Ionicons name="barbell" size={12} color={C.white} />
-            <Text style={st.heroPillText} numberOfLines={1}>
-              {program.title} · {doneDays}/30 days
-            </Text>
-          </View>
-          <Text style={st.photoTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
-            {heroTitle}
-          </Text>
-          <View style={st.heroRow}>
-            <Text style={st.heroSub} numberOfLines={1}>
-              {heroSub}
-            </Text>
-            <PressableScale
-              scaleTo={0.94}
-              onPress={() => {
-                tap();
-                openDay();
-              }}
-              style={st.heroCta}
-              accessibilityRole="button"
-              accessibilityLabel={doneToday ? 'View today\'s workout' : `Start day ${nextDay}`}>
-              <Ionicons name={doneToday ? 'eye' : 'play'} size={13} color={C.primaryDark} />
-              <Text style={st.heroCtaText}>{doneToday ? 'View' : 'Start'}</Text>
-            </PressableScale>
-          </View>
+          <PressableScale
+            scaleTo={0.98}
+            onPress={() => {
+              tap();
+              openDay();
+            }}
+            style={st.workout}
+            accessibilityRole="button"
+            accessibilityLabel={doneToday ? "View today's workout" : `Start day ${nextDay}`}>
+            <Ring size={62} stroke={5} value={doneDays / 30} track="rgba(255,255,255,0.18)" gradient={[C.primaryTint, C.primary]}>
+              <Text style={st.workoutDay}>{doneDays}</Text>
+              <Text style={st.workoutOf}>/30</Text>
+            </Ring>
+            <View style={{ flex: 1 }}>
+              <Text style={st.heroPillText} numberOfLines={1}>
+                {program.title.toUpperCase()}
+              </Text>
+              <Text style={st.photoTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
+                {heroTitle}
+              </Text>
+              <Text style={st.heroSub} numberOfLines={1}>
+                {heroSub}
+              </Text>
+            </View>
+            <View style={st.heroCta}>
+              <Ionicons name={doneToday ? 'eye' : 'play'} size={18} color={C.primaryDark} style={doneToday ? undefined : { marginLeft: 2 }} />
+            </View>
+          </PressableScale>
         </Animated.View>
 
         {/* Content: the first card floats over the photo's faded bottom edge */}
@@ -315,7 +320,7 @@ export default function Home() {
           />
         </Animated.View>
 
-        {/* Ria insight (AI) */}
+        {/* Saathi insight (AI), as a coach message */}
         <Animated.View entering={enter(2)}>
           <PressableScale
             scaleTo={0.98}
@@ -324,15 +329,24 @@ export default function Home() {
               router.push('/coach');
             }}
             style={st.ria}
-            accessibilityRole="button">
+            accessibilityRole="button"
+            accessibilityLabel="Open Saathi, your AI coach">
             <View style={st.riaHead}>
-              <View style={st.riaIcon}>
-                <Ionicons name="sparkles" size={15} color={C.ai} />
+              <LinearGradient colors={G.brand} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.riaIcon}>
+                <Ionicons name="sparkles" size={15} color={C.white} />
+              </LinearGradient>
+              <View style={{ flex: 1 }}>
+                <Text style={st.riaTitle}>Saathi</Text>
+                <View style={st.riaLive}>
+                  <View style={st.riaDot} />
+                  <Text style={st.riaSub}>Your AI coach · tip for today</Text>
+                </View>
               </View>
-              <Text style={st.riaTitle}>Ria&apos;s insight</Text>
               <Ionicons name="chevron-forward" size={16} color={C.ai} />
             </View>
-            <Text style={st.riaText}>{ria}</Text>
+            <View style={st.riaBubble}>
+              <Text style={st.riaText}>{ria}</Text>
+            </View>
             <View style={st.riaChips}>
               {RIA_CHIPS.map((c) => (
                 <PressableScale
@@ -697,13 +711,31 @@ export default function Home() {
       </Animated.ScrollView>
 
       {/* Compact bar fades in once the photo hero has scrolled away */}
-      <Animated.View pointerEvents="none" style={[st.bar, { paddingTop: insets.top, height: insets.top + 48 }, barStyle]}>
-        <Text style={st.barTitle} numberOfLines={1}>
-          {greet}, {first}
-        </Text>
-        <Text style={st.barMeta} numberOfLines={1}>
-          {fmtDate(today)}
-        </Text>
+      {/* Compact bar: only takes touches once it's fully in, so the photo header stays tappable underneath */}
+      <Animated.View pointerEvents={solid ? 'box-none' : 'none'} style={[st.bar, { paddingTop: insets.top, height: insets.top + 60 }, barStyle]}>
+        <View style={st.barRow}>
+          <PressableScale scaleTo={0.92} onPress={() => { tap(); router.push('/profile'); }} accessibilityRole="button" accessibilityLabel="Profile">
+            <LinearGradient colors={G.brand} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.barAvatar}>
+              <Text style={st.barAvatarText}>{(first[0] ?? 'F').toUpperCase()}</Text>
+            </LinearGradient>
+          </PressableScale>
+          <View style={{ flex: 1 }}>
+            <Text style={st.barTitle} numberOfLines={1}>
+              {p.name ? `Hey, ${first}` : greet}
+            </Text>
+            <Text style={st.barMeta} numberOfLines={1}>
+              {dayShort(today)}, {fmtDate(today)} · <Text style={{ color: over ? C.danger : C.primaryDark, fontWeight: '800' }}>{Math.abs(left).toLocaleString('en-IN')} kcal {over ? 'over' : 'left'}</Text>
+            </Text>
+          </View>
+          <PressableScale scaleTo={0.94} onPress={() => { tap(); router.push('/history'); }} style={st.barStreak} accessibilityRole="button" accessibilityLabel={`${streak} day streak`}>
+            <Ionicons name="flame" size={14} color={C.accent} />
+            <Text style={st.barStreakText}>{streak}</Text>
+          </PressableScale>
+          <IconButton icon="notifications-outline" color={C.text} bg={C.surfaceAlt} badge={unread} onPress={() => router.push('/notifications')} />
+        </View>
+        <View style={st.barTrack}>
+          <View style={[st.barFill, { width: `${Math.min(100, Math.round((eaten / Math.max(1, targets.budget + burned.total)) * 100))}%`, backgroundColor: over ? C.danger : C.primary }]} />
+        </View>
       </Animated.View>
 
       <Sheet visible={!!tip} onClose={() => setTip(null)} title={tip?.title}>
@@ -712,7 +744,7 @@ export default function Home() {
         </View>
         <Text style={[T.body, { marginTop: 16 }]}>{tip?.body}</Text>
         <Button
-          title="Ask Ria about this"
+          title="Ask Saathi about this"
           variant="secondary"
           icon="sparkles"
           style={{ marginTop: 20 }}
@@ -751,18 +783,25 @@ const st = StyleSheet.create({
   photoHero: { position: 'absolute', top: 0, left: 0, right: 0, overflow: 'hidden', backgroundColor: C.bg },
   photoLayer: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 14 },
   heroFade: { position: 'absolute', left: 0, right: 0, bottom: -2, height: HERO_OVERLAP + 26 },
-  heroCopy: { marginTop: 22, paddingBottom: 26 },
-  heroPill: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', backgroundColor: GLASS, borderColor: 'rgba(255,255,255,0.28)', borderWidth: StyleSheet.hairlineWidth * 2, paddingHorizontal: 10, height: 26, borderRadius: 13, maxWidth: '100%' },
-  heroPillText: { color: C.white, fontSize: 12, fontWeight: '700', letterSpacing: 0.2 },
-  photoTitle: { color: C.white, fontSize: 28, lineHeight: 34, fontWeight: '800', letterSpacing: -0.6, marginTop: 10, textShadowColor: 'rgba(0,0,0,0.25)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 6 },
-  heroRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 8 },
-  heroSub: { flex: 1, color: 'rgba(255,255,255,0.9)', fontSize: 13, fontWeight: '600' },
-  heroCta: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: C.white, paddingHorizontal: 14, height: 34, borderRadius: 17, ...shadowSm },
-  heroCtaText: { color: C.primaryDark, fontSize: 13, fontWeight: '800', letterSpacing: 0.2 },
+  heroCopy: { marginTop: 18, paddingBottom: 24 },
+  heroPillText: { color: C.primaryTint, fontSize: 10.5, fontWeight: '800', letterSpacing: 1.2 },
+  photoTitle: { color: C.white, fontSize: 22, lineHeight: 27, fontWeight: '900', letterSpacing: -0.5, marginTop: 2 },
+  heroSub: { color: 'rgba(255,255,255,0.85)', fontSize: 12.5, fontWeight: '600', marginTop: 2 },
+  heroCta: { width: 46, height: 46, borderRadius: 23, backgroundColor: C.white, alignItems: 'center', justifyContent: 'center', ...shadowSm },
+  workout: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14, borderRadius: R.xl, backgroundColor: 'rgba(8,22,19,0.38)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.22)' },
+  workoutDay: { color: C.white, fontSize: 18, fontWeight: '900', fontVariant: ['tabular-nums'], lineHeight: 20 },
+  workoutOf: { color: 'rgba(255,255,255,0.7)', fontSize: 10, fontWeight: '700' },
   glassBtn: { borderWidth: StyleSheet.hairlineWidth * 2, borderColor: 'rgba(255,255,255,0.28)' },
-  bar: { position: 'absolute', top: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, backgroundColor: C.bg, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.border },
-  barTitle: { flex: 1, fontSize: 17, fontWeight: '700', color: C.text, letterSpacing: -0.3 },
-  barMeta: { fontSize: 13, fontWeight: '600', color: C.muted },
+  bar: { position: 'absolute', top: 0, left: 0, right: 0, justifyContent: 'flex-end', backgroundColor: C.card, borderBottomLeftRadius: 22, borderBottomRightRadius: 22, overflow: 'hidden', ...shadow },
+  barRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16 },
+  barAvatar: { width: 36, height: 36, borderRadius: 18, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
+  barAvatarText: { color: C.white, fontWeight: '800', fontSize: 15 },
+  barTitle: { fontSize: 16, fontWeight: '800', color: C.text, letterSpacing: -0.3 },
+  barMeta: { fontSize: 12, fontWeight: '600', color: C.muted, marginTop: 1, fontVariant: ['tabular-nums'] },
+  barStreak: { flexDirection: 'row', alignItems: 'center', gap: 4, height: 34, paddingHorizontal: 10, borderRadius: 17, backgroundColor: C.accentSoft },
+  barStreakText: { fontSize: 14, fontWeight: '800', color: C.accent, fontVariant: ['tabular-nums'] },
+  barTrack: { height: 3, backgroundColor: C.borderSoft },
+  barFill: { height: '100%' },
   header: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingTop: 12, paddingBottom: 14 },
   avatarWrap: { width: 48, height: 48, borderRadius: 24, ...shadowSm },
   avatarRing: { width: 48, height: 48, borderRadius: 24, padding: 2, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
@@ -781,11 +820,15 @@ const st = StyleSheet.create({
   statVal: { fontSize: 17, fontWeight: '700', color: C.text, fontVariant: ['tabular-nums'], letterSpacing: -0.2 },
   unit: { fontSize: 12, color: C.muted, fontWeight: '500' },
   unitLg: { fontSize: 14, color: C.muted, fontWeight: '500', letterSpacing: 0 },
-  ria: { marginTop: 14, backgroundColor: C.aiSoft, borderRadius: R.lg, borderWidth: 1, borderColor: C.aiBorder, padding: 16 },
-  riaHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  riaIcon: { width: 28, height: 28, borderRadius: 9, backgroundColor: C.card, borderWidth: 1, borderColor: C.aiBorder, alignItems: 'center', justifyContent: 'center' },
-  riaTitle: { flex: 1, fontSize: 14, fontWeight: '700', color: C.ai },
-  riaText: { fontSize: 14, color: C.text, lineHeight: 20, marginTop: 10 },
+  ria: { marginTop: 14, backgroundColor: C.card, borderRadius: R.xl, borderWidth: 1, borderColor: C.borderSoft, padding: 16, ...shadowSm },
+  riaHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  riaIcon: { width: 36, height: 36, borderRadius: 18, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
+  riaTitle: { fontSize: 15, fontWeight: '800', color: C.text },
+  riaLive: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 1 },
+  riaDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: C.primary },
+  riaSub: { fontSize: 12, fontWeight: '600', color: C.muted },
+  riaBubble: { marginTop: 12, padding: 14, borderRadius: R.lg, borderTopLeftRadius: 6, backgroundColor: C.aiSoft, borderWidth: 1, borderColor: C.aiBorder },
+  riaText: { fontSize: 14, color: C.text, lineHeight: 20 },
   riaChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
   riaChip: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 34, paddingHorizontal: 12, borderRadius: R.pill, backgroundColor: C.card, borderWidth: 1, borderColor: C.aiBorder },
   riaChipText: { fontSize: 13, fontWeight: '600', color: C.ai },

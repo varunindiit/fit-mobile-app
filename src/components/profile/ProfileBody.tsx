@@ -323,7 +323,7 @@ export function ProfileBody({ mode }: { mode: 'tab' | 'stack' }) {
               onPress={() => router.push('/notifications')}
             />
             <Divider style={shared.inset} />
-            <Row icon="sparkles" color={C.ai} bg={C.aiSoft} title="Ask Ria" subtitle="Your AI nutrition coach" onPress={() => router.push('/coach')} />
+            <Row icon="sparkles" color={C.ai} bg={C.aiSoft} title="Ask Saathi" subtitle="Your AI nutrition coach" onPress={() => router.push('/coach')} />
             <Divider style={shared.inset} />
             <Row icon="diamond" color={C.warning} bg={C.warningSoft} title="Plans" subtitle={premium ? (premium.cancelledAt ? `Cancelled · active till ${planTill}` : `${tier?.name ?? 'Premium'} · active`) : 'Smart & Pro · up to 62% off'} onPress={() => router.push('/plans')} />
           </Card>
@@ -364,7 +364,7 @@ export function ProfileBody({ mode }: { mode: 'tab' | 'stack' }) {
 
       {/* Diet sheet */}
       <Sheet visible={sheet === 'diet'} onClose={close} title="Diet preference" scroll>
-        <Text style={[T.small, { marginBottom: 12 }]}>Ria and your meal suggestions will follow this.</Text>
+        <Text style={[T.small, { marginBottom: 12 }]}>Saathi and your meal suggestions will follow this.</Text>
         {DIETS.map((d) => (
           <OptionCard
             key={d.value}

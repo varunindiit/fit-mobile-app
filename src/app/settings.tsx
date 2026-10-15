@@ -101,7 +101,7 @@ export default function SettingsScreen() {
         <Animated.View entering={enter(4)}>
           <GroupLabel title="Support" />
           <Card style={shared.listCard}>
-            <ListRow icon="sparkles" iconColor={C.ai} iconBg={C.aiSoft} title="Ask Ria" subtitle="Instant answers, 24×7" onPress={() => router.push('/coach')} />
+            <ListRow icon="sparkles" iconColor={C.ai} iconBg={C.aiSoft} title="Ask Saathi" subtitle="Instant answers, 24×7" onPress={() => router.push('/coach')} />
             <Divider style={shared.inset} />
             <ListRow icon="help-circle-outline" iconColor={C.fiber} iconBg={tint(C.fiber)} title="Help & FAQ" onPress={() => setSheet('help')} />
             <Divider style={shared.inset} />

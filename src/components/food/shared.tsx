@@ -125,8 +125,8 @@ export function ScoreRing({ score, size = 44, stroke }: { score: number; size?: 
   );
 }
 
-/** Ria (AI) note: mint fill, tinted hairline, sparkles. One style everywhere AI speaks. */
-export function RiaNote({ title = "Ria's insight", text, children, style }: { title?: string; text?: string; children?: React.ReactNode; style?: ViewStyle }) {
+/** Saathi (AI) note: mint fill, tinted hairline, sparkles. One style everywhere AI speaks. */
+export function RiaNote({ title = "Saathi's insight", text, children, style }: { title?: string; text?: string; children?: React.ReactNode; style?: ViewStyle }) {
   return (
     <View style={[st.ria, style]}>
       <View style={st.riaHead}>

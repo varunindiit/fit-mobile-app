@@ -184,7 +184,7 @@ export default function SnapScreen() {
         <Animated.View entering={enter(1)} style={st.sheet}>
           <ScrollView contentContainerStyle={{ paddingBottom: 20 }} showsVerticalScrollIndicator={false}>
             {/* AI summary */}
-            <RiaNote title="Ria's take" style={st.aiCard}>
+            <RiaNote title="Saathi's take" style={st.aiCard}>
               <View style={st.totRow}>
                 <View style={{ flex: 1 }}>
                   <Text style={[T.tiny, { color: C.ai }]}>TOTAL · {sel.length} SELECTED</Text>
