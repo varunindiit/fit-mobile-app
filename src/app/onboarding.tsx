@@ -15,12 +15,14 @@ import { ActivityCards, ActivityHero, StepGoal, type ActivityOption } from '@/co
 import { BeforeAfter } from '@/components/onboarding/BeforeAfter';
 import { BenefitsHero, CompareTable } from '@/components/onboarding/Benefits';
 import { BmiGauge } from '@/components/onboarding/BmiGauge';
+import { DailyTargets, DietGrid, PlateHero, type DietOption } from '@/components/onboarding/Diet';
 import { IntensityList, StoryGrid, type IntensityOption, type StoryOption } from '@/components/onboarding/Choices';
 import { GoalCurve } from '@/components/onboarding/GoalCurve';
 import { HeightStage } from '@/components/onboarding/HeightStage';
-import { ChoiceRow, GUTTER, OnbHeader, PACES, Photo, QTitle, StepSlider, UnitToggle, fromUnit, stepIn, toUnit, useOn, type WeightUnit } from '@/components/onboarding/kit';
+import { GUTTER, OnbHeader, PACES, QTitle, StepSlider, UnitToggle, fromUnit, stepIn, toUnit, useOn, type WeightUnit } from '@/components/onboarding/kit';
 import { PacePicker } from '@/components/onboarding/PacePicker';
 import { MAX_REST, RestPlanner } from '@/components/onboarding/RestPlanner';
+import { RewardWall } from '@/components/onboarding/Rewards';
 import { RulerPicker } from '@/components/onboarding/RulerPicker';
 import { YearWheel } from '@/components/onboarding/YearWheel';
 import { Button, CountUp, EASE_OUT, nativeOnly, PressableScale, tap, useToast, type IconName } from '@/components/ui';
@@ -81,18 +83,20 @@ const ACTIVITY: ActivityOption<Profile['activity']>[] = [
   { v: 'sedentary', t: 'Mostly sitting', s: 'Desk work, long hours at a screen', icon: 'laptop-outline' },
 ];
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-const DIETS: { t: string; img: number; hero: number; diet: string }[] = [
-  { t: 'Meat-based', img: IMG.dietMeat, hero: IMG.dietHeroMeat, diet: 'Non-vegetarian' },
-  { t: 'Regular diet', img: IMG.dietRegular, hero: IMG.diet, diet: 'Non-vegetarian' },
-  { t: 'Vegetarian', img: IMG.dietVegetarian, hero: IMG.dietHeroVegetarian, diet: 'Vegetarian' },
-  { t: 'Vegan', img: IMG.dietVegan, hero: IMG.dietHeroVegan, diet: 'Vegan' },
-  { t: 'Other', img: IMG.dietOther, hero: IMG.dietHeroOther, diet: 'Other' },
+// `t` is the stored diet type (Profile matches on it); `label` / `s` are what the screen shows.
+const DIETS: (DietOption & { hero: number; diet: string })[] = [
+  { t: 'Meat-based', label: 'Meat lover', s: 'Chicken, fish, eggs and red meat', img: IMG.dietMeat, hero: IMG.dietHeroMeat, diet: 'Non-vegetarian' },
+  { t: 'Regular diet', label: 'Bit of everything', s: 'A balanced mix, no strict rules', img: IMG.dietRegular, hero: IMG.diet, diet: 'Non-vegetarian' },
+  { t: 'Vegetarian', label: 'Vegetarian', s: 'No meat, with dairy', img: IMG.dietVegetarian, hero: IMG.dietHeroVegetarian, diet: 'Vegetarian' },
+  { t: 'Vegan', label: 'Fully vegan', s: '100% plant-based', img: IMG.dietVegan, hero: IMG.dietHeroVegan, diet: 'Vegan' },
+  { t: 'Other', label: 'Something else', s: 'Keto, Jain or my own style', img: IMG.dietOther, hero: IMG.dietHeroOther, diet: 'Other' },
 ];
-const REWARDS: { t: string; img: number; imgMale: number }[] = [
-  { t: 'Treat myself to a nice meal', img: IMG.rewardMeal, imgMale: IMG.rewardMealMale },
-  { t: 'Buy new gym clothes', img: IMG.rewardClothes, imgMale: IMG.rewardClothesMale },
-  { t: 'Take a trip somewhere', img: IMG.rewardTrip, imgMale: IMG.rewardTripMale },
-  { t: 'Get a makeover', img: IMG.rewardMakeover, imgMale: IMG.rewardMakeoverMale },
+// `t` is the stored reward; `label` is what the screen shows.
+const REWARDS: { t: string; label: string; icon: IconName; img: number; imgMale: number }[] = [
+  { t: 'Treat myself to a nice meal', label: 'A great dinner out', icon: 'restaurant', img: IMG.rewardMeal, imgMale: IMG.rewardMealMale },
+  { t: 'Buy new gym clothes', label: 'Fresh workout gear', icon: 'shirt', img: IMG.rewardClothes, imgMale: IMG.rewardClothesMale },
+  { t: 'Take a trip somewhere', label: 'A well-earned getaway', icon: 'airplane', img: IMG.rewardTrip, imgMale: IMG.rewardTripMale },
+  { t: 'Get a makeover', label: 'A brand-new look', icon: 'cut', img: IMG.rewardMakeover, imgMale: IMG.rewardMakeoverMale },
 ];
 const GENDERS: { v: 'male' | 'female'; label: string; icon: IconName; img: number }[] = [
   { v: 'male', label: 'Male', icon: 'male', img: IMG.genderMale },
@@ -616,49 +620,45 @@ export default function Onboarding() {
       case 'diet':
         return (
           <Body>
-            <QTitle text="What's your diet type?" />
-            <View style={st.list}>
-              {DIETS.map((d, i) => (
-                <Rise key={d.t} i={i + 1}>
-                  <ChoiceRow image={d.img} title={d.t} selected={p.dietType === d.t} onPress={() => set({ dietType: d.t, diet: d.diet })} />
-                </Rise>
-              ))}
-            </View>
+            <QTitle text="How do you like to *eat*?" sub="Your meal plan will match the way you already eat." />
+            <Rise i={1} style={{ paddingHorizontal: GUTTER, marginTop: 22 }}>
+              <DietGrid
+                options={DIETS}
+                value={p.dietType}
+                onChange={(t) => {
+                  const d = DIETS.find((x) => x.t === t);
+                  if (d) set({ dietType: d.t, diet: d.diet });
+                }}
+              />
+            </Rise>
           </Body>
         );
-      case 'dietinfo':
+      case 'dietinfo': {
+        const d = DIETS.find((x) => x.t === p.dietType);
+        const t = targets({ ...p, goal: goalFor(p) });
         return (
           <Body>
-            <QTitle text="Get the best diet for your goals" />
-            <Rise i={1} style={st.dietArt}>
-              <Photo source={DIETS.find((d) => d.t === p.dietType)?.hero ?? IMG.diet} style={StyleSheet.absoluteFill} />
-              <LinearGradient colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.28)']} style={StyleSheet.absoluteFill} />
-              <Animated.View entering={nativeOnly(ZoomIn.duration(MOTION.enter).delay(380))} style={[st.dietTag, { left: 14, bottom: 16, backgroundColor: C.white }]}>
-                <Text style={[st.dietTagText, { color: C.primaryDark }]}>LOW CALORIES</Text>
-              </Animated.View>
-              <Animated.View entering={nativeOnly(ZoomIn.duration(MOTION.enter).delay(520))} style={[st.dietTag, { right: 14, top: 18, backgroundColor: C.accent }]}>
-                <Text style={st.dietTagText}>HIGH PROTEIN</Text>
-              </Animated.View>
-              <Animated.View entering={nativeOnly(ZoomIn.duration(MOTION.enter).delay(660))} style={[st.dietTag, { right: 18, bottom: 16, backgroundColor: C.primary }]}>
-                <Text style={st.dietTagText}>BALANCED CARBS</Text>
-              </Animated.View>
+            <QTitle text="Your plate, *perfectly planned*" sub="Daily targets worked out from your answers so far." />
+            <Rise i={1} style={{ paddingHorizontal: GUTTER, marginTop: 20 }}>
+              <PlateHero img={d?.hero ?? IMG.diet} label={`${d?.label ?? 'Balanced'} plan`} />
             </Rise>
-            <Rise i={2} style={{ paddingHorizontal: GUTTER + 8, marginTop: 18 }}>
-              <Text style={st.centerCopy}>Help you achieve the goal faster and with the least effort possible.</Text>
+            <Rise i={2} style={{ paddingHorizontal: GUTTER }}>
+              <DailyTargets kcal={t.budget} protein={t.protein} carbs={t.carbs} fat={t.fat} />
             </Rise>
           </Body>
         );
+      }
       case 'reward':
         return (
           <Body>
-            <QTitle text="How would you reward yourself after reaching your goals?" />
-            <View style={st.rewardGrid}>
-              {REWARDS.map((r, i) => (
-                <Rise key={r.t} i={i + 1} style={st.rewardCell}>
-                  <RewardCard label={r.t} img={p.gender === 'male' ? r.imgMale : r.img} on={p.rewards.includes(r.t)} onPress={() => set((x) => ({ rewards: toggleIn(x.rewards, r.t) }))} />
-                </Rise>
-              ))}
-            </View>
+            <QTitle text="What's your *reward* for crushing it?" sub="Pick as many as you like. A goal feels closer with a prize waiting." />
+            <Rise i={1} style={{ paddingHorizontal: GUTTER, marginTop: 22 }}>
+              <RewardWall
+                options={REWARDS.map((r) => ({ t: r.t, label: r.label, icon: r.icon, img: p.gender === 'male' ? r.imgMale : r.img }))}
+                value={p.rewards}
+                onToggle={(t) => set((x) => ({ rewards: toggleIn(x.rewards, t) }))}
+              />
+            </Rise>
           </Body>
         );
       default:
@@ -748,26 +748,6 @@ function OtherRow({ on, onPress }: { on: boolean; onPress: () => void }) {
           <Text style={st.otherSub}>We&apos;ll use balanced, neutral defaults</Text>
         </View>
         <Ionicons name={on ? 'checkmark-circle' : 'chevron-forward'} size={20} color={on ? C.primary : C.muted} />
-      </Animated.View>
-    </PressableScale>
-  );
-}
-
-function RewardCard({ label, img, on, onPress }: { label: string; img: number; on: boolean; onPress: () => void }) {
-  const p = useOn(on);
-  const box = useAnimatedStyle(() => ({ borderColor: interpolateColor(p.get(), [0, 1], [C.border, C.primary]) }));
-  return (
-    <PressableScale scaleTo={0.97} accessibilityRole="checkbox" accessibilityState={{ checked: on }} onPress={() => { tap(); onPress(); }}>
-      <Animated.View style={[st.reward, box]}>
-        <Photo source={img} style={st.rewardImg} />
-        <Text style={st.rewardText} numberOfLines={2}>
-          {label}
-        </Text>
-        {on && (
-          <Animated.View entering={nativeOnly(ZoomIn.duration(MOTION.base))} style={st.rewardCheck}>
-            <Ionicons name="checkmark" size={14} color={C.white} />
-          </Animated.View>
-        )}
       </Animated.View>
     </PressableScale>
   );
@@ -881,7 +861,6 @@ const st = StyleSheet.create({
   card: { backgroundColor: C.card, borderRadius: R.lg, padding: 16, borderWidth: 1, borderColor: C.borderSoft, ...shadowSm },
   list: { paddingHorizontal: GUTTER, gap: 10, marginTop: 22 },
   bold: { fontWeight: '800', color: C.text },
-  centerCopy: { fontSize: 15, color: C.textSoft, lineHeight: 22, textAlign: 'center' },
   tipTitle: { fontSize: 14, fontWeight: '800', color: C.text },
   tipText: { fontSize: 13, color: C.textSoft, lineHeight: 18 },
 
@@ -947,15 +926,6 @@ const st = StyleSheet.create({
 
 
 
-  dietArt: { marginHorizontal: GUTTER, marginTop: 22, height: 300, borderRadius: R.xl, overflow: 'hidden' },
-  dietTag: { position: 'absolute', borderRadius: R.pill, paddingHorizontal: 12, paddingVertical: 6, ...shadowSm },
-  dietTagText: { color: C.white, fontSize: 11, fontWeight: '900', letterSpacing: 0.6 },
 
-  rewardGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, paddingHorizontal: GUTTER, marginTop: 22 },
-  rewardCell: { width: '47.8%' },
-  reward: { borderRadius: R.lg, borderWidth: 2, backgroundColor: C.card, overflow: 'hidden', paddingBottom: 10 },
-  rewardImg: { height: 128 },
-  rewardText: { fontSize: 13, fontWeight: '700', color: C.text, textAlign: 'center', marginTop: 8, paddingHorizontal: 8, minHeight: 34 },
-  rewardCheck: { position: 'absolute', top: 8, right: 8, width: 24, height: 24, borderRadius: 12, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: C.white },
 
 });
