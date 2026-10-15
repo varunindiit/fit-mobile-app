@@ -8,8 +8,8 @@ import Svg, { Circle } from 'react-native-svg';
 
 import { WeekStrip } from '@/components/charts/Calendar';
 import { fmtNum } from '@/components/charts/Charts';
-import { Bolts } from '@/components/program/PlanAccordion';
-import { Button, Card, Chip, CountUp, Dialog, EmptyState, enter, IconButton, IconTile, layoutTransition, nativeOnly, PressableScale, ProgressBar, Ring, Screen, ScreenTitle, SectionTitle, Sheet, Stepper, T, tap, useToast, type IconName } from '@/components/ui';
+import { ChallengeCard } from '@/components/program/ChallengeCard';
+import { Button, Card, Chip, CountUp, Dialog, EmptyState, enter, IconButton, IconTile, layoutTransition, nativeOnly, PressableScale, Ring, Screen, ScreenTitle, SectionTitle, Sheet, Stepper, T, tap, useToast, type IconName } from '@/components/ui';
 import { ACTIVITIES, WORKOUT_CATEGORIES, WORKOUTS } from '@/data/fitness';
 import { BODY_PARTS, FOCUS_SESSIONS, programById, programDay, PROGRAM_DAYS, sessionStats, type Session } from '@/data/program';
 import { kcalFromSteps, kmFromSteps } from '@/lib/calc';
@@ -47,7 +47,6 @@ export default function TrainingScreen() {
   const stats = sessionStats(session);
   const [askRestart, setAskRestart] = useState(false);
   const openChallenge = () => {
-    tap();
     if (finished) setAskRestart(true);
     else openSession(session.key);
   };
@@ -58,7 +57,7 @@ export default function TrainingScreen() {
   const goal = state.profile.weeklyGoal || 3;
   const [goalOpen, setGoalOpen] = useState(false);
   const [goalDraft, setGoalDraft] = useState(goal);
-  const nudge = wp.done >= goal ? 'Weekly goal smashed! Keep the momentum going.' : wp.done === 0 ? "Haven't exercised yet this week? Let's wake up those muscles!" : `${goal - wp.done} more workout${goal - wp.done === 1 ? '' : 's'} to hit your weekly goal`;
+  const nudge = wp.done >= goal ? 'Goal crushed this week! Every extra session is a bonus.' : wp.done === 0 ? 'Fresh week, fresh start. One session gets the ball rolling.' : `Just ${goal - wp.done} more session${goal - wp.done === 1 ? '' : 's'} to close out your week.`;
 
   // Steps + today
   const steps = state.steps[today] ?? 0;
@@ -119,7 +118,6 @@ export default function TrainingScreen() {
   const setCat = (c: Cat) => updateSettings({ trainingCat: c });
   const classes = WORKOUTS.filter((w) => cat === 'All' || w.category === cat);
   const doneToday = new Set(todays.map((w) => w.workoutId).filter(Boolean));
-  const pct = Math.round((done / PROGRAM_DAYS) * 100);
   const goalHint: { icon: IconName; color: string; text: string } =
     goalDraft <= 2
       ? { icon: 'leaf', color: C.primary, text: 'An easy start — great for building the habit' }
@@ -134,7 +132,7 @@ export default function TrainingScreen() {
         <Animated.View entering={enter(0)}>
           <ScreenTitle
             title="Training"
-            subtitle={`${program.title} in 30 Days`}
+            subtitle={finished ? `${program.title} · all 30 days done` : `${program.title} · day ${day} of 30`}
             right={
               <PressableScale
                 scaleTo={0.94}
@@ -163,9 +161,12 @@ export default function TrainingScreen() {
                 </Text>
               </Ring>
               <View style={{ flex: 1 }}>
-                <Text style={T.h3}>Weekly goal</Text>
-                <Text style={[T.small, { marginTop: 2 }]}>
-                  <Text style={{ color: C.primary, fontWeight: '700' }}>{wp.done}</Text> of {goal} workouts this week
+                <Text style={st.goalKicker}>THIS WEEK</Text>
+                <Text style={st.goalTitle}>
+                  {wp.done >= goal ? 'Goal reached' : `${goal - wp.done} to go`}
+                </Text>
+                <Text style={[T.small, { marginTop: 1 }]}>
+                  <Text style={{ color: C.primary, fontWeight: '800' }}>{wp.done}</Text> of {goal} sessions done
                 </Text>
               </View>
               <IconButton
@@ -183,7 +184,9 @@ export default function TrainingScreen() {
               <WeekStrip week={wp.week} days={wp.days} onPress={(k) => router.push({ pathname: '/history', params: { date: k } })} />
             </View>
             <View style={st.nudge}>
-              <IconTile icon="chatbubble-ellipses" size={34} />
+              <View style={st.nudgeIcon}>
+                <Ionicons name={wp.done >= goal ? 'trophy' : wp.done === 0 ? 'sunny' : 'trending-up'} size={16} color={C.primaryDark} />
+              </View>
               <View style={st.bubble}>
                 <Text style={st.bubbleText}>{nudge}</Text>
               </View>
@@ -193,42 +196,28 @@ export default function TrainingScreen() {
 
         {/* Daily challenge */}
         <Animated.View entering={enter(2)}>
-          <SectionTitle title="Daily challenge" action="Change plan" onAction={() => router.push('/select-plan')} />
-          <PressableScale scaleTo={0.98} accessibilityLabel={finished ? `Restart ${program.title}` : `Start day ${day}`} onPress={openChallenge} style={[st.heroShell, { backgroundColor: program.colors[1] }]}>
-            <LinearGradient colors={program.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.challenge}>
-              <Deco size={260} style={{ top: -70, right: -80 }} />
-              <View style={st.kickerPill}>
-                <Text style={st.kicker}>{program.title}</Text>
-                <Bolts n={program.bolts} />
-              </View>
-              <View style={st.challengeMid}>
-                <View style={{ flex: 1 }}>
-                  <Text style={st.dayBig}>{finished ? 'Completed' : `Day ${day}`}</Text>
-                  <Text style={st.dayMeta}>{finished ? 'You finished all 30 days!' : session.restDay ? 'Rest day · recover & stretch' : `${stats.exercises} exercises · ${stats.minutes} min · ${stats.kcal} kcal`}</Text>
-                </View>
-                <View style={st.heroDisc}>
-                  <Glyph emoji={finished ? '🏆' : session.emoji} src={finished ? undefined : sessionArt(session.key)} size={!finished && sessionArt(session.key) ? 106 : 64} />
-                </View>
-              </View>
-              <View style={st.daysRow}>
-                <Text style={st.daysText}>
-                  {done}/{PROGRAM_DAYS} days
-                </Text>
-                <Text style={st.daysText}>{pct}%</Text>
-              </View>
-              <ProgressBar value={done / PROGRAM_DAYS} color={C.white} track="rgba(255,255,255,0.28)" height={6} style={{ marginTop: 8 }} />
-              <PressableScale scaleTo={0.94} accessibilityRole="button" onPress={openChallenge} style={st.startPill}>
-                <Ionicons name={finished ? 'refresh' : 'play'} size={15} color={program.colors[1]} />
-                <Text style={[st.startText, { color: program.colors[1] }]}>{finished ? 'RESTART' : 'START'}</Text>
-              </PressableScale>
-            </LinearGradient>
-          </PressableScale>
+          <SectionTitle title="Today's workout" action="Switch plan" onAction={() => router.push('/select-plan')} />
+          <ChallengeCard
+            title={program.title}
+            bolts={program.bolts}
+            colors={program.colors}
+            day={finished ? PROGRAM_DAYS : day}
+            done={done}
+            stats={finished || session.restDay ? undefined : stats}
+            note={finished ? 'All 30 days done. Legend!' : 'Rest day · stretch & recover'}
+            emoji={finished ? '🏆' : session.emoji}
+            art={finished ? undefined : sessionArt(session.key)}
+            cta={finished ? 'Go again' : session.restDay ? 'Open rest day' : `Start Day ${day}`}
+            ctaIcon={finished ? 'refresh' : session.restDay ? 'moon' : 'play'}
+            onPress={openChallenge}
+          />
         </Animated.View>
 
         {/* Today */}
         <Animated.View entering={enter(3)}>
-          <SectionTitle title="Today" action="Log activity" onAction={openLog} />
-          <Card style={st.stepsCard}>
+          <SectionTitle title="Your activity" action="Add activity" onAction={openLog} />
+          <Card style={{ paddingVertical: 14 }}>
+          <View style={st.stepsCard}>
             <Ring size={58} stroke={7} value={steps / stepGoal} color={C.steps} track={C.stepsSoft}>
               <Ionicons name="footsteps" size={20} color={C.steps} />
             </Ring>
@@ -241,17 +230,18 @@ export default function TrainingScreen() {
               </Text>
             </View>
             <Button title="Sync" icon="sync" small variant="secondary" loading={syncing} onPress={sync} style={{ minWidth: 86 }} />
-          </Card>
-          <Card style={st.summary}>
+          </View>
+          <View style={st.summary}>
             <SumCol icon="flame" color={C.accent} bg={C.accentSoft} value={burned.total} format={fmtNum} label="kcal burned" />
             <View style={st.vDivider} />
             <SumCol icon="time" color={C.water} bg={C.waterSoft} value={activeMin} label="active min" />
             <View style={st.vDivider} />
-            <SumCol icon="trophy" color={C.workout} bg={C.workoutSoft} value={todays.length} label="workouts" />
+            <SumCol icon="trophy" color={C.workout} bg={C.workoutSoft} value={todays.length} label="sessions" />
+          </View>
           </Card>
           <Card style={{ marginTop: 10, paddingVertical: todays.length ? 6 : 0 }}>
             {todays.length === 0 ? (
-              <EmptyState icon="walk" title="No activity logged yet" text="Start today's challenge or log a walk, a badminton game or a gym session." action="Log activity" onAction={openLog} />
+              <EmptyState icon="walk" title="Nothing logged yet today" text="Did a walk, a badminton match or a gym session? Add it and we'll count the calories." action="Add activity" onAction={openLog} />
             ) : (
               todays.map((w, i) => {
                 const linked = !!(w.sessionKey || w.workoutId);
@@ -283,19 +273,19 @@ export default function TrainingScreen() {
 
         {/* Push your limits */}
         <Animated.View entering={enter(4)}>
-          <SectionTitle title="Push your limits" />
+          <SectionTitle title="Level up" />
           <Carousel items={PUSH} />
         </Animated.View>
 
         {/* With equipment */}
         <Animated.View entering={enter(5)}>
-          <SectionTitle title="With equipment" />
+          <SectionTitle title="Got gear? Try these" />
           <Carousel items={EQUIP} />
         </Animated.View>
 
         {/* Body focus */}
         <Animated.View entering={enter(6)}>
-          <SectionTitle title="Body focus" />
+          <SectionTitle title="Target an area" />
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -16 }} contentContainerStyle={st.chips}>
             {BODY_PARTS.map((p) => (
               <Chip key={p} label={p} selected={p === part} onPress={() => setPart(p)} />
@@ -338,7 +328,7 @@ export default function TrainingScreen() {
 
         {/* Guided classes */}
         <Animated.View entering={enter(7)}>
-          <SectionTitle title="Guided classes" />
+          <SectionTitle title="Train with a coach" />
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={st.chips} style={{ marginHorizontal: -16 }}>
             {WORKOUT_CATEGORIES.map((c) => (
               <Chip key={c} label={c} selected={cat === c} onPress={() => setCat(c)} />
@@ -361,6 +351,9 @@ export default function TrainingScreen() {
                       <Ionicons name="time-outline" size={11} color={C.text} />
                       <Text style={st.wTimeText}>{w.minutes} min</Text>
                     </View>
+                    <View style={st.wLevel}>
+                      <Text style={st.wLevelText}>{w.level}</Text>
+                    </View>
                     {doneToday.has(w.id) && (
                       <View style={st.wDone}>
                         <Ionicons name="checkmark" size={13} color={C.white} />
@@ -371,15 +364,15 @@ export default function TrainingScreen() {
                     <Text style={st.wTitle} numberOfLines={2}>
                       {w.title}
                     </Text>
-                    <View style={[st.metaRow, { marginTop: 4 }]}>
-                      <Ionicons name="flame" size={12} color={C.accent} />
-                      <Text style={st.wMeta} numberOfLines={1}>
-                        {w.kcal} kcal
+                    <View style={st.wFoot}>
+                      <View style={st.wKcal}>
+                        <Ionicons name="flame" size={11} color={C.accent} />
+                        <Text style={st.wMeta}>{w.kcal}</Text>
+                      </View>
+                      <Text style={st.wCoach} numberOfLines={1}>
+                        {w.coach}
                       </Text>
                     </View>
-                    <Text style={st.wCoach} numberOfLines={1}>
-                      {w.level} · {w.coach}
-                    </Text>
                   </View>
                 </PressableScale>
               </Animated.View>
@@ -576,25 +569,16 @@ const st = StyleSheet.create({
   goalHead: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   ringNum: { fontSize: 17, fontWeight: '800', color: C.text, fontVariant: ['tabular-nums'], letterSpacing: -0.4 },
   ringOf: { fontSize: 12, fontWeight: '600', color: C.muted },
-  nudge: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 16 },
-  bubble: { flex: 1, backgroundColor: C.surfaceAlt, borderRadius: R.sm, borderTopLeftRadius: 4, paddingHorizontal: 12, paddingVertical: 10, borderWidth: StyleSheet.hairlineWidth * 2, borderColor: C.borderSoft },
-  bubbleText: { fontSize: 13, fontWeight: '600', color: C.text, lineHeight: 18 },
-  heroShell: { borderRadius: R.xl, overflow: 'hidden' },
-  challenge: { borderRadius: R.xl, padding: 20, overflow: 'hidden' },
-  kickerPill: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', backgroundColor: 'rgba(255,255,255,0.18)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: R.pill },
-  kicker: { color: C.white, fontSize: 12, fontWeight: '700' },
-  challengeMid: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 12 },
-  dayBig: { color: C.white, fontSize: 40, fontWeight: '800', letterSpacing: -1.2, fontVariant: ['tabular-nums'] },
-  dayMeta: { color: 'rgba(255,255,255,0.9)', fontSize: 13, fontWeight: '600', marginTop: 2 },
-  heroDisc: { width: 92, height: 92, borderRadius: 46, backgroundColor: 'rgba(255,255,255,0.16)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.24)', alignItems: 'center', justifyContent: 'center' },
-  daysRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 18 },
-  daysText: { color: C.white, fontSize: 12, fontWeight: '700', fontVariant: ['tabular-nums'] },
-  startPill: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', backgroundColor: C.white, borderRadius: R.pill, paddingHorizontal: 24, height: 44, marginTop: 18, ...shadowSm },
-  startText: { fontSize: 14, fontWeight: '800', letterSpacing: 1 },
-  stepsCard: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14 },
+  nudge: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 16, padding: 10, borderRadius: R.md, backgroundColor: C.primarySoft },
+  nudgeIcon: { width: 32, height: 32, borderRadius: 16, backgroundColor: C.card, alignItems: 'center', justifyContent: 'center' },
+  goalKicker: { fontSize: 10.5, fontWeight: '800', color: C.muted, letterSpacing: 1.2 },
+  goalTitle: { fontSize: 20, fontWeight: '900', color: C.text, letterSpacing: -0.4, marginTop: 1 },
+  bubble: { flex: 1 },
+  bubbleText: { fontSize: 13, fontWeight: '600', color: C.primaryDark, lineHeight: 18 },
+  stepsCard: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   stepsBig: { fontSize: 20, fontWeight: '800', color: C.text, fontVariant: ['tabular-nums'], letterSpacing: -0.4 },
   stepsOf: { fontSize: 13, fontWeight: '600', color: C.muted, letterSpacing: 0 },
-  summary: { flexDirection: 'row', alignItems: 'center', marginTop: 10, paddingVertical: 14 },
+  summary: { flexDirection: 'row', alignItems: 'center', marginTop: 14, paddingTop: 14, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: C.border },
   sumValue: { fontSize: 18, fontWeight: '800', color: C.text, fontVariant: ['tabular-nums'], letterSpacing: -0.3 },
   vDivider: { width: StyleSheet.hairlineWidth * 2, height: 40, backgroundColor: C.borderSoft },
   actRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, paddingHorizontal: 8, marginHorizontal: -8, borderRadius: R.sm },
@@ -618,13 +602,17 @@ const st = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 12 },
   wCell: { width: '48.3%' },
   wCard: { backgroundColor: C.card, borderRadius: R.lg, borderWidth: StyleSheet.hairlineWidth, borderColor: C.borderSoft, overflow: 'hidden', ...shadowSm },
-  wHead: { height: 96, alignItems: 'center', justifyContent: 'center' },
+  wHead: { height: 110, alignItems: 'center', justifyContent: 'center' },
+  wLevel: { position: 'absolute', left: 8, top: 8, backgroundColor: 'rgba(28,25,23,0.72)', borderRadius: R.pill, paddingHorizontal: 7, paddingVertical: 3 },
+  wLevelText: { fontSize: 10, fontWeight: '800', color: C.white, letterSpacing: 0.3 },
+  wFoot: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 },
+  wKcal: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: C.accentSoft, borderRadius: R.pill, paddingHorizontal: 7, paddingVertical: 3 },
   wTime: { position: 'absolute', left: 8, bottom: 8, flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: C.card, borderRadius: R.pill, paddingHorizontal: 7, paddingVertical: 3 },
   wTimeText: { fontSize: 11, fontWeight: '700', color: C.text, fontVariant: ['tabular-nums'] },
   wDone: { position: 'absolute', right: 8, top: 8, width: 22, height: 22, borderRadius: 11, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center' },
   wTitle: { fontSize: 14, fontWeight: '700', color: C.text, minHeight: 36, lineHeight: 18, letterSpacing: -0.1 },
-  wMeta: { fontSize: 12, color: C.textSoft, fontWeight: '600' },
-  wCoach: { fontSize: 11, color: C.muted, fontWeight: '600', marginTop: 3 },
+  wMeta: { fontSize: 11.5, color: C.accent, fontWeight: '800', fontVariant: ['tabular-nums'] },
+  wCoach: { flex: 1, fontSize: 11.5, color: C.muted, fontWeight: '600' },
   goalPick: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 18 },
   goalOpt: { width: 42, height: 42, borderRadius: 21, borderWidth: 1.5, borderColor: C.border, alignItems: 'center', justifyContent: 'center', backgroundColor: C.card },
   goalOptOn: { backgroundColor: C.primaryDark, borderColor: C.primaryDark },

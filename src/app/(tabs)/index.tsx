@@ -11,12 +11,12 @@ import { scheduleOnRN } from 'react-native-worklets';
 import Svg, { Circle } from 'react-native-svg';
 
 import { CalorieCard } from '@/components/home/CalorieCard';
-import { ProgramBadge } from '@/components/home/ProgramBadge';
 import { SnapPlateArt } from '@/components/home/SnapPlateArt';
 import { WaterBottle } from '@/components/home/WaterBottle';
 import { WeekStrip } from '@/components/home/WeekStrip';
 import { WeightSparkline } from '@/components/home/WeightSparkline';
-import { Bolts } from '@/components/program/PlanAccordion';
+import { ChallengeCard } from '@/components/program/ChallengeCard';
+import { sessionArt } from '@/components/glyphs';
 import {
   Button,
   Card,
@@ -396,50 +396,22 @@ export default function Home() {
 
         {/* Daily challenge (30-day program) */}
         <Animated.View entering={enter(4)}>
-          <SectionTitle title="Daily challenge" action="Change plan" onAction={() => router.push('/select-plan')} />
-          <PressableScale
-            scaleTo={0.98}
-            onPress={() => {
-              tap();
-              openDay();
-            }}
-            style={st.challengeWrap}
-            accessibilityRole="button">
-            <LinearGradient colors={program.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.challenge}>
-              <Svg pointerEvents="none" width="100%" height="100%" style={StyleSheet.absoluteFill}>
-                <Circle cx="88%" cy="18%" r={92} fill={C.white} opacity={0.08} />
-                <Circle cx="98%" cy="96%" r={64} fill={C.white} opacity={0.06} />
-              </Svg>
-              <View style={st.rowBetween}>
-                <View style={st.chTag}>
-                  <Text style={st.chTagText}>{program.title}</Text>
-                  <Bolts n={program.bolts} />
-                </View>
-                <Text style={st.chCount}>{doneDays}/30 days</Text>
-              </View>
-              <View style={st.chMid}>
-                <View style={{ flex: 1 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Text style={st.challengeDay}>Day {doneToday ? doneDays : nextDay}</Text>
-                    {doneToday && <Ionicons name="checkmark-circle" size={24} color={C.white} />}
-                  </View>
-                  <Text style={st.challengeMeta}>
-                    {doneToday ? 'Done for today — great work!' : nextSession.restDay ? 'Rest & recovery day' : `${nextStats.exercises} exercises · ${nextStats.minutes} min · ~${nextStats.kcal} kcal`}
-                  </Text>
-                </View>
-                <ProgramBadge emoji={program.emoji} progress={doneDays / 30} />
-              </View>
-              <View style={[st.rowBetween, { marginTop: 16 }]}>
-                <Text style={st.chWeek}>
-                  This week {wk.done}/{p.weeklyGoal} workouts
-                </Text>
-                <View style={st.challengeBtn}>
-                  <Ionicons name={doneToday ? 'eye' : 'play'} size={13} color={program.colors[1]} />
-                  <Text style={[st.challengeBtnText, { color: program.colors[1] }]}>{doneToday ? 'VIEW' : 'START'}</Text>
-                </View>
-              </View>
-            </LinearGradient>
-          </PressableScale>
+          <SectionTitle title="Today's workout" action="Switch plan" onAction={() => router.push('/select-plan')} />
+          <ChallengeCard
+            title={program.title}
+            bolts={program.bolts}
+            colors={program.colors}
+            day={doneToday ? doneDays : nextDay}
+            done={doneDays}
+            stats={doneToday || nextSession.restDay ? undefined : nextStats}
+            note={doneToday ? 'Done for today. Great work!' : 'Rest day · stretch & recover'}
+            emoji={nextSession.emoji}
+            art={sessionArt(nextSession.key)}
+            footnote={`This week: ${wk.done} of ${p.weeklyGoal} sessions`}
+            cta={doneToday ? "View today's workout" : nextSession.restDay ? 'Open rest day' : `Start Day ${nextDay}`}
+            ctaIcon={doneToday ? 'eye' : nextSession.restDay ? 'moon' : 'play'}
+            onPress={openDay}
+          />
         </Animated.View>
 
         {/* Meals */}
@@ -839,17 +811,6 @@ const st = StyleSheet.create({
   snapTitle: { fontSize: 16, fontWeight: '700', color: C.text, letterSpacing: -0.2 },
   aiTag: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, backgroundColor: C.aiSoft, borderWidth: 1, borderColor: C.aiBorder },
   aiTagText: { fontSize: 10, fontWeight: '800', color: C.ai, letterSpacing: 0.4 },
-  challengeWrap: { borderRadius: R.lg, ...shadow },
-  challenge: { borderRadius: R.lg, padding: 16, overflow: 'hidden' },
-  chTag: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(255,255,255,0.18)', paddingHorizontal: 10, height: 26, borderRadius: R.pill },
-  chTagText: { color: C.white, fontWeight: '700', fontSize: 12 },
-  chCount: { color: 'rgba(255,255,255,0.85)', fontWeight: '600', fontSize: 12, fontVariant: ['tabular-nums'] },
-  chMid: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 12 },
-  challengeDay: { color: C.white, fontSize: 32, fontWeight: '800', letterSpacing: -0.8 },
-  challengeMeta: { color: 'rgba(255,255,255,0.88)', fontSize: 13, fontWeight: '500', marginTop: 2 },
-  chWeek: { color: 'rgba(255,255,255,0.88)', fontSize: 12, fontWeight: '600', flex: 1 },
-  challengeBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: C.white, borderRadius: R.pill, paddingHorizontal: 14, height: 34 },
-  challengeBtnText: { fontWeight: '800', fontSize: 12, letterSpacing: 0.8 },
   meal: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 16 },
   sep: { height: StyleSheet.hairlineWidth * 2, backgroundColor: C.borderSoft, marginLeft: 70 },
   mealHead: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
