@@ -4,7 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Redirect, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo, useState } from 'react';
-import { BackHandler, Pressable, ScrollView, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { BackHandler, ScrollView, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, { FadeInDown, ZoomIn, interpolateColor, useAnimatedStyle } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -80,7 +80,11 @@ const REWARDS: { t: string; img: number; imgMale: number }[] = [
   { t: 'Take a trip somewhere', img: IMG.rewardTrip, imgMale: IMG.rewardTripMale },
   { t: 'Get a makeover', img: IMG.rewardMakeover, imgMale: IMG.rewardMakeoverMale },
 ];
-const BENEFITS_LEFT = ['Slow transformation', 'Lack of personalization', 'Missing expertise', 'Limited progress'];
+const GENDERS: { v: 'male' | 'female'; label: string; icon: IconName; img: number }[] = [
+  { v: 'male', label: 'Male', icon: 'male', img: IMG.genderMale },
+  { v: 'female', label: 'Female', icon: 'female', img: IMG.genderFemale },
+];
+const BENEFITS_LEFT =['Slow transformation', 'Lack of personalization', 'Missing expertise', 'Limited progress'];
 const BENEFITS_RIGHT = ['Faster results', 'Tailored for you', 'Expert guidance', 'Boosted progress'];
 
 const toggleIn = (list: string[], v: string) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
@@ -235,45 +239,34 @@ export default function Onboarding() {
 
   function renderStep() {
     switch (step) {
-      case 'gender':
+      case 'gender': {
+        const picked = genderPicked ? p.gender : null;
+        // Brief pause so the selected state reads before the step advances.
+        const pick = (g: Profile['gender'], delay: number) => {
+          set({ gender: g });
+          setGenderPicked(true);
+          setTimeout(() => go('shape', 1), delay);
+        };
         return (
           <Body>
-            <QTitle text="What's your gender?" />
-            <Rise i={1} style={{ paddingHorizontal: GUTTER, marginTop: 18 }}>
-              <TipCard icon="bulb">
-                <Text style={st.tipText}>Knowing your gender can help us tailor the intensity for you based on different metabolic rates.</Text>
-              </TipCard>
-            </Rise>
-            <Rise i={2} style={st.genderRow}>
-              {(['male', 'female'] as const).map((g) => (
-                <GenderCard
-                  key={g}
-                  label={g === 'male' ? 'Male' : 'Female'}
-                  img={g === 'male' ? IMG.genderMale : IMG.genderFemale}
-                  on={genderPicked && p.gender === g}
-                  onPress={() => {
-                    set({ gender: g });
-                    setGenderPicked(true);
-                    setTimeout(() => go('shape', 1), 320);
-                  }}
-                />
+            <QTitle text="Which best *describes* you?" sub="We tune calorie burn and training intensity to your metabolism." />
+            <View style={st.genderRow}>
+              {GENDERS.map((g, i) => (
+                <Rise key={g.v} i={i + 1} style={{ flex: 1 }}>
+                  <GenderCard label={g.label} icon={g.icon} img={g.img} on={picked === g.v} dim={!!picked && picked !== g.v} onPress={() => pick(g.v, 380)} />
+                </Rise>
               ))}
+            </View>
+            <Rise i={3} style={{ paddingHorizontal: GUTTER, marginTop: 14 }}>
+              <OtherRow on={picked === 'other'} onPress={() => pick('other', 280)} />
             </Rise>
-            <Rise i={3} style={{ alignItems: 'center', marginTop: 18 }}>
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => {
-                  tap();
-                  set({ gender: 'other' });
-                  setGenderPicked(true);
-                  setTimeout(() => go('shape', 1), 200);
-                }}
-                style={({ pressed }) => [st.otherBtn, genderPicked && p.gender === 'other' && st.otherBtnOn, pressed && { opacity: 0.6 }]}>
-                <Text style={[st.otherText, genderPicked && p.gender === 'other' && { color: C.primaryDark }]}>Others / I&apos;d rather not say</Text>
-              </Pressable>
+            <Rise i={4} style={st.privacy}>
+              <Ionicons name="lock-closed" size={12} color={C.muted} />
+              <Text style={st.privacyText}>Private. Only used to personalize your plan.</Text>
             </Rise>
           </Body>
         );
+      }
       case 'shape':
       case 'desired': {
         const desired = step === 'desired';
@@ -646,23 +639,62 @@ function CtaBar({ children }: { children: React.ReactNode }) {
   return <View style={[st.ctaBar, { paddingBottom: Math.max(insets.bottom, 12) + 4 }]}>{children}</View>;
 }
 
-function GenderCard({ label, img, on, onPress }: { label: string; img: number; on: boolean; onPress: () => void }) {
+/** Portrait card: figure over a mint halo, floating label pill. Selected lifts and deepens; the other card recedes. */
+function GenderCard({ label, icon, img, on, dim, onPress }: { label: string; icon: IconName; img: number; on: boolean; dim: boolean; onPress: () => void }) {
   const p = useOn(on);
-  const box = useAnimatedStyle(() => ({
-    backgroundColor: interpolateColor(p.get(), [0, 1], [C.surfaceAlt, C.primary]),
-    borderColor: interpolateColor(p.get(), [0, 1], [C.border, C.primary]),
+  const d = useOn(dim);
+  const card = useAnimatedStyle(() => ({
+    borderColor: interpolateColor(p.get(), [0, 1], [C.borderSoft, C.primary]),
+    opacity: 1 - d.get() * 0.45,
+    transform: [{ translateY: -4 * p.get() }],
   }));
+  const halo = useAnimatedStyle(() => ({
+    backgroundColor: interpolateColor(p.get(), [0, 1], [C.primarySoft, C.primaryTint]),
+    transform: [{ scale: 1 + 0.08 * p.get() }],
+  }));
+  const pill = useAnimatedStyle(() => ({ backgroundColor: interpolateColor(p.get(), [0, 1], [C.card, C.primaryDark]) }));
   const text = useAnimatedStyle(() => ({ color: interpolateColor(p.get(), [0, 1], [C.text, C.white]) }));
   return (
-    <PressableScale scaleTo={0.97} accessibilityRole="radio" accessibilityState={{ checked: on }} onPress={() => { tap(); onPress(); }} style={{ flex: 1 }}>
-      <Animated.View style={[st.genderCard, box]}>
+    <PressableScale scaleTo={0.97} accessibilityRole="radio" accessibilityLabel={label} accessibilityState={{ checked: on }} onPress={() => { tap(); onPress(); }}>
+      <Animated.View style={[st.genderCard, card]}>
+        <Animated.View style={[st.genderHalo, halo]} />
         <Image source={img} style={st.genderImg} contentFit="contain" contentPosition="bottom" transition={200} />
-        <Animated.Text style={[st.genderLabel, text]}>{label}</Animated.Text>
-        {on && (
-          <Animated.View entering={nativeOnly(ZoomIn.duration(MOTION.base))} style={st.genderCheck}>
-            <Ionicons name="checkmark" size={15} color={C.primary} />
-          </Animated.View>
-        )}
+        <LinearGradient colors={['rgba(255,255,255,0)', C.card]} style={st.genderFade} pointerEvents="none" />
+        <Animated.View style={[st.genderPill, pill]}>
+          <View style={[st.genderIcon, on && { backgroundColor: C.white }]}>
+            <Ionicons name={icon} size={13} color={C.primaryDark} />
+          </View>
+          <Animated.Text style={[st.genderLabel, text]}>{label}</Animated.Text>
+        </Animated.View>
+        <View style={[st.genderRadio, on && st.genderRadioOn]}>
+          {on && (
+            <Animated.View entering={nativeOnly(ZoomIn.duration(MOTION.base))}>
+              <Ionicons name="checkmark" size={14} color={C.white} />
+            </Animated.View>
+          )}
+        </View>
+      </Animated.View>
+    </PressableScale>
+  );
+}
+
+function OtherRow({ on, onPress }: { on: boolean; onPress: () => void }) {
+  const p = useOn(on);
+  const box = useAnimatedStyle(() => ({
+    borderColor: interpolateColor(p.get(), [0, 1], [C.borderSoft, C.primary]),
+    backgroundColor: interpolateColor(p.get(), [0, 1], [C.card, C.primarySoft]),
+  }));
+  return (
+    <PressableScale scaleTo={0.98} accessibilityRole="radio" accessibilityLabel="Other or prefer not to say" accessibilityState={{ checked: on }} onPress={() => { tap(); onPress(); }}>
+      <Animated.View style={[st.otherRow, box]}>
+        <View style={st.otherIcon}>
+          <Ionicons name="male-female" size={17} color={C.primaryDark} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={st.otherTitle}>Other / Prefer not to say</Text>
+          <Text style={st.otherSub}>We&apos;ll use balanced, neutral defaults</Text>
+        </View>
+        <Ionicons name={on ? 'checkmark-circle' : 'chevron-forward'} size={20} color={on ? C.primary : C.muted} />
       </Animated.View>
     </PressableScale>
   );
@@ -773,14 +805,22 @@ const st = StyleSheet.create({
   tipTitle: { fontSize: 14, fontWeight: '800', color: C.text },
   tipText: { fontSize: 13, color: C.textSoft, lineHeight: 18 },
 
-  genderRow: { flexDirection: 'row', gap: 12, paddingHorizontal: GUTTER, marginTop: 18 },
-  genderCard: { height: 260, borderRadius: R.lg, borderWidth: 2, overflow: 'hidden', alignItems: 'center', paddingTop: 12 },
-  genderImg: { alignSelf: 'stretch', flex: 1 },
-  genderLabel: { fontSize: 16, fontWeight: '800', marginVertical: 12 },
-  genderCheck: { position: 'absolute', top: 10, right: 10, width: 24, height: 24, borderRadius: 12, backgroundColor: C.white, alignItems: 'center', justifyContent: 'center' },
-  otherBtn: { paddingHorizontal: 18, paddingVertical: 11, borderRadius: R.pill, borderWidth: 1, borderColor: C.border, backgroundColor: C.card },
-  otherBtnOn: { borderColor: C.primary, backgroundColor: C.primarySoft },
-  otherText: { fontSize: 13, fontWeight: '600', color: C.textSoft },
+  genderRow: { flexDirection: 'row', gap: 12, paddingHorizontal: GUTTER, marginTop: 24 },
+  genderCard: { height: 290, borderRadius: R.xl, borderWidth: 2, backgroundColor: C.card, alignItems: 'center', ...shadowSm },
+  genderHalo: { position: 'absolute', top: 30, width: '84%', aspectRatio: 1, borderRadius: R.pill },
+  genderImg: { position: 'absolute', top: 18, left: 6, right: 6, bottom: 34 },
+  genderFade: { position: 'absolute', left: 2, right: 2, bottom: 34, height: 40 },
+  genderPill: { position: 'absolute', bottom: 14, flexDirection: 'row', alignItems: 'center', gap: 7, paddingLeft: 5, paddingRight: 14, paddingVertical: 5, borderRadius: R.pill, ...shadowSm },
+  genderIcon: { width: 24, height: 24, borderRadius: 12, backgroundColor: C.primarySoft, alignItems: 'center', justifyContent: 'center' },
+  genderLabel: { fontSize: 15, fontWeight: '800', letterSpacing: -0.2 },
+  genderRadio: { position: 'absolute', top: 12, right: 12, width: 24, height: 24, borderRadius: 12, borderWidth: 1.5, borderColor: C.border, backgroundColor: C.card, alignItems: 'center', justifyContent: 'center' },
+  genderRadioOn: { borderColor: C.primary, backgroundColor: C.primary },
+  otherRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: R.lg, borderWidth: 1.5 },
+  otherIcon: { width: 38, height: 38, borderRadius: 19, backgroundColor: C.primarySoft, alignItems: 'center', justifyContent: 'center' },
+  otherTitle: { fontSize: 14.5, fontWeight: '700', color: C.text },
+  otherSub: { fontSize: 12.5, color: C.muted, marginTop: 1 },
+  privacy: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 18 },
+  privacyText: { fontSize: 12, fontWeight: '500', color: C.muted },
 
   shapePhoto: { alignSelf: 'stretch', marginHorizontal: GUTTER + 8, aspectRatio: 4 / 3, borderRadius: R.lg },
   fatCard: { backgroundColor: C.card, borderRadius: R.md, borderWidth: 1, borderColor: C.borderSoft, overflow: 'hidden' },

@@ -4,15 +4,16 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import Animated, { Easing, FadeIn, FadeInDown, FadeInUp, ZoomIn, useAnimatedStyle, useReducedMotion, useSharedValue, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
+import Animated, { Easing, FadeIn, FadeInDown, FadeInUp, ZoomIn, useAnimatedStyle, useReducedMotion, useSharedValue, withDelay, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Circle } from 'react-native-svg';
 
 import { Button, CountUp, Dialog, EASE_OUT, nativeOnly, Ring, Sheet, tap, type IconName } from '@/components/ui';
 import { DEFAULT_MONTHS, pctOff, PlanPicker, planFor } from '@/components/plans/PlanPicker';
 import { formatINR, type PlanTier } from '@/data/plans';
 import { bmi, targets } from '@/lib/calc';
 import type { Profile } from '@/lib/store';
-import { BRAND, C, MOTION, R, shadow, shadowSm } from '@/theme';
+import { BRAND, C, glow, MOTION, R, shadow, shadowLg, shadowSm } from '@/theme';
 import { IMG } from './assets';
 import { GoalCurve } from './GoalCurve';
 import { GUTTER, fmtWeight, toUnit, type WeightUnit } from './kit';
@@ -145,34 +146,102 @@ export function LoginSheet({ visible, onClose, onLogin }: { visible: boolean; on
 
 /* ---------------- 1 · Welcome ---------------- */
 
-/** "Hello! I'm your personal coach." Coach pops in, greeting rises, then it moves on by itself (tap to skip). */
-export function Welcome({ onNext }: { onNext: () => void }) {
+const WELCOME_MS = 2800;
+const ARCH_W = 196;
+const ARCH_H = 248;
+const ORBIT = 292;
+
+/** Small glass chip that floats around the coach portrait, bobbing gently once it has popped in. */
+function CoachChip({ icon, label, tint, bg, delay, bob, style }: { icon: IconName; label: string; tint: string; bg: string; delay: number; bob: number; style: object }) {
   const reduce = useReducedMotion();
-  const pulse = useSharedValue(0);
+  const y = useSharedValue(0);
   useEffect(() => {
     if (reduce) return;
-    pulse.set(withRepeat(withSequence(withTiming(1, { duration: 1400, easing: Easing.out(Easing.quad) }), withTiming(0, { duration: 0 })), -1, false));
-  }, [pulse, reduce]);
-  const halo = useAnimatedStyle(() => ({ opacity: 0.35 * (1 - pulse.get()), transform: [{ scale: 1 + pulse.get() * 0.35 }] }));
-  useTimeout(onNext, 2800);
+    y.set(withRepeat(withSequence(withTiming(-bob, { duration: 1600, easing: Easing.inOut(Easing.sin) }), withTiming(0, { duration: 1600, easing: Easing.inOut(Easing.sin) })), -1, false));
+  }, [y, bob, reduce]);
+  const float = useAnimatedStyle(() => ({ transform: [{ translateY: y.get() }] }));
+  return (
+    <Animated.View entering={nativeOnly(ZoomIn.springify().damping(14).delay(delay))} style={[st.wChip, shadow, style]}>
+      <Animated.View style={[{ flexDirection: 'row', alignItems: 'center', gap: 8 }, float]}>
+        <View style={[st.wChipIcon, { backgroundColor: bg }]}>
+          <Ionicons name={icon} size={14} color={tint} />
+        </View>
+        <Text style={st.wChipText}>{label}</Text>
+      </Animated.View>
+    </Animated.View>
+  );
+}
+
+/** "Hey there! Meet your personal coach." Arch portrait inside a slowly orbiting ring, feature chips float in, greeting rises,
+ *  and a thin timer bar shows the screen moving on by itself (a tap skips ahead). */
+export function Welcome({ onNext }: { onNext: () => void }) {
+  const reduce = useReducedMotion();
+  const spin = useSharedValue(0);
+  const wave = useSharedValue(0);
+  const timer = useSharedValue(0);
+  useEffect(() => {
+    timer.set(withTiming(1, { duration: WELCOME_MS, easing: Easing.linear }));
+    if (reduce) return;
+    spin.set(withRepeat(withTiming(1, { duration: 24000, easing: Easing.linear }), -1, false));
+    wave.set(withDelay(700, withRepeat(withSequence(withTiming(1, { duration: 140 }), withTiming(-1, { duration: 180 }), withTiming(1, { duration: 180 }), withTiming(0, { duration: 140 }), withTiming(0, { duration: 900 })), -1, false)));
+  }, [spin, wave, timer, reduce]);
+  const orbit = useAnimatedStyle(() => ({ transform: [{ rotate: `${spin.get() * 360}deg` }] }));
+  const hand = useAnimatedStyle(() => ({ transform: [{ rotate: `${wave.get() * 18}deg` }] }));
+  const bar = useAnimatedStyle(() => ({ width: `${timer.get() * 100}%` }));
+  useTimeout(onNext, WELCOME_MS);
 
   return (
-    <Pressable style={st.white} onPress={onNext} accessibilityRole="button" accessibilityLabel="Continue">
+    <Pressable style={st.white} onPress={onNext} accessibilityRole="button" accessibilityLabel="Hey there! Meet your personal coach. Tap to continue">
       <StatusBar style="dark" />
-      <View style={st.center}>
-        <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-          <Animated.View style={[st.halo, halo]} />
-          <Animated.View entering={nativeOnly(ZoomIn.duration(520).easing(EASE_OUT))} style={[st.coach, shadow]}>
-            <Image source={IMG.coach} style={StyleSheet.absoluteFill} contentFit="cover" contentPosition="top" />
-          </Animated.View>
+      <LinearGradient colors={[C.primarySoft, 'rgba(255,255,255,0)']} locations={[0, 0.62]} style={StyleSheet.absoluteFill} />
+      <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
+        <View style={st.center}>
+          <View style={st.wStage}>
+            <Animated.View entering={nativeOnly(FadeIn.duration(900))} style={[st.wOrbit, orbit]}>
+              <Svg width={ORBIT} height={ORBIT}>
+                <Circle cx={ORBIT / 2} cy={ORBIT / 2} r={ORBIT / 2 - 1} stroke={C.primaryTint} strokeWidth={1.5} strokeDasharray="2 7" strokeLinecap="round" fill="none" />
+              </Svg>
+              <View style={[st.wOrbitDot, { top: -4, left: ORBIT / 2 - 4, backgroundColor: C.primary }]} />
+              <View style={[st.wOrbitDot, { bottom: ORBIT * 0.14, right: ORBIT * 0.1, backgroundColor: C.accent, width: 6, height: 6 }]} />
+            </Animated.View>
+            <Animated.View entering={nativeOnly(FadeIn.duration(700))} style={st.wGlow} />
+            <Animated.View entering={nativeOnly(FadeInUp.duration(640).easing(EASE_OUT).withInitialValues({ transform: [{ translateY: 40 }], opacity: 0 }))} style={[st.wArch, shadowLg]}>
+              <Image source={IMG.coach} style={StyleSheet.absoluteFill} contentFit="cover" contentPosition="top" transition={200} />
+              <LinearGradient colors={['rgba(21,94,80,0)', 'rgba(21,94,80,0.28)']} locations={[0.6, 1]} style={StyleSheet.absoluteFill} />
+            </Animated.View>
+
+            <CoachChip icon="barbell" label="Custom workouts" tint={C.primaryDark} bg={C.primarySoft} delay={520} bob={5} style={{ top: 96, left: -30 }} />
+            <CoachChip icon="restaurant" label="Smart nutrition" tint={C.accent} bg={C.accentSoft} delay={680} bob={6} style={{ top: 178, right: -26 }} />
+            <Animated.View entering={nativeOnly(ZoomIn.springify().damping(14).delay(840))} style={[st.wStatus, glow(C.primaryDark)]}>
+              <View style={st.wLive} />
+              <Text style={st.wStatusText}>Your plan starts here</Text>
+            </Animated.View>
+          </View>
+
+          <View style={st.wCopy}>
+            <Animated.View entering={rise(360)} style={st.wHelloRow}>
+              <Text style={st.hello} accessibilityRole="header">
+                Hey there!
+              </Text>
+              <Animated.View style={[st.wHand, hand]}>
+                <Ionicons name="hand-left" size={24} color={C.accent} />
+              </Animated.View>
+            </Animated.View>
+            <Animated.Text entering={rise(480)} style={st.helloSub}>
+              Meet your <Text style={{ color: C.primaryDark, fontWeight: '700' }}>personal coach.</Text>
+            </Animated.Text>
+            <Animated.Text entering={rise(600)} style={st.wNote}>
+              Answer a few quick questions and we&apos;ll craft a plan made just for you.
+            </Animated.Text>
+          </View>
         </View>
-        <Animated.Text entering={rise(320)} style={st.hello}>
-          Hello!
-        </Animated.Text>
-        <Animated.Text entering={rise(480)} style={st.helloSub}>
-          I&apos;m your personal coach.
-        </Animated.Text>
-      </View>
+
+        <Animated.View entering={nativeOnly(FadeIn.duration(MOTION.enter).delay(900))} style={st.wFoot}>
+          <View style={st.wTrack}>
+            <Animated.View style={[st.wFill, bar]} />
+          </View>
+        </Animated.View>
+      </SafeAreaView>
     </Pressable>
   );
 }
@@ -496,10 +565,26 @@ const st = StyleSheet.create({
   loginNoteText: { fontSize: 12, color: C.muted, fontWeight: '600' },
   introFoot: { fontSize: 12.5, color: 'rgba(255,255,255,0.55)', textAlign: 'center', marginTop: 14, fontWeight: '600' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  halo: { position: 'absolute', width: 132, height: 132, borderRadius: 66, backgroundColor: C.primary },
-  coach: { width: 132, height: 132, borderRadius: 66, overflow: 'hidden', backgroundColor: C.skeleton, borderWidth: 4, borderColor: C.white },
-  hello: { fontSize: 30, fontWeight: '800', color: C.text, marginTop: 24, letterSpacing: -0.6 },
-  helloSub: { fontSize: 15, color: C.textSoft, marginTop: 6 },
+  wStage: { width: ARCH_W + 120, height: ARCH_H + 40, alignItems: 'center', justifyContent: 'center' },
+  wOrbit: { position: 'absolute', width: ORBIT, height: ORBIT },
+  wOrbitDot: { position: 'absolute', width: 8, height: 8, borderRadius: 4, borderWidth: 2, borderColor: C.white },
+  wGlow: { position: 'absolute', width: ARCH_W + 40, height: ARCH_W + 40, borderRadius: (ARCH_W + 40) / 2, backgroundColor: C.primaryTint, opacity: 0.45, top: 6 },
+  wArch: { width: ARCH_W, height: ARCH_H, borderTopLeftRadius: ARCH_W / 2, borderTopRightRadius: ARCH_W / 2, borderBottomLeftRadius: R.xl, borderBottomRightRadius: R.xl, overflow: 'hidden', backgroundColor: C.skeleton, borderWidth: 5, borderColor: C.white },
+  wChip: { position: 'absolute', backgroundColor: 'rgba(255,255,255,0.96)', borderRadius: R.pill, paddingVertical: 7, paddingLeft: 7, paddingRight: 12, borderWidth: StyleSheet.hairlineWidth, borderColor: C.border },
+  wChipIcon: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
+  wChipText: { fontSize: 13, fontWeight: '700', color: C.text, letterSpacing: -0.1 },
+  wStatus: { position: 'absolute', bottom: 2, flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: C.primaryDark, borderRadius: R.pill, paddingVertical: 8, paddingHorizontal: 14, borderWidth: 3, borderColor: C.white },
+  wLive: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#5EE3B3' },
+  wStatusText: { fontSize: 12.5, fontWeight: '700', color: C.white, letterSpacing: 0.1 },
+  wCopy: { alignItems: 'center', marginTop: 30, paddingHorizontal: GUTTER + 12 },
+  wHelloRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  hello: { fontSize: 44, fontWeight: '800', color: C.text, letterSpacing: -1.2 },
+  wHand: { width: 44, height: 44, borderRadius: 22, backgroundColor: C.accentSoft, alignItems: 'center', justifyContent: 'center', transformOrigin: '50% 85%' },
+  helloSub: { fontSize: 19, color: C.text, marginTop: 6, fontWeight: '500', letterSpacing: -0.2 },
+  wNote: { fontSize: 14.5, lineHeight: 21, color: C.muted, marginTop: 10, textAlign: 'center', maxWidth: 280 },
+  wFoot: { alignItems: 'center', paddingBottom: 24 },
+  wTrack: { width: 88, height: 4, borderRadius: 2, backgroundColor: C.borderSoft, overflow: 'hidden' },
+  wFill: { height: 4, borderRadius: 2, backgroundColor: C.primary },
 
   motTitle: { fontSize: 32, lineHeight: 39, fontWeight: '800', color: C.white, marginTop: 28, letterSpacing: -0.6, maxWidth: 300 },
   textBtn: { alignItems: 'center', paddingVertical: 14 },
