@@ -9,7 +9,11 @@
     "userInterfaceStyle": "light",
     "ios": {
       "icon": "./assets/expo.icon",
-      "bundleIdentifier": "com.dev.fittelo"
+      "bundleIdentifier": "com.dev.fittelo",
+      "infoPlist": {
+        "NSAppleMusicUsageDescription": "Fittelo uses your Apple Music library to play music during your workouts.",
+        "NSPhotoLibraryUsageDescription": "Fittelo needs access to your photos so you can add progress and profile pictures."
+      }
     },
     "android": {
       "package": "com.dev.fittelo",
