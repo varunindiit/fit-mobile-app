@@ -9,7 +9,7 @@ import { IMG } from '@/components/onboarding/assets';
 import { nativeOnly, type IconName } from '@/components/ui';
 import { BRAND, C, G, MOTION, R, glow, shadowSm } from '@/theme';
 
-/** Fitora vs typical apps, one row per thing the plan is built from. */
+/** Fittelo vs typical apps, one row per thing the plan is built from. */
 const ROWS: { icon: IconName; label: string }[] = [
   { icon: 'person-circle-outline', label: 'Plan built from your answers' },
   { icon: 'barbell-outline', label: 'Workouts matched to your level' },
@@ -57,7 +57,7 @@ export function BenefitsHero({ male }: { male: boolean }) {
   );
 }
 
-/** Two-column comparison: Fitora ticks every row, typical apps none. */
+/** Two-column comparison: Fittelo ticks every row, typical apps none. */
 export function CompareTable() {
   return (
     <View style={s.table}>

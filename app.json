@@ -1,17 +1,18 @@
 {
   "expo": {
-    "name": "Fitora",
-    "slug": "fitora-demo",
+    "name": "Fittelo",
+    "slug": "fittelo",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "fitora",
+    "scheme": "fittelo",
     "userInterfaceStyle": "light",
     "ios": {
       "icon": "./assets/expo.icon",
-      "bundleIdentifier": "com.anonymous.fitora-demo"
+      "bundleIdentifier": "com.dev.fittelo"
     },
     "android": {
+      "package": "com.dev.fittelo",
       "adaptiveIcon": {
         "backgroundColor": "#155E50",
         "foregroundImage": "./assets/images/android-icon-foreground.png",

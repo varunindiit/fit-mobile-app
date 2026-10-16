@@ -13,7 +13,7 @@ import type { PlanTier } from '@/data/plans';
 import { BRAND, C, MOTION, R } from '@/theme';
 import { GUTTER } from './kit';
 
-const LOGO = require('@/assets/images/splash-icon.png');
+const LOGO = require('@/assets/images/logo-mark.png');
 const MIN_PASSWORD = 6;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 

@@ -118,7 +118,7 @@ function TierCard({ tier, selected, onPress }: { tier: (typeof PLAN_TIERS)[numbe
           <Ionicons name="checkmark" size={13} color={tier.id === 'pro' ? C.gold : C.white} />
         </Animated.View>
         <IconTile icon={a.icon} color={a.iconColor} bg={a.tile} size={38} />
-        <Text style={st.tierName}>{tier.name.replace('Fitora ', '')}</Text>
+        <Text style={st.tierName}>{tier.name.replace('Fittelo ', '')}</Text>
         <Text style={st.tierTag} numberOfLines={2}>
           {tier.tagline}
         </Text>

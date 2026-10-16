@@ -41,7 +41,7 @@ function Letter({ ch, i, p }: { ch: string; i: number; p: SharedValue<number> })
 
 /**
  * Continues the native splash seamlessly (same colour, icon and size), then animates:
- * the leaf pops with a glow ring, lifts up, the app name rises in letter by letter and the tagline fades in.
+ * the logo mark pops with a glow ring, lifts up, the app name rises in letter by letter and the tagline fades in.
  * Leaves with a fade + gentle zoom once the intro has played and the app is `ready`; `onReveal` fires as it starts leaving.
  */
 export function AnimatedSplash({ ready, onReveal, onDone }: { ready: boolean; /** Exit is starting: mount the app underneath now so its entrance plays as the splash fades. */ onReveal: () => void; onDone: () => void }) {

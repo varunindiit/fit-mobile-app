@@ -185,7 +185,7 @@ export default function StreakScreen() {
         <View style={s.sheetHero}>
           <IconTile icon="gift" color={C.white} bg={C.accent} size={44} />
           <Text style={[T.body, { flex: 1 }]}>
-            Work out for <Text style={{ fontWeight: '700', color: C.text }}>7 days</Text> to unlock <Text style={{ fontWeight: '700', color: C.accent }}>50% off Fitora Premium</Text> — personal coach, custom meal plans and every training program.
+            Work out for <Text style={{ fontWeight: '700', color: C.text }}>7 days</Text> to unlock <Text style={{ fontWeight: '700', color: C.accent }}>50% off Fittelo Premium</Text> — personal coach, custom meal plans and every training program.
           </Text>
         </View>
         <View style={{ marginTop: 16, gap: 10 }}>

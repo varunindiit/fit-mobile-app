@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 
 /**
- * Fitora design tokens.
+ * Fittelo design tokens.
  * Two-tier brand: `primary` (vivid) for progress, highlights and active states;
  * `primaryDark` (deep) for filled buttons, the quick-log button and text on mint.
  * Neutrals are warm "stone" greys; cards stay white on a warm canvas.
@@ -85,4 +85,4 @@ export const MOTION = {
   spring: { damping: 18, stiffness: 200, mass: 0.8 },
 };
 
-export const BRAND = 'Fitora';
+export const BRAND = 'Fittelo';

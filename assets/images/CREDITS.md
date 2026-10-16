@@ -7,4 +7,4 @@
 
 ## Onboarding imagery
 
-- `onboarding/*.webp` — original images generated with OpenAI image generation (via Codex) for Fitora's onboarding, modelled on the reference onboarding storyboard. No real people, third-party likeness or branding. Resized and compressed to WebP.
+- `onboarding/*.webp` — original images generated with OpenAI image generation (via Codex) for Fittelo's onboarding, modelled on the reference onboarding storyboard. No real people, third-party likeness or branding. Resized and compressed to WebP.

@@ -119,7 +119,7 @@ export function RateSheet({ visible, onClose }: SheetProps) {
       <View style={st.rateHead}>
         <IconTile icon="star" color={C.warning} bg={C.warningSoft} size={56} />
         <Text style={[T.body, { textAlign: 'center', marginTop: 12 }]}>
-          {rated ? `Thanks for rating us ${rated} star${rated === 1 ? '' : 's'}! You can change it anytime.` : 'Enjoying Fitora? Your rating helps more people find us.'}
+          {rated ? `Thanks for rating us ${rated} star${rated === 1 ? '' : 's'}! You can change it anytime.` : 'Enjoying Fittelo? Your rating helps more people find us.'}
         </Text>
       </View>
       <View style={st.stars}>

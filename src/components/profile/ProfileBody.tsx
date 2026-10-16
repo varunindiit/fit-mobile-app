@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useState, type ReactNode } from "react";
@@ -73,6 +74,8 @@ import {
 } from "./shared";
 import { LanguageSheet, RateSheet, WorkoutSettingsSheet } from "./sheets";
 
+const LOGO = require("@/assets/images/logo-mark.png");
+
 type SheetKind =
   | null
   | "diet"
@@ -101,7 +104,7 @@ const DIALOGS = {
   },
   logout: {
     icon: "👋",
-    title: "Log out of Fitora?",
+    title: "Log out of Fittelo?",
     text: "You can log back in anytime with your email, Google or Apple account. Your data stays on this device.",
     confirm: "Log out",
     danger: true,
@@ -230,7 +233,7 @@ export function ProfileBody({ mode }: { mode: "tab" | "stack" }) {
             <>
               <Avatar name={p.name} premium={!!premium} size={38} />
               <TabHeaderText
-                title={p.name || "Fitora member"}
+                title={p.name || "Fittelo member"}
                 sub={premium ? `Premium · valid till ${planTill}` : "Free plan"}
               />
             </>
@@ -272,7 +275,7 @@ export function ProfileBody({ mode }: { mode: "tab" | "stack" }) {
                 <View style={{ flex: 1 }}>
                   <Text style={st.hello}>Hello,</Text>
                   <Text style={st.name} numberOfLines={1}>
-                    {p.name || "Fitora member"}
+                    {p.name || "Fittelo member"}
                   </Text>
                   {!!p.phone && (
                     <Text style={st.phone}>{fmtPhone(p.phone)}</Text>
@@ -551,12 +554,12 @@ export function ProfileBody({ mode }: { mode: "tab" | "stack" }) {
               <View style={{ flex: 1 }}>
                 <View style={st.premEyebrow}>
                   <Ionicons name="diamond" size={12} color={C.gold} />
-                  <Text style={st.premEyebrowText}>FITORA PREMIUM</Text>
+                  <Text style={st.premEyebrowText}>FITTELO PREMIUM</Text>
                 </View>
                 {premium && tier ? (
                   <>
                     <Text style={st.premTitle}>
-                      {tier.name.replace("Fitora ", "")} ·{" "}
+                      {tier.name.replace("Fittelo ", "")} ·{" "}
                       {premium.cancelledAt ? "Cancelled" : "Active"}
                     </Text>
                     <Text style={st.premSub}>
@@ -708,7 +711,7 @@ export function ProfileBody({ mode }: { mode: "tab" | "stack" }) {
 
         {/* Support us */}
         <Animated.View entering={enter(5)}>
-          <GroupLabel title="Love Fitora?" />
+          <GroupLabel title="Love Fittelo?" />
           <Card style={shared.listCard}>
             <Row
               icon="star"
@@ -784,10 +787,10 @@ export function ProfileBody({ mode }: { mode: "tab" | "stack" }) {
           </View>
           <View style={st.footer}>
             <View style={st.footerLogo}>
-              <Ionicons name="leaf" size={13} color={C.white} />
+              <Image source={LOGO} style={{ width: 13, height: 13 }} contentFit="contain" />
             </View>
             <Text style={st.footerText}>
-              Fitora v1.0.0 · Demo build · data stored on this device
+              Fittelo v1.0.0 · Demo build · data stored on this device
             </Text>
           </View>
         </Animated.View>
@@ -877,7 +880,7 @@ export function ProfileBody({ mode }: { mode: "tab" | "stack" }) {
                 Managing diabetes, PCOS or thyroid?
               </Text>
               <Text style={st.proHintSub}>
-                Get a certified specialist with Fitora Pro
+                Get a certified specialist with Fittelo Pro
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={C.gold} />

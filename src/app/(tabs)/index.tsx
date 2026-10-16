@@ -607,7 +607,7 @@ export default function Home() {
               <View style={{ flex: 1 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <Ionicons name="diamond" size={12} color={C.gold} />
-                  <Text style={st.premiumLabel}>{premiumTier ? 'ACTIVE PLAN' : 'FITORA PRO'}</Text>
+                  <Text style={st.premiumLabel}>{premiumTier ? 'ACTIVE PLAN' : 'FITTELO PRO'}</Text>
                 </View>
                 <Text style={st.premiumTitle}>{premiumTier ? `You're on ${premiumTier.name}` : 'Get a personal nutritionist & trainer'}</Text>
                 <Text style={st.premiumSub}>{premiumTier ? 'Ask your coach anything, anytime' : 'Custom plans · weekly check-ins · up to 40% off'}</Text>

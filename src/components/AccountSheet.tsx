@@ -19,20 +19,20 @@ const slug = (name: string) =>
     .replace(/[^a-z\s]/g, '')
     .split(/\s+/)
     .filter(Boolean)
-    .join('.') || 'fitora.user';
+    .join('.') || 'fittelo.user';
 
 /** Demo accounts offered by each provider; the first one is built from the user's own name. */
 export function demoAccounts(provider: Provider, name: string): Account[] {
-  const me = name.trim() || 'Fitora User';
+  const me = name.trim() || 'Fittelo User';
   return provider === 'google'
     ? [
         { name: me, email: `${slug(me)}@gmail.com`, plan: null },
-        { name: 'Demo User', email: 'demo.fitora@gmail.com', plan: 'smart' },
+        { name: 'Demo User', email: 'demo.fittelo@gmail.com', plan: 'smart' },
         { name: 'Fitness Team', email: 'fitness.team.in@gmail.com', plan: 'pro' },
       ]
     : [
         { name: me, email: `${slug(me)}@icloud.com`, plan: null },
-        { name: 'Demo User', email: 'demo.fitora@icloud.com', plan: 'smart' },
+        { name: 'Demo User', email: 'demo.fittelo@icloud.com', plan: 'smart' },
         // Apple's "Hide My Email" hands the app a private relay address instead.
         { name: me, email: 'x7k2p9qd4m@privaterelay.appleid.com', plan: 'pro' },
       ];

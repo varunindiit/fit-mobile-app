@@ -121,7 +121,7 @@ export default function PlansScreen() {
               </View>
             </Animated.View>
             <Animated.View entering={enter(1)}>
-              <Text style={st.heroTitle}>Fitora Premium</Text>
+              <Text style={st.heroTitle}>Fittelo Premium</Text>
               <Text style={st.heroSub}>Reach your goal faster with Saathi AI and real Indian nutrition experts.</Text>
               <View style={st.proof}>
                 <View style={st.stars}>
@@ -150,7 +150,7 @@ export default function PlansScreen() {
                       <Ionicons name={premium.tier === 'pro' ? 'diamond' : 'sparkles'} size={18} color={C.navy} />
                     </LinearGradient>
                     <View style={{ flex: 1 }}>
-                      <Text style={T.h3}>{`You're on Fitora ${premium.tier === 'pro' ? 'Pro' : 'Smart'}`}</Text>
+                      <Text style={T.h3}>{`You're on Fittelo ${premium.tier === 'pro' ? 'Pro' : 'Smart'}`}</Text>
                       <Text style={T.small}>
                         {premium.cancelledAt
                           ? `Cancelled · active till ${fmtFull(planEnd(premium.since, premium.months))}`
@@ -359,7 +359,7 @@ export default function PlansScreen() {
       <Dialog
         visible={askCancel}
         icon="😢"
-        title={`Cancel Fitora ${premium?.tier === 'pro' ? 'Pro' : 'Smart'}?`}
+        title={`Cancel Fittelo ${premium?.tier === 'pro' ? 'Pro' : 'Smart'}?`}
         text={`You keep premium until ${premium ? fmtFull(planEnd(premium.since, premium.months)) : 'your plan ends'}, then lose Saathi's unlimited chats and personalised plans. This is a demo, so nothing is charged or refunded.`}
         confirm="Cancel plan"
         cancel="Keep plan"

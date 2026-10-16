@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -11,13 +11,15 @@ import { NOTIFICATIONS } from '@/data/notifications';
 import { isPremiumActive, useStore } from '@/lib/store';
 import { C } from '@/theme';
 
+const LOGO = require('@/assets/images/logo-mark.png');
+
 export default function SettingsScreen() {
   const { state, updateProfile } = useStore();
   const toast = useToast();
   const [sheet, setSheet] = useState<null | 'help' | 'about' | 'workout' | 'language'>(null);
   const unread = NOTIFICATIONS.filter((n) => !state.readNotifs.includes(n.id)).length;
   const premium = isPremiumActive(state.premium) ? state.premium : null;
-  const planName = premium ? `Fitora ${premium.tier === 'pro' ? 'Pro' : 'Smart'}` : '';
+  const planName = premium ? `Fittelo ${premium.tier === 'pro' ? 'Pro' : 'Smart'}` : '';
   const push = state.profile.notifications;
   const setPush = (v: boolean) => {
     updateProfile({ notifications: v });
@@ -109,9 +111,9 @@ export default function SettingsScreen() {
           </Card>
           <View style={st.footer}>
             <View style={st.footerLogo}>
-              <Ionicons name="leaf" size={13} color={C.white} />
+              <Image source={LOGO} style={{ width: 13, height: 13 }} contentFit="contain" />
             </View>
-            <Text style={st.footerText}>Fitora v1.0.0 · Demo build</Text>
+            <Text style={st.footerText}>Fittelo v1.0.0 · Demo build</Text>
           </View>
         </Animated.View>
       </ScrollView>

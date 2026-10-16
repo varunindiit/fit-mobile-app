@@ -1,4 +1,4 @@
-# Fitora — Phase 1 UX demo
+# Fittelo — Phase 1 UX demo
 
 Clickable Expo prototype combining a HealthifyMe-style nutrition experience (calorie budget, food diary, Snap, Saathi AI coach, premium plans) with a "Six Pack in 30 Days"-style training experience (30-day plans, guided player, streaks, reports).
 

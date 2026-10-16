@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -11,6 +12,8 @@ import type { PlanTier } from '@/data/plans';
 import { parseKey, round1, targets as calcTargets } from '@/lib/calc';
 import { useStore, type Goal, type Profile, type Settings } from '@/lib/store';
 import { BRAND, C, G, MOTION, R } from '@/theme';
+
+const LOGO = require('@/assets/images/logo-mark.png');
 
 export type Targets = ReturnType<typeof calcTargets>;
 export type Units = Settings['units'];
@@ -292,7 +295,7 @@ export function ConnectedAppsCard() {
         visible={ask}
         icon="❤️"
         title={`“${BRAND}” would like to access ${HEALTH_APP}`}
-        text="Allow Fitora to read your steps, workouts, sleep and weight, and to write your nutrition data."
+        text="Allow Fittelo to read your steps, workouts, sleep and weight, and to write your nutrition data."
         confirm="Allow"
         cancel="Don't allow"
         onCancel={() => setAsk(false)}
@@ -395,7 +398,7 @@ export function AboutSheet({ visible, onClose }: { visible: boolean; onClose: ()
     <Sheet visible={visible} onClose={onClose} title="About & Privacy" scroll>
       <View style={st.aboutHead}>
         <LinearGradient colors={G.brand} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.logo}>
-          <Ionicons name="leaf" size={28} color={C.white} />
+          <Image source={LOGO} style={{ width: 28, height: 28 }} contentFit="contain" />
         </LinearGradient>
         <View style={{ flex: 1, gap: 4 }}>
           <Text style={T.h3}>{BRAND}</Text>

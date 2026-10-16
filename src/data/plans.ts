@@ -10,7 +10,7 @@ export const PLAN_TIERS: {
 }[] = [
   {
     id: 'smart',
-    name: 'Fitora Smart',
+    name: 'Fittelo Smart',
     tagline: 'AI-powered plan that adapts to you',
     color: '#0EA472',
     features: [
@@ -28,7 +28,7 @@ export const PLAN_TIERS: {
   },
   {
     id: 'pro',
-    name: 'Fitora Pro',
+    name: 'Fittelo Pro',
     tagline: 'Your own expert nutritionist & trainer',
     color: '#7C3AED',
     features: [
