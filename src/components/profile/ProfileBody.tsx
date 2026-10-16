@@ -46,7 +46,7 @@ import { PLAN_TIERS } from "@/data/plans";
 import { PROGRAM_DAYS, programById } from "@/data/program";
 import { bmiLabel, cmToFtIn } from "@/lib/calc";
 import { isPremiumActive, useStore, workoutStreak } from "@/lib/store";
-import { C, G, R, shadowSm } from "@/theme";
+import { C, R, shadowSm } from "@/theme";
 import { BackupCard } from "./backup";
 import {
   AboutSheet,
@@ -264,7 +264,7 @@ export function ProfileBody({ mode }: { mode: "tab" | "stack" }) {
         <Animated.View entering={enter(0)}>
           <View style={st.hero}>
             <LinearGradient
-              colors={G.deep}
+              colors={PREMIUM_BG}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={st.heroBg}

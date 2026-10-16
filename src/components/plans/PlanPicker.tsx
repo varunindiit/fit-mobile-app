@@ -140,8 +140,11 @@ function DurationChip({ months, perMonth, off, badge, fill, selected, onPress }:
     backgroundColor: interpolateColor(sel.get(), [0, 1], [C.card, fill]),
     borderColor: interpolateColor(sel.get(), [0, 1], [C.border, fill]),
   }));
-  const strong = useAnimatedStyle(() => ({ color: interpolateColor(sel.get(), [0, 1], [C.text, onFill(fill)]) }));
-  const soft = useAnimatedStyle(() => ({ color: interpolateColor(sel.get(), [0, 1], [C.textSoft, onFill(fill) === C.white ? 'rgba(255,255,255,0.78)' : 'rgba(4,8,11,0.62)']) }));
+  // Resolved on the JS side: a worklet can't call onFill() on the UI runtime.
+  const fillInk = onFill(fill);
+  const fillInkSoft = fillInk === C.white ? 'rgba(255,255,255,0.78)' : 'rgba(4,8,11,0.62)';
+  const strong = useAnimatedStyle(() => ({ color: interpolateColor(sel.get(), [0, 1], [C.text, fillInk]) }));
+  const soft = useAnimatedStyle(() => ({ color: interpolateColor(sel.get(), [0, 1], [C.textSoft, fillInkSoft]) }));
   const best = badge === 'Best value';
   return (
     <PressableScale

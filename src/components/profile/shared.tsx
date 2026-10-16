@@ -118,8 +118,8 @@ export function useKeyboardShown() {
 /* ---------- Small components ---------- */
 
 export const GOLD = ['#F7D774', '#E2A21B'] as const;
-/** Premium surfaces: green-ink into deep teal (paywall hero, premium banner, success). */
-export const PREMIUM_BG = [G.premium[0], G.deep[0]] as const;
+/** Premium surfaces: all-black (profile header, paywall hero, premium banner, success). */
+export const PREMIUM_BG = G.premium;
 
 /** Icon for each goal (used instead of emoji in chrome). */
 export const GOAL_ICON: Record<Goal, IconName> = { lose: 'flame', maintain: 'scale', gain: 'restaurant', muscle: 'barbell', healthy: 'leaf' };
