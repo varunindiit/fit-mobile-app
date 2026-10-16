@@ -27,6 +27,7 @@ import { RewardWall } from '@/components/onboarding/Rewards';
 import { RulerPicker } from '@/components/onboarding/RulerPicker';
 import { YearWheel } from '@/components/onboarding/YearWheel';
 import { Button, CountUp, EASE_OUT, nativeOnly, PressableScale, tap, useToast, type IconName } from '@/components/ui';
+import { PLAN_TIERS } from '@/data/plans';
 import { bmi, bmiLabel, dateKey, fmtDate, targets } from '@/lib/calc';
 import { DEFAULT_PROFILE, isPremiumActive, useStore, type Goal, type Profile } from '@/lib/store';
 import { BRAND, C, MOTION, R, shadowSm } from '@/theme';
@@ -146,7 +147,7 @@ function finalize(p: Profile): Profile {
 /* ---------------- Screen ---------------- */
 
 export default function Onboarding() {
-  const { state, completeOnboarding, logIn, subscribe, updateSettings, saveOnboardingDraft } = useStore();
+  const { state, completeOnboarding, logIn, subscribe, updateSettings, saveOnboardingDraft, setBackup, updateProfile, setPremium } = useStore();
   const toast = useToast();
   // The saved draft survives reloads and app kills, so answers and position are never lost.
   const [draft] = useState(() => state.onboardingDraft);
@@ -250,12 +251,20 @@ export default function Onboarding() {
         mode="login"
         onBack={back}
         onSwitch={() => go('signup', 1)}
-        onDone={({ email }) => {
+        onDone={({ name, email, provider, plan }) => {
+          const who = state.profile.name.trim() || name || email.split('@')[0];
           // A returning user on this device goes straight back in with their saved logs and profile.
-          if (state.weights.length || state.entries.length) logIn();
-          else completeOnboarding(finalize({ ...p, email: email || p.email }));
+          if (state.weights.length || state.entries.length) {
+            logIn();
+            updateProfile({ email, name: who });
+          } else completeOnboarding(finalize({ ...p, email, name: who }));
+          // The account just used becomes the backup account, synced right away.
+          setBackup({ name: who, email, provider, lastSync: new Date().toISOString() });
+          // Demo Google / Apple accounts each own a plan (Free, Smart or Pro); email log-ins keep the current one.
+          if (plan !== undefined) setPremium(plan ? { tier: plan, months: 12, since: dateKey(new Date()) } : null);
           router.replace('/(tabs)');
-          setTimeout(() => toast('Welcome back!', 'person-circle'), 400);
+          const tier = PLAN_TIERS.find((t) => t.id === plan);
+          setTimeout(() => toast(tier ? `Welcome back! ${tier.name} is active` : 'Welcome back!', tier ? 'diamond' : 'person-circle'), 400);
         }}
       />
     );
@@ -266,9 +275,10 @@ export default function Onboarding() {
         mode="signup"
         onBack={back}
         onSwitch={() => go('login', 1)}
-        onDone={({ name, email }) => {
-          // New account: keep the details and start the plan questions.
+        onDone={({ name, email, provider }) => {
+          // New account: keep the details, link it as the backup account and start the plan questions.
           set((d) => ({ name: name || d.name, email: email || d.email }));
+          setBackup({ name: name || email.split('@')[0], email, provider, lastSync: new Date().toISOString() });
           go('welcome', 1);
         }}
       />

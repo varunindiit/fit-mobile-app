@@ -7,7 +7,9 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text
 import Animated, { FadeInDown, interpolateColor, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AccountSheet, demoAccounts, type Account, type Provider } from '@/components/AccountSheet';
 import { Button, EASE_OUT, nativeOnly, tap, useToast, type IconName } from '@/components/ui';
+import type { PlanTier } from '@/data/plans';
 import { BRAND, C, MOTION, R } from '@/theme';
 import { GUTTER } from './kit';
 
@@ -67,7 +69,7 @@ const Field = forwardRef<TextInput, FieldProps>(function Field({ label, icon, er
 });
 
 /** Log in / sign up with email and password (demo: any valid email and password work). */
-export function AuthScreen({ mode, onBack, onSwitch, onDone }: { mode: AuthMode; onBack: () => void; onSwitch: () => void; onDone: (r: { name: string; email: string }) => void }) {
+export function AuthScreen({ mode, onBack, onSwitch, onDone }: { mode: AuthMode; onBack: () => void; onSwitch: () => void; onDone: (r: { name: string; email: string; provider: Provider | 'email'; plan?: PlanTier | null }) => void }) {
   const toast = useToast();
   const copy = COPY[mode];
   const signup = mode === 'signup';
@@ -77,7 +79,8 @@ export function AuthScreen({ mode, onBack, onSwitch, onDone }: { mode: AuthMode;
   const [show, setShow] = useState(false);
   // Errors only appear once a field has been left, so typing isn't interrupted.
   const [touched, setTouched] = useState<{ email?: boolean; password?: boolean }>({});
-  const [loading, setLoading] = useState<null | 'email' | 'google'>(null);
+  const [loading, setLoading] = useState<null | 'email' | Provider>(null);
+  const [sheet, setSheet] = useState<Provider | null>(null);
   const emailRef = useRef<TextInput>(null);
   const passRef = useRef<TextInput>(null);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -90,7 +93,7 @@ export function AuthScreen({ mode, onBack, onSwitch, onDone }: { mode: AuthMode;
   const canSubmit = nameOk && emailOk && passOk && !loading;
 
   // Simulated network round-trip so the buttons show their loading state.
-  const run = (kind: 'email' | 'google', then: () => void) => {
+  const run = (kind: 'email' | Provider, then: () => void) => {
     setLoading(kind);
     clearTimeout(timer.current);
     timer.current = setTimeout(() => {
@@ -101,7 +104,18 @@ export function AuthScreen({ mode, onBack, onSwitch, onDone }: { mode: AuthMode;
 
   const submit = () => {
     if (!canSubmit) return;
-    run('email', () => onDone({ name: name.trim(), email: mail }));
+    run('email', () => onDone({ name: name.trim(), email: mail, provider: 'email' }));
+  };
+
+  const openSheet = (provider: Provider) => {
+    if (loading) return;
+    setSheet(provider);
+  };
+  // The chosen account signs straight in once its sheet has slid away.
+  const pickAccount = (a: Account) => {
+    const provider = sheet;
+    setSheet(null);
+    if (provider) run(provider, () => onDone({ name: a.name, email: a.email, provider, plan: a.plan }));
   };
 
   const forgot = () => {
@@ -206,13 +220,25 @@ export function AuthScreen({ mode, onBack, onSwitch, onDone }: { mode: AuthMode;
                 <Text style={st.orText}>or</Text>
                 <View style={st.orLine} />
               </View>
+              {/* Sign in with Apple is iOS-only. */}
+              {Platform.OS === 'ios' && (
+                <Button
+                  title="Continue with Apple"
+                  variant="dark"
+                  icon="logo-apple"
+                  loading={loading === 'apple'}
+                  disabled={!!loading && loading !== 'apple'}
+                  onPress={() => openSheet('apple')}
+                  style={{ backgroundColor: '#000', borderColor: '#000', marginBottom: 10 }}
+                />
+              )}
               <Button
                 title="Continue with Google"
                 variant="outline"
                 icon="logo-google"
                 loading={loading === 'google'}
-                disabled={!!loading}
-                onPress={() => run('google', () => onDone({ name: name.trim(), email: mail }))}
+                disabled={!!loading && loading !== 'google'}
+                onPress={() => openSheet('google')}
               />
               <Text style={st.terms}>By continuing you agree to our Terms of Service and Privacy Policy.</Text>
             </Animated.View>
@@ -226,6 +252,14 @@ export function AuthScreen({ mode, onBack, onSwitch, onDone }: { mode: AuthMode;
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
+      <AccountSheet
+        visible={sheet !== null}
+        provider={sheet ?? 'google'}
+        accounts={demoAccounts(sheet ?? 'google', name)}
+        onClose={() => setSheet(null)}
+        onPick={pickAccount}
+        showPlans={!signup}
+      />
     </View>
   );
 }

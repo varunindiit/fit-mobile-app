@@ -102,7 +102,7 @@ const DIALOGS = {
   logout: {
     icon: "👋",
     title: "Log out of Fitora?",
-    text: "You can log back in anytime with your phone number. Your data stays on this device.",
+    text: "You can log back in anytime with your email, Google or Apple account. Your data stays on this device.",
     confirm: "Log out",
     danger: true,
   },

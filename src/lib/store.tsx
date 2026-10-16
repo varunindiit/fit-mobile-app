@@ -93,7 +93,8 @@ export type AppState = {
   readNotifs: string[];
   settings: Settings;
   programProgress: Record<string, number>; // completed days per program
-  backup: { name: string; email: string; lastSync: string } | null;
+  /** Signed-in cloud account; `provider` is missing on saves from before email/Apple sign-in (treated as Google). */
+  backup: { name: string; email: string; lastSync: string; provider?: 'google' | 'apple' | 'email' } | null;
   /** User-edited exercise lists, keyed by session key. */
   planEdits: Record<string, SessionItem[]>;
   sessionResume: Record<string, SessionResume>;
@@ -412,6 +413,8 @@ function useAppStore() {
           const premium: Premium = extend ? { tier, since: s.premium!.since, months: s.premium!.months + months } : { tier, months, since: today };
           return { ...s, premium, purchases: [...s.purchases, { tier, months, date: today, amount }] };
         }),
+      /** Replaces the plan outright, e.g. with the one an account brings along at log-in (null = Free). */
+      setPremium: (premium: Premium | null) => update((s) => ({ ...s, premium })),
       cancelPremium: () => update((s) => (s.premium ? { ...s, premium: { ...s.premium, cancelledAt: todayKey() } } : s)),
       markNotifsRead: (ids: string[]) => update((s) => ({ ...s, readNotifs: Array.from(new Set([...s.readNotifs, ...ids])) })),
     }),
