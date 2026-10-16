@@ -8,10 +8,10 @@ import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, w
 import { Glyph } from '@/components/Glyph';
 import { Bolts } from '@/components/program/PlanAccordion';
 import { PressableScale, Ring, tap, type IconName } from '@/components/ui';
-import { C, INK, R, glow } from '@/theme';
+import { C, INK, R, glow, ink } from '@/theme';
 
-/** Same graphite as the calorie card and the workout pill, with a faint diagonal lift. */
-const SURFACE: [string, string, string] = ['#2A3038', C.graphite, '#1E2229'];
+/** Neutral black at 0.9, so the warm canvas barely lifts it; depth comes from the white halo. */
+const SURFACE: [string, string, string] = [ink(0.9), ink(0.9), ink(0.9)];
 
 const DAYS = 30;
 
@@ -138,7 +138,7 @@ function Chip({ icon, text }: { icon: IconName; text: string }) {
 }
 
 const s = StyleSheet.create({
-  shell: { borderRadius: R.xl, backgroundColor: C.graphite },
+  shell: { borderRadius: R.xl },
   card: { borderRadius: R.xl, padding: 18, overflow: 'hidden' },
   glowA: { position: 'absolute', right: -110, top: -40 },
   glowB: { position: 'absolute', width: 180, height: 180, borderRadius: 90, left: -70, bottom: -90, backgroundColor: 'rgba(255,255,255,0.05)' },

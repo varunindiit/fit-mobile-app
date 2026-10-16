@@ -6,6 +6,7 @@ import { AppState } from 'react-native';
 
 import { addDays, todayKey } from '../calc';
 import { STORAGE_KEY } from '../persist';
+import { DEMO_DAYS } from '../demo';
 import { DEFAULT_PROFILE, isPremiumActive, StoreProvider, useStore } from '../store';
 
 const wrapper = ({ children }: { children: React.ReactNode }) => <StoreProvider>{children}</StoreProvider>;
@@ -35,18 +36,46 @@ afterEach(() => {
 });
 
 const profile = { ...DEFAULT_PROFILE, name: 'Asha', weightKg: 70, targetKg: 62 };
+/** Logs the user made themselves, i.e. everything the demo history did not create. */
+const own = <T extends { id: string }>(xs: T[]) => xs.filter((x) => !x.id.startsWith('demo-'));
 
 describe('onboarding', () => {
-  it('stores real answers only — no fake history', async () => {
+  it('keeps the answers and fills the account with 30 days of demo history', async () => {
     const h = await launch();
     await act(async () => h.result.current.completeOnboarding(profile));
     const s = h.result.current.state;
     expect(s.onboarded).toBe(true);
-    expect(s.entries).toEqual([]);
+    expect(s.profile.name).toBe('Asha');
+    expect(s.demoSeeded).toBe(true);
+    expect(new Set(s.entries.map((e) => e.date)).size).toBe(DEMO_DAYS);
+    expect(s.workouts.length).toBeGreaterThan(0);
+    expect(s.snaps.length).toBeGreaterThan(0);
+    expect(s.programProgress[s.profile.program]).toBeGreaterThan(0);
+    // Today's weigh-in is still the weight they entered; the 30-day history leads up to it.
+    expect(s.weights.at(-1)).toMatchObject({ date: todayKey(), kg: 70 });
+    expect(s.profile.startWeightKg).toBeGreaterThan(70);
+    // Today is left half-logged: no dinner yet.
+    const todayMeals = s.entries.filter((e) => e.date === todayKey()).map((e) => e.meal);
+    expect(todayMeals).toContain('breakfast');
+    expect(todayMeals).not.toContain('dinner');
+  });
+
+  it('seeds the demo history only once, even after a restart', async () => {
+    let h = await launch();
+    await act(async () => h.result.current.completeOnboarding(profile));
+    const before = h.result.current.state.entries.length;
+    h = await restart(h);
+    expect(h.result.current.state.entries).toHaveLength(before);
+  });
+
+  it('never seeds over real logs', async () => {
+    let h = await launch();
+    await act(async () => h.result.current.addFood('poha', 'breakfast', 1));
+    await act(async () => h.result.current.completeOnboarding(profile));
+    const s = h.result.current.state;
+    expect(s.demoSeeded).toBe(true);
+    expect(s.entries).toHaveLength(1);
     expect(s.workouts).toEqual([]);
-    expect(s.weights).toEqual([expect.objectContaining({ date: todayKey(), kg: 70 })]);
-    expect(s.profile.startWeightKg).toBe(70);
-    expect(s.programProgress).toEqual({});
   });
 
   it('re-onboarding after log out keeps every log', async () => {
@@ -58,13 +87,14 @@ describe('onboarding', () => {
       h.result.current.subscribe('pro', 3);
       h.result.current.restartOnboarding();
     });
+    const startWeight = h.result.current.state.profile.startWeightKg;
     await act(async () => h.result.current.completeOnboarding({ ...profile, name: 'Asha K' }));
     const s = h.result.current.state;
-    expect(s.entries).toHaveLength(1);
+    expect(own(s.entries)).toHaveLength(1);
     expect(s.weights.at(-1)?.kg).toBe(69.4);
     expect(s.premium?.tier).toBe('pro');
     expect(s.profile.name).toBe('Asha K');
-    expect(s.profile.startWeightKg).toBe(70);
+    expect(s.profile.startWeightKg).toBe(startWeight);
   });
 
   it('log in returns to saved data and draft survives a restart', async () => {
@@ -83,8 +113,10 @@ describe('every user action survives an app restart', () => {
   it('food, water, steps, weight, settings, chat, search, favourites, plan edits, resume', async () => {
     let h = await launch();
     const a = () => h.result.current;
+    await act(async () => a().completeOnboarding(profile));
+    // The demo history already fills today, so these checks are relative to it.
+    const water0 = a().state.water[todayKey()] ?? 0;
     await act(async () => {
-      a().completeOnboarding(profile);
       a().addFood('dal', 'lunch', 2);
       a().addWater(1);
       a().addWater(1);
@@ -104,16 +136,16 @@ describe('every user action survives an app restart', () => {
     const s = a().state;
     const t = todayKey();
     expect(s.onboarded).toBe(true);
-    expect(s.entries).toEqual([expect.objectContaining({ foodId: 'dal', meal: 'lunch', qty: 2, date: t })]);
-    expect(s.water[t]).toBe(3);
+    expect(own(s.entries)).toEqual([expect.objectContaining({ foodId: 'dal', meal: 'lunch', qty: 2, date: t })]);
+    expect(s.water[t]).toBe(water0 + 3);
     expect(s.steps[t]).toBe(5400);
     expect(s.weights.find((w) => w.date === t)?.kg).toBe(69.5);
     expect(s.profile.weightKg).toBe(69.5);
     expect(s.settings.units).toBe('lb');
     expect(s.settings.classSpeed).toBe(10);
     expect(s.coachChat.map((m) => m.text)).toEqual(['hi']);
-    expect(s.recentSearches).toEqual(['paneer']);
-    expect(s.favoriteFoods).toEqual(['apple']);
+    expect(s.recentSearches[0]).toBe('paneer');
+    expect(s.favoriteFoods[0]).toBe('apple');
     expect(s.planEdits['program:belly:3']).toEqual([{ exerciseId: 'burpees', reps: 8 }]);
     expect(s.sessionResume['program:belly:3']).toMatchObject({ idx: 2, done: [0, 2], elapsedMs: 90000 });
     expect(s.seenTips).toEqual(['plan-edit']);

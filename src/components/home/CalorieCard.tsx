@@ -4,14 +4,14 @@ import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
 
 import { CountUp, PressableScale, ProgressBar, Ring, tap, type IconName } from '@/components/ui';
-import { C, fade, glow, INK } from '@/theme';
+import { C, fade, glow, ink, INK } from '@/theme';
 
 /**
- * Glass at the top (the hero photo shows through) settling onto solid `C.graphite` — the exact
- * colour the workout pill below uses. Full opacity arrives at 68% so the card's whole lower
- * third is that flat graphite, not a translucent (and therefore lighter) blend with the canvas.
+ * A black scrim at the top (the hero photo still shows through, but darkened with neutral `INK`
+ * rather than a grey-blue wash) settling onto solid `C.graphite` — the exact colour the workout
+ * pill below uses. Full opacity arrives at 68% so the card's whole lower third is flat graphite.
  */
-const WASH: [string, string, string] = [fade(C.graphite, 0.3), fade(C.graphite, 0.92), C.graphite];
+const WASH: [string, string, string] = [ink(0.55), fade(C.graphite, 0.96), C.graphite];
 const FAINT = 'rgba(255,255,255,0.62)';
 const TRACK = 'rgba(255,255,255,0.09)';
 const OVER = '#FF8F87';

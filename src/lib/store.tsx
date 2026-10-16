@@ -5,6 +5,7 @@ import { foodById, type MealKey } from '@/data/foods';
 import type { PlanTier } from '@/data/plans';
 import { EXERCISES, type ProgramId, type SessionItem } from '@/data/program';
 import { addDays, parseKey, round1, targets, todayKey } from './calc';
+import { demoSeed } from './demo';
 import { loadState, mergeTyped, saveState } from './persist';
 
 export type Goal = 'lose' | 'maintain' | 'gain' | 'muscle' | 'healthy';
@@ -110,6 +111,8 @@ export type AppState = {
   onboardingDraft: OnboardingDraft | null;
   /** App rating the user gave (1–5), so we don't ask again. */
   rating: number | null;
+  /** Set once the demo history has been filled in — or skipped because real logs already exist. */
+  demoSeeded: boolean;
 };
 
 export const DEFAULT_PROFILE: Profile = {
@@ -174,6 +177,7 @@ const INITIAL: AppState = {
   onboardingDraft: null,
   rating: null,
   purchases: [],
+  demoSeeded: false,
 };
 
 let idSeq = 0;
@@ -215,6 +219,30 @@ const clampWater = (n: number) => Math.max(0, Math.min(16, Math.round(n)));
 const EXERCISE_IDS = new Set(EXERCISES.map((e) => e.id));
 const SAVE_DELAY = 300;
 
+/**
+ * Fill a brand-new account with the 30-day demo history, leaving today half-logged.
+ * Runs once per install: anyone who already has logs only gets the flag set.
+ */
+function withDemo(s: AppState): AppState {
+  if (s.demoSeeded) return s;
+  if (s.entries.length || s.workouts.length) return { ...s, demoSeeded: true };
+  const d = demoSeed(s.profile);
+  return {
+    ...s,
+    demoSeeded: true,
+    entries: d.entries,
+    workouts: d.workouts,
+    weights: d.weights,
+    snaps: d.snaps,
+    water: { ...d.water, ...s.water },
+    steps: { ...d.steps, ...s.steps },
+    programProgress: { ...s.programProgress, ...d.programProgress },
+    recentSearches: s.recentSearches.length ? s.recentSearches : d.recentSearches,
+    favoriteFoods: s.favoriteFoods.length ? s.favoriteFoods : d.favoriteFoods,
+    profile: { ...s.profile, startWeightKg: d.startWeightKg },
+  };
+}
+
 function useAppStore() {
   const [state, setState] = useState<AppState>(INITIAL);
   const [hydrated, setHydrated] = useState(false);
@@ -238,7 +266,11 @@ function useAppStore() {
 
   useEffect(() => {
     loadState(INITIAL)
-      .then((saved) => setState(sanitize(saved)))
+      // An onboarded account with no logs yet (e.g. saved before the demo history existed) gets it now.
+      .then((saved) => setState(() => {
+        const s = sanitize(saved);
+        return s.onboarded ? withDemo(s) : s;
+      }))
       .catch((e) => {
         loadFailed.current = true;
         console.warn('[store] load failed', e);
@@ -279,11 +311,11 @@ function useAppStore() {
           const fresh = s.weights.length === 0;
           const weights = fresh ? [{ id: uid(), date: todayKey(), kg: round1(p.weightKg) }] : s.weights;
           const startWeightKg = fresh ? p.weightKg : (s.profile.startWeightKg || p.weightKg);
-          return { ...s, weights, profile: { ...p, startWeightKg }, onboarded: true, onboardingDraft: null };
+          return withDemo({ ...s, weights, profile: { ...p, startWeightKg }, onboarded: true, onboardingDraft: null });
         }),
       restartOnboarding: () => update((s) => ({ ...s, onboarded: false })),
       /** Returning user on this device: go straight back in with their saved data. */
-      logIn: () => update((s) => ({ ...s, onboarded: true, onboardingDraft: null })),
+      logIn: () => update((s) => withDemo({ ...s, onboarded: true, onboardingDraft: null })),
       saveOnboardingDraft: (d: OnboardingDraft) => update((s) => ({ ...s, onboardingDraft: d })),
       clearOnboardingDraft: () => update((s) => ({ ...s, onboardingDraft: null })),
       setRating: (n: number) => update((s) => ({ ...s, rating: Math.max(1, Math.min(5, Math.round(n))) })),
@@ -401,7 +433,7 @@ function useAppStore() {
       saveClassRun: (r: Omit<ClassRun, 'date'> | null) => update((s) => ({ ...s, classRun: r ? { ...r, date: todayKey() } : null })),
       markTipSeen: (id: string) => update((s) => (s.seenTips.includes(id) ? s : { ...s, seenTips: [...s.seenTips, id] })),
       unlockReward: (id: string) => update((s) => (s.unlockedRewards.includes(id) ? s : { ...s, unlockedRewards: [...s.unlockedRewards, id] })),
-      setProgram: (program: ProgramId) => update((s) => ({ ...s, profile: { ...s.profile, program } })),
+      setProgram: (program: ProgramId) => update((s) => withDemo({ ...s, profile: { ...s.profile, program } })),
       resetProgram: (program: ProgramId) => update((s) => ({ ...s, programProgress: { ...s.programProgress, [program]: 0 } })),
       setBackup: (backup: AppState['backup']) => update((s) => ({ ...s, backup })),
 
