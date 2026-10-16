@@ -76,16 +76,18 @@ export function CalorieCard({ eaten, burned, budget, left, over, status, macros,
       accessibilityLabel={`Calorie budget: ${fmt(Math.abs(left))} kcal ${over ? 'over' : 'left'}. Open diary`}
       style={[st.shell, glow(INK)]}>
       <LinearGradient colors={WASH} locations={[0, 0.46, 1]} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }} style={st.bg}>
-        {/* Decorative glows */}
-        <Svg pointerEvents="none" width={260} height={260} style={st.glowTR}>
-          <Defs>
-            <RadialGradient id="calGlowA" cx="50%" cy="50%" r="50%">
-              <Stop offset="0" stopColor={over ? '#E5484D' : C.primaryBright} stopOpacity={0.3} />
-              <Stop offset="1" stopColor={over ? '#E5484D' : C.primaryBright} stopOpacity={0} />
-            </RadialGradient>
-          </Defs>
-          <Circle cx={130} cy={130} r={130} fill="url(#calGlowA)" />
-        </Svg>
+        {/* Over budget gets a red wash; on track the card stays plain graphite. */}
+        {over && (
+          <Svg pointerEvents="none" width={260} height={260} style={st.glowTR}>
+            <Defs>
+              <RadialGradient id="calGlowA" cx="50%" cy="50%" r="50%">
+                <Stop offset="0" stopColor="#E5484D" stopOpacity={0.3} />
+                <Stop offset="1" stopColor="#E5484D" stopOpacity={0} />
+              </RadialGradient>
+            </Defs>
+            <Circle cx={130} cy={130} r={130} fill="url(#calGlowA)" />
+          </Svg>
+        )}
         <Svg pointerEvents="none" width={200} height={200} style={st.glowBL}>
           <Defs>
             <RadialGradient id="calGlowB" cx="50%" cy="50%" r="50%">
