@@ -111,8 +111,8 @@ const RESTORE: [IconName, string][] = [
   ['flame', 'Streak'],
 ];
 
-/** "Log in" bottom sheet on the Intro screen: what comes back with the account, the confirm action and the demo note. */
-export function LoginSheet({ visible, onClose, onLogin }: { visible: boolean; onClose: () => void; onLogin: () => void }) {
+/** "Log in" bottom sheet on the Intro screen: what comes back with the account, then on to the log-in or sign-up screen. */
+export function LoginSheet({ visible, onClose, onLogin, onSignup }: { visible: boolean; onClose: () => void; onLogin: () => void; onSignup: () => void }) {
   return (
     <Sheet visible={visible} onClose={onClose}>
       <View style={{ paddingHorizontal: GUTTER + 4, paddingTop: 4 }}>
@@ -136,8 +136,10 @@ export function LoginSheet({ visible, onClose, onLogin }: { visible: boolean; on
           <Text style={st.textBtnLabel}>Not now</Text>
         </Pressable>
         <View style={st.loginNote}>
-          <Ionicons name="information-circle" size={15} color={C.muted} />
-          <Text style={st.loginNoteText}>Demo mode: no account is needed.</Text>
+          <Text style={st.loginNoteText}>New to {BRAND}?</Text>
+          <Pressable accessibilityRole="button" onPress={() => { tap(); onSignup(); }} hitSlop={10}>
+            <Text style={st.loginNoteLink}>Sign up</Text>
+          </Pressable>
         </View>
       </View>
     </Sheet>
@@ -656,7 +658,8 @@ const st = StyleSheet.create({
   loginItemIcon: { width: 36, height: 36, borderRadius: 18, backgroundColor: C.primarySoft, alignItems: 'center', justifyContent: 'center' },
   loginItemText: { fontSize: 12.5, fontWeight: '700', color: C.text },
   loginNote: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 },
-  loginNoteText: { fontSize: 12, color: C.muted, fontWeight: '600' },
+  loginNoteText: { fontSize: 14, color: C.textSoft, fontWeight: '600' },
+  loginNoteLink: { fontSize: 14, color: C.primaryDark, fontWeight: '800' },
   introFoot: { fontSize: 12.5, color: 'rgba(255,255,255,0.55)', textAlign: 'center', marginTop: 14, fontWeight: '600' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   wStage: { width: ARCH_W + 120, height: ARCH_H + 40, alignItems: 'center', justifyContent: 'center' },

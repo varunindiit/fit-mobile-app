@@ -11,6 +11,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { BodyShape, SHAPES, bodyFat } from '@/components/onboarding/BodyShape';
 import { IMG } from '@/components/onboarding/assets';
 import { Analysis, Intro, LoginSheet, Motivation, Paywall, PlanResult, Welcome } from '@/components/onboarding/FullScreens';
+import { AuthScreen } from '@/components/onboarding/Auth';
 import { ActivityCards, ActivityHero, StepGoal, type ActivityOption } from '@/components/onboarding/Activity';
 import { BeforeAfter } from '@/components/onboarding/BeforeAfter';
 import { BenefitsHero, CompareTable } from '@/components/onboarding/Benefits';
@@ -33,9 +34,10 @@ import { BRAND, C, MOTION, R, shadowSm } from '@/theme';
 /* ---------------- Flow ---------------- */
 
 type StepId =
-  | 'intro' | 'welcome' | 'gender' | 'shape' | 'desired' | 'birth' | 'height' | 'weight' | 'target' | 'preview' | 'timeline' | 'benefits'
+  | 'intro' | 'login' | 'signup' | 'welcome' | 'gender' | 'shape' | 'desired' | 'birth' | 'height' | 'weight' | 'target' | 'preview' | 'timeline' | 'benefits'
   | 'experience' | 'level' | 'activity' | 'rest' | 'diet' | 'dietinfo' | 'reward' | 'motivation' | 'analysis' | 'result' | 'paywall';
 
+// 'login' / 'signup' branch off the intro and are not part of the linear flow.
 const STEPS: StepId[] = [
   'intro', 'welcome', 'gender', 'shape', 'desired', 'birth', 'height', 'weight', 'target', 'preview', 'timeline', 'benefits',
   'experience', 'level', 'activity', 'rest', 'diet', 'dietinfo', 'reward', 'motivation', 'analysis', 'result', 'paywall',
@@ -185,6 +187,7 @@ export default function Onboarding() {
     if (i < STEPS.length - 1) go(STEPS[i + 1], 1);
   };
   const back = () => {
+    if (step === 'login' || step === 'signup') return go('intro', -1);
     // The analysis screen is a one-way transition; going back from the result skips it.
     if (step === 'result') return go('motivation', -1);
     const i = STEPS.indexOf(step);
@@ -231,14 +234,44 @@ export default function Onboarding() {
           onClose={() => setLogin(false)}
           onLogin={() => {
             setLogin(false);
-            // A returning user on this device goes straight back in with their saved logs and profile.
-            if (state.weights.length || state.entries.length) logIn();
-            else completeOnboarding(finalize(p));
-            router.replace('/(tabs)');
-            setTimeout(() => toast('Welcome back!', 'person-circle'), 400);
+            go('login', 1);
+          }}
+          onSignup={() => {
+            setLogin(false);
+            go('signup', 1);
           }}
         />
       </>
+    );
+  if (step === 'login')
+    return (
+      <AuthScreen
+        key="login"
+        mode="login"
+        onBack={back}
+        onSwitch={() => go('signup', 1)}
+        onDone={({ email }) => {
+          // A returning user on this device goes straight back in with their saved logs and profile.
+          if (state.weights.length || state.entries.length) logIn();
+          else completeOnboarding(finalize({ ...p, email: email || p.email }));
+          router.replace('/(tabs)');
+          setTimeout(() => toast('Welcome back!', 'person-circle'), 400);
+        }}
+      />
+    );
+  if (step === 'signup')
+    return (
+      <AuthScreen
+        key="signup"
+        mode="signup"
+        onBack={back}
+        onSwitch={() => go('login', 1)}
+        onDone={({ name, email }) => {
+          // New account: keep the details and start the plan questions.
+          set((d) => ({ name: name || d.name, email: email || d.email }));
+          go('welcome', 1);
+        }}
+      />
     );
   if (step === 'welcome') return <Welcome onNext={next} />;
   if (step === 'motivation')

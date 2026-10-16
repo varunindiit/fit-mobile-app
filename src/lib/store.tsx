@@ -12,6 +12,7 @@ export type Goal = 'lose' | 'maintain' | 'gain' | 'muscle' | 'healthy';
 export type Profile = {
   name: string;
   phone: string;
+  email: string;
   goal: Goal;
   motivations: string[];
   gender: 'male' | 'female' | 'other';
@@ -113,6 +114,7 @@ export type AppState = {
 export const DEFAULT_PROFILE: Profile = {
   name: '',
   phone: '',
+  email: '',
   goal: 'lose',
   motivations: [],
   gender: 'female',
