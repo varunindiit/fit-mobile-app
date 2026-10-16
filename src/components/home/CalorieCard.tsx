@@ -4,10 +4,14 @@ import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
 
 import { CountUp, PressableScale, ProgressBar, Ring, tap, type IconName } from '@/components/ui';
-import { C, glow, ink, INK } from '@/theme';
+import { C, fade, glow, INK } from '@/theme';
 
-/** Transparent-ish at the top (the hero photo shows through) down to near-solid black. */
-const WASH: [string, string, string] = [ink(0.28), ink(0.88), ink(0.97)];
+/**
+ * Glass at the top (the hero photo shows through) settling onto solid `C.graphite` — the exact
+ * colour the workout pill below uses. Full opacity arrives at 68% so the card's whole lower
+ * third is that flat graphite, not a translucent (and therefore lighter) blend with the canvas.
+ */
+const WASH: [string, string, string] = [fade(C.graphite, 0.3), fade(C.graphite, 0.92), C.graphite];
 const FAINT = 'rgba(255,255,255,0.62)';
 const TRACK = 'rgba(255,255,255,0.09)';
 const OVER = '#FF8F87';
@@ -75,7 +79,7 @@ export function CalorieCard({ eaten, burned, budget, left, over, status, macros,
       }}
       accessibilityLabel={`Calorie budget: ${fmt(Math.abs(left))} kcal ${over ? 'over' : 'left'}. Open diary`}
       style={[st.shell, glow(INK)]}>
-      <LinearGradient colors={WASH} locations={[0, 0.46, 1]} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }} style={st.bg}>
+      <LinearGradient colors={WASH} locations={[0, 0.42, 0.68]} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }} style={st.bg}>
         {/* Over budget gets a red wash; on track the card stays plain graphite. */}
         {over && (
           <Svg pointerEvents="none" width={260} height={260} style={st.glowTR}>

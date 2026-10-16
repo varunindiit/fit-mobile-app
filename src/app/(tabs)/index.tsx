@@ -43,7 +43,7 @@ import { programById, programDay, sessionStats } from '@/data/program';
 import { dayShort, fmtDate, kmFromSteps } from '@/lib/calc';
 import { burnedOn, dayTotals, isPremiumActive, useStore, weekProgress, workoutStreak } from '@/lib/store';
 import { useToday } from '@/lib/useToday';
-import { C, G, ink, INK, MOTION, R, shadow, shadowSm } from '@/theme';
+import { C, G, ink, MOTION, R, shadow, shadowSm } from '@/theme';
 
 const HERO_IMAGE = require('@/assets/images/home-hero.jpg');
 /** Visible photo height below the status bar (the sheet overlaps its last ~28 px). */
@@ -763,7 +763,7 @@ const st = StyleSheet.create({
   photoTitle: { color: C.white, fontSize: 22, lineHeight: 27, fontWeight: '900', letterSpacing: -0.5, marginTop: 2 },
   heroSub: { color: 'rgba(255,255,255,0.85)', fontSize: 12.5, fontWeight: '600', marginTop: 2 },
   heroCta: { width: 46, height: 46, borderRadius: 23, backgroundColor: C.white, alignItems: 'center', justifyContent: 'center', ...shadowSm },
-  workout: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14, borderRadius: R.xl, backgroundColor: INK, borderWidth: 1, borderColor: 'rgba(255,255,255,0.14)', ...shadow },
+  workout: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14, borderRadius: R.xl, backgroundColor: C.graphite, borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)', ...shadow },
   workoutDay: { color: C.white, fontSize: 18, fontWeight: '900', fontVariant: ['tabular-nums'], lineHeight: 20 },
   workoutOf: { color: 'rgba(255,255,255,0.7)', fontSize: 10, fontWeight: '700' },
   glassBtn: { borderWidth: StyleSheet.hairlineWidth * 2, borderColor: 'rgba(255,255,255,0.28)' },

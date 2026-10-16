@@ -1,4 +1,4 @@
-import { Platform } from 'react-native';
+import { Platform } from "react-native";
 
 /**
  * Fittelo design tokens.
@@ -12,56 +12,63 @@ import { Platform } from 'react-native';
  */
 export const C = {
   /** The brand green. Content on top of it must be `onPrimary`. */
-  primaryBright: '#56D661',
+  primaryBright: "#56D661",
   /** Ink for text and icons sitting on any green fill. */
-  onPrimary: '#04080B',
-  primary: '#56D661',
-  primaryDark: '#56D661',
-  primarySoft: '#E6FCE8',
-  primaryTint: '#B3F2B9',
-  accent: '#F2703A',
-  accentSoft: '#FEEDE4',
-  bg: '#F5F5F4',
-  card: '#FFFFFF',
-  surfaceAlt: '#F8F7F6',
-  text: '#1C1917',
-  textSoft: '#57534E',
-  muted: '#8C8580',
-  border: '#E7E5E4',
-  borderSoft: '#F0EFED',
-  skeleton: '#ECEAE8',
-  carbs: '#F0AE1C',
-  protein: '#4A7CF0',
-  fat: '#EC6A8E',
-  fiber: '#8D70E0',
-  water: '#2C9BDB',
-  waterSoft: '#E3F2FB',
-  steps: '#7457D6',
-  stepsSoft: '#EEEAFB',
-  workout: '#C2468F',
-  workoutSoft: '#FBEAF3',
-  weight: '#1F8572',
-  weightSoft: '#E2F3EF',
-  danger: '#E5484D',
-  dangerSoft: '#FDECEC',
-  warning: '#C98A06',
-  warningSoft: '#FDF4DC',
-  gold: '#F5C451',
-  navy: '#121417',
-  white: '#FFFFFF',
-  overlay: 'rgba(12,10,9,0.42)',
+  onPrimary: "#04080B",
+  primary: "#56D661",
+  primaryDark: "#56D661",
+  primarySoft: "#E6FCE8",
+  primaryTint: "#B3F2B9",
+  accent: "#F2703A",
+  accentSoft: "#FEEDE4",
+  bg: "#F5F5F4",
+  card: "#FFFFFF",
+  surfaceAlt: "#F8F7F6",
+  text: "#1C1917",
+  textSoft: "#57534E",
+  muted: "#8C8580",
+  border: "#E7E5E4",
+  borderSoft: "#F0EFED",
+  skeleton: "#ECEAE8",
+  carbs: "#F0AE1C",
+  protein: "#4A7CF0",
+  fat: "#EC6A8E",
+  fiber: "#8D70E0",
+  water: "#2C9BDB",
+  waterSoft: "#E3F2FB",
+  steps: "#7457D6",
+  stepsSoft: "#EEEAFB",
+  workout: "#C2468F",
+  workoutSoft: "#FBEAF3",
+  weight: "#1F8572",
+  weightSoft: "#E2F3EF",
+  danger: "#E5484D",
+  dangerSoft: "#FDECEC",
+  warning: "#C98A06",
+  warningSoft: "#FDF4DC",
+  gold: "#F5C451",
+  navy: "#121417",
+  /** Softer dark surface than `navy` — dark cards that sit on the white canvas. */
+  graphite: "#23282f",
+  white: "#FFFFFF",
+  overlay: "rgba(12,10,9,0.42)",
   /** AI (Saathi) surfaces: mint fill, tinted hairline, deep text. */
-  ai: '#1F6B5A',
-  aiSoft: '#E8F7F0',
-  aiBorder: '#BFE6D4',
+  ai: "#1F6B5A",
+  aiSoft: "#E8F7F0",
+  aiBorder: "#BFE6D4",
 };
 
 /**
  * Neutral ink used for every scrim laid over photography — kept free of brand hue so
  * photos read as photos. `ink(0)` gives the fully transparent stop for a fade.
  */
-export const INK = '#0B0B0C';
-export const ink = (opacity: number) => `rgba(11,11,12,${opacity})`;
+export const INK = "#0B0B0C";
+
+/** Any 6-digit hex token at an opacity: `fade(C.graphite, 0.3)`. */
+export const fade = (hex: string, opacity: number) =>
+  `rgba(${parseInt(hex.slice(1, 3), 16)},${parseInt(hex.slice(3, 5), 16)},${parseInt(hex.slice(5, 7), 16)},${opacity})`;
+
+export const ink = (opacity: number) => fade(INK, opacity);
 
 /**
  * Readable ink for content sitting on `fill`: dark on light fills, white on dark ones.
@@ -69,36 +76,74 @@ export const ink = (opacity: number) => `rgba(11,11,12,${opacity})`;
  * fills can just use `C.onPrimary`.
  */
 export const onFill = (fill: string) => {
-  if (fill.length !== 7 || fill[0] !== '#') return C.white;
+  if (fill.length !== 7 || fill[0] !== "#") return C.white;
   const srgb = [1, 3, 5].map((i) => parseInt(fill.slice(i, i + 2), 16) / 255);
-  const [r, g, b] = srgb.map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+  const [r, g, b] = srgb.map((c) =>
+    c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4,
+  );
   return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.45 ? C.onPrimary : C.white;
 };
 
 /** Gradient stops (always use sparingly: hero, premium, celebration). */
 export const G = {
-  brand: ['#56D661', '#56D661'] as [string, string],
-  deep: ['#078511', '#044A0A'] as [string, string],
-  premium: ['#121417', '#2B3036'] as [string, string],
-  warm: ['#FF8A4C', '#F0563D'] as [string, string],
-  glow: ['#DEF9E0', 'rgba(245,245,244,0)'] as [string, string],
+  brand: ["#56D661", "#56D661"] as [string, string],
+  deep: ["#078511", "#044A0A"] as [string, string],
+  premium: ["#121417", "#2B3036"] as [string, string],
+  warm: ["#FF8A4C", "#F0563D"] as [string, string],
+  glow: ["#DEF9E0", "rgba(245,245,244,0)"] as [string, string],
   /** Charcoal wash that sits behind or below a photo. */
-  photo: ['#1C2026', '#0B0B0C'] as [string, string],
+  photo: ["#1C2026", "#0B0B0C"] as [string, string],
 };
 
 export const R = { xs: 8, sm: 12, md: 16, lg: 20, xl: 28, pill: 999 };
 
 /** 4-pt spacing scale. Screen gutter is `S.lg` (16). */
-export const S = { xxs: 4, xs: 8, sm: 12, md: 14, lg: 16, xl: 20, xxl: 24, xxxl: 32 };
+export const S = {
+  xxs: 4,
+  xs: 8,
+  sm: 12,
+  md: 14,
+  lg: 16,
+  xl: 20,
+  xxl: 24,
+  xxxl: 32,
+};
 
-const ios = (opacity: number, radius: number, y: number, color = '#1C1917') => ({ shadowColor: color, shadowOpacity: opacity, shadowRadius: radius, shadowOffset: { width: 0, height: y } });
+const ios = (
+  opacity: number,
+  radius: number,
+  y: number,
+  color = "#1C1917",
+) => ({
+  shadowColor: color,
+  shadowOpacity: opacity,
+  shadowRadius: radius,
+  shadowOffset: { width: 0, height: y },
+});
 
 /** Soft, diffuse card shadow. */
-export const shadow = Platform.select<object>({ ios: ios(0.06, 14, 4), android: { elevation: 2 }, default: ios(0.06, 14, 4) }) as object;
-export const shadowSm = Platform.select<object>({ ios: ios(0.05, 6, 2), android: { elevation: 1 }, default: ios(0.05, 6, 2) }) as object;
-export const shadowLg = Platform.select<object>({ ios: ios(0.12, 24, 10), android: { elevation: 8 }, default: ios(0.12, 24, 10) }) as object;
+export const shadow = Platform.select<object>({
+  ios: ios(0.06, 14, 4),
+  android: { elevation: 2 },
+  default: ios(0.06, 14, 4),
+}) as object;
+export const shadowSm = Platform.select<object>({
+  ios: ios(0.05, 6, 2),
+  android: { elevation: 1 },
+  default: ios(0.05, 6, 2),
+}) as object;
+export const shadowLg = Platform.select<object>({
+  ios: ios(0.12, 24, 10),
+  android: { elevation: 8 },
+  default: ios(0.12, 24, 10),
+}) as object;
 /** Coloured glow under brand-filled elements (buttons, quick-log). */
-export const glow = (color: string) => Platform.select<object>({ ios: ios(0.3, 14, 6, color), android: { elevation: 6 }, default: ios(0.3, 14, 6, color) }) as object;
+export const glow = (color: string) =>
+  Platform.select<object>({
+    ios: ios(0.3, 14, 6, color),
+    android: { elevation: 6 },
+    default: ios(0.3, 14, 6, color),
+  }) as object;
 
 /** Motion: durations (ms) and springs. Keep UI motion short; entrances are the longest. */
 export const MOTION = {
@@ -114,4 +159,4 @@ export const MOTION = {
   spring: { damping: 18, stiffness: 200, mass: 0.8 },
 };
 
-export const BRAND = 'Fittelo';
+export const BRAND = "Fittelo";
