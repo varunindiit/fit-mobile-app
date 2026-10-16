@@ -191,6 +191,8 @@ export default function Onboarding() {
     if (step === 'login' || step === 'signup') return go('intro', -1);
     // The analysis screen is a one-way transition; going back from the result skips it.
     if (step === 'result') return go('motivation', -1);
+    // The welcome splash auto-advances, so going back from the first question lands on the intro.
+    if (step === 'gender') return go('intro', -1);
     const i = STEPS.indexOf(step);
     if (i > 0) go(STEPS[i - 1], -1);
   };
