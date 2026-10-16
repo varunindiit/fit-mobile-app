@@ -268,7 +268,7 @@ const st = StyleSheet.create({
   bar: { height: 52, flexDirection: 'row', alignItems: 'center', paddingHorizontal: GUTTER - 8 },
   back: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   body: { paddingHorizontal: GUTTER + 4, paddingTop: 8, paddingBottom: 24 },
-  mark: { width: 56, height: 56, borderRadius: 18, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center' },
+  mark: { width: 56, height: 56, borderRadius: 18, backgroundColor: C.primaryDark, alignItems: 'center', justifyContent: 'center' },
   title: { fontSize: 28, fontWeight: '900', color: C.text, letterSpacing: -0.7, marginTop: 20 },
   sub: { fontSize: 15, lineHeight: 22, color: C.textSoft, marginTop: 8 },
   fieldLabel: { fontSize: 13, fontWeight: '600', color: C.textSoft, marginBottom: 8, marginLeft: 2 },

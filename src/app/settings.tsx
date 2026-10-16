@@ -128,6 +128,6 @@ export default function SettingsScreen() {
 const st = StyleSheet.create({
   content: { paddingHorizontal: 16, paddingBottom: 40 },
   footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 24 },
-  footerLogo: { width: 20, height: 20, borderRadius: 6, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center' },
+  footerLogo: { width: 20, height: 20, borderRadius: 6, backgroundColor: C.primaryDark, alignItems: 'center', justifyContent: 'center' },
   footerText: { color: C.muted, fontSize: 12 },
 });

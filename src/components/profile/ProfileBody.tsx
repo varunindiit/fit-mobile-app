@@ -1285,7 +1285,7 @@ const st = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 6,
-    backgroundColor: C.primary,
+    backgroundColor: C.primaryDark,
     alignItems: "center",
     justifyContent: "center",
     ...shadowSm,

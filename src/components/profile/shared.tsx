@@ -397,9 +397,9 @@ export function AboutSheet({ visible, onClose }: { visible: boolean; onClose: ()
   return (
     <Sheet visible={visible} onClose={onClose} title="About & Privacy" scroll>
       <View style={st.aboutHead}>
-        <LinearGradient colors={G.brand} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.logo}>
+        <View style={st.logo}>
           <Image source={LOGO} style={{ width: 28, height: 28 }} contentFit="contain" />
-        </LinearGradient>
+        </View>
         <View style={{ flex: 1, gap: 4 }}>
           <Text style={T.h3}>{BRAND}</Text>
           <Pill text="VERSION 1.0.0 · DEMO BUILD" color={C.textSoft} bg="#EEEDEB" />
@@ -442,7 +442,7 @@ const st = StyleSheet.create({
   faqList: { backgroundColor: C.card },
   askRia: { marginTop: 18, backgroundColor: C.aiSoft, borderColor: C.aiBorder, borderWidth: 1 },
   aboutHead: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 8, paddingBottom: 16, borderBottomWidth: StyleSheet.hairlineWidth * 2, borderBottomColor: C.borderSoft },
-  logo: { width: 56, height: 56, borderRadius: 18, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  logo: { width: 56, height: 56, borderRadius: 18, backgroundColor: C.primaryDark, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   aboutItem: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginTop: 16 },
   aboutH: { fontSize: 15, fontWeight: '700', color: C.text, marginBottom: 3, marginTop: 1 },
   madeWith: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, marginTop: 24 },

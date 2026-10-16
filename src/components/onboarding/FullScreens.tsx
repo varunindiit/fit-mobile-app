@@ -42,7 +42,7 @@ const INTRO_STATS: { label: string; value: number; format: (n: number) => string
   { label: 'user rating', value: 4.9, format: (n) => `${n.toFixed(1)}★` },
 ];
 
-const LOGO = require('@/assets/images/splash-icon.png');
+const LOGO = require('@/assets/images/logo-mark.png');
 
 /** First screen: full-bleed group photo under a deep scrim, brand bar, left-aligned headline, glass stat strip and the CTA. */
 export function Intro({ onStart, onLogin }: { onStart: () => void; onLogin: () => void }) {
@@ -636,7 +636,7 @@ const st = StyleSheet.create({
   introTopScrim: { position: 'absolute', top: 0, left: 0, right: 0, height: 160 },
   introBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 6 },
   introBrand: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  introLogo: { width: 32, height: 32, borderRadius: 10, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center' },
+  introLogo: { width: 32, height: 32, borderRadius: 10, backgroundColor: C.primaryDark, alignItems: 'center', justifyContent: 'center' },
   introBrandText: { fontSize: 20, fontWeight: '900', color: C.white, letterSpacing: -0.4 },
   introLoginPill: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: R.pill, backgroundColor: 'rgba(255,255,255,0.16)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.28)' },
   introLoginText: { fontSize: 14, fontWeight: '700', color: C.white },
@@ -650,7 +650,7 @@ const st = StyleSheet.create({
   introStatDivider: { borderLeftWidth: 1, borderLeftColor: 'rgba(255,255,255,0.14)' },
   introValue: { fontSize: 22, fontWeight: '900', color: C.gold, letterSpacing: -0.4, fontVariant: ['tabular-nums'] },
   introLabel: { fontSize: 12, fontWeight: '600', color: 'rgba(255,255,255,0.68)', marginTop: 2 },
-  loginMark: { width: 56, height: 56, borderRadius: 18, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center', alignSelf: 'center' },
+  loginMark: { width: 56, height: 56, borderRadius: 18, backgroundColor: C.primaryDark, alignItems: 'center', justifyContent: 'center', alignSelf: 'center' },
   loginTitle: { fontSize: 24, fontWeight: '900', color: C.text, letterSpacing: -0.5, textAlign: 'center', marginTop: 16 },
   loginSub: { fontSize: 14.5, lineHeight: 21, color: C.textSoft, textAlign: 'center', marginTop: 6, paddingHorizontal: 8 },
   loginRestore: { flexDirection: 'row', gap: 10, marginTop: 22 },
