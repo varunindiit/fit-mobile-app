@@ -65,7 +65,7 @@ function TabItem({
           <Ionicons
             name={focused ? iconOn : icon}
             size={22}
-            color={focused ? C.primaryDark : C.muted}
+            color={focused ? C.onPrimary : C.muted}
           />
         </Animated.View>
       </View>
@@ -148,5 +148,5 @@ const st = StyleSheet.create({
     color: C.muted,
     letterSpacing: 0.1,
   },
-  labelOn: { color: C.primaryDark, fontWeight: "700" },
+  labelOn: { color: C.onPrimary, fontWeight: "700" },
 });

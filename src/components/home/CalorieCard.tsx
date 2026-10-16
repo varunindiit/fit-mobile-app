@@ -4,9 +4,10 @@ import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
 
 import { CountUp, PressableScale, ProgressBar, Ring, tap, type IconName } from '@/components/ui';
-import { C, glow } from '@/theme';
+import { C, glow, ink, INK } from '@/theme';
 
-const INK: [string, string, string] = ['#0A2007', '#123D0C', '#195011'];
+/** Transparent-ish at the top (the hero photo shows through) down to near-solid black. */
+const WASH: [string, string, string] = [ink(0.28), ink(0.88), ink(0.97)];
 const FAINT = 'rgba(255,255,255,0.62)';
 const TRACK = 'rgba(255,255,255,0.09)';
 const OVER = '#FF8F87';
@@ -73,8 +74,8 @@ export function CalorieCard({ eaten, burned, budget, left, over, status, macros,
         onPress();
       }}
       accessibilityLabel={`Calorie budget: ${fmt(Math.abs(left))} kcal ${over ? 'over' : 'left'}. Open diary`}
-      style={[st.shell, glow('#0A2007')]}>
-      <LinearGradient colors={INK} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.bg}>
+      style={[st.shell, glow(INK)]}>
+      <LinearGradient colors={WASH} locations={[0, 0.46, 1]} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }} style={st.bg}>
         {/* Decorative glows */}
         <Svg pointerEvents="none" width={260} height={260} style={st.glowTR}>
           <Defs>
@@ -142,7 +143,7 @@ const st = StyleSheet.create({
   glowBL: { position: 'absolute', bottom: -90, left: -70 },
   head: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   eyebrow: { fontSize: 11, fontWeight: '800', color: FAINT, letterSpacing: 1.2 },
-  chip: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, height: 22, borderRadius: 11, backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: StyleSheet.hairlineWidth * 2, borderColor: 'rgba(59,227,166,0.35)' },
+  chip: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, height: 22, borderRadius: 11, backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: StyleSheet.hairlineWidth * 2, borderColor: 'rgba(86,214,97,0.45)' },
   chipText: { fontSize: 11, fontWeight: '700', color: C.primaryBright },
   diary: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, height: 28, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.12)' },
   diaryText: { fontSize: 12, fontWeight: '700', color: C.white },

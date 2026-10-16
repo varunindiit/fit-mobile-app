@@ -43,13 +43,15 @@ import { programById, programDay, sessionStats } from '@/data/program';
 import { dayShort, fmtDate, kmFromSteps } from '@/lib/calc';
 import { burnedOn, dayTotals, isPremiumActive, useStore, weekProgress, workoutStreak } from '@/lib/store';
 import { useToday } from '@/lib/useToday';
-import { C, G, ink, MOTION, R, shadow, shadowSm } from '@/theme';
+import { C, G, ink, INK, MOTION, R, shadow, shadowSm } from '@/theme';
 
 const HERO_IMAGE = require('@/assets/images/home-hero.jpg');
 /** Visible photo height below the status bar (the sheet overlaps its last ~28 px). */
-const HERO_BODY = 300;
+const HERO_BODY = 330;
 /** How far the photo runs under the first card, which floats over its bottom edge. */
 const HERO_OVERLAP = 76;
+/** How far down the calorie card the photo reaches. */
+const HERO_CUT = 0.7;
 const GLASS = 'rgba(255,255,255,0.2)';
 
 const TIPS: { icon: IconName; title: string; short: string; body: string }[] = [
@@ -135,9 +137,10 @@ export default function Home() {
   const openDay = () => router.push({ pathname: '/program-day', params: { key: nextSession.key } });
 
   // Photo hero: parallax + fade as you scroll, stretches on pull-down; a compact bar takes over once it's gone.
-  // Photo height follows where the content sheet actually starts (safe area, font scale, title length).
-  const [sheetY, setSheetY] = useState(0);
-  const heroH = sheetY > 0 ? sheetY + HERO_OVERLAP : insets.top + HERO_BODY;
+  // The photo ends partway down the calorie card, where that card is already near-opaque,
+  // so its fade to the canvas is hidden and the picture keeps about its original height.
+  const [heroBox, setHeroBox] = useState({ y: 0, h: 0 });
+  const heroH = heroBox.h > 0 ? heroBox.y + heroBox.h * HERO_CUT : insets.top + HERO_BODY;
   const barAt = heroH - insets.top - 70;
   const scrollY = useSharedValue(0);
   const solidSV = useSharedValue(false);
@@ -271,8 +274,25 @@ export default function Home() {
           <IconButton icon="notifications-outline" color={C.white} bg={GLASS} style={st.glassBtn} badge={unread} onPress={() => router.push('/notifications')} />
         </Animated.View>
 
-        {/* Today's workout: glass card on the photo */}
-        <Animated.View entering={enter(1)} style={st.heroCopy}>
+        {/* Calorie budget: rides the photo, its top glass letting the picture through */}
+        <Animated.View entering={enter(1)} style={st.heroCopy} onLayout={(e) => setHeroBox({ y: e.nativeEvent.layout.y, h: e.nativeEvent.layout.height })}>
+          <CalorieCard
+            eaten={eaten}
+            burned={burned.total}
+            budget={targets.budget}
+            left={left}
+            over={over}
+            status={status}
+            macros={{ carbs: [total.carbs, targets.carbs], protein: [total.protein, targets.protein], fat: [total.fat, targets.fat], fiber: [total.fiber, targets.fiber] }}
+            onPress={() => router.navigate('/diet')}
+          />
+        </Animated.View>
+
+        {/* Content below the photo */}
+        <View>
+
+        {/* Today's workout */}
+        <Animated.View entering={enter(1)}>
           <PressableScale
             scaleTo={0.98}
             onPress={() => {
@@ -301,23 +321,6 @@ export default function Home() {
               <Ionicons name={doneToday ? 'eye' : 'play'} size={18} color={C.primaryDark} style={doneToday ? undefined : { marginLeft: 2 }} />
             </View>
           </PressableScale>
-        </Animated.View>
-
-        {/* Content: the first card floats over the photo's faded bottom edge */}
-        <View onLayout={(e) => setSheetY(e.nativeEvent.layout.y)}>
-
-        {/* Calorie budget (hero) */}
-        <Animated.View entering={enter(1)}>
-          <CalorieCard
-            eaten={eaten}
-            burned={burned.total}
-            budget={targets.budget}
-            left={left}
-            over={over}
-            status={status}
-            macros={{ carbs: [total.carbs, targets.carbs], protein: [total.protein, targets.protein], fat: [total.fat, targets.fat], fiber: [total.fiber, targets.fiber] }}
-            onPress={() => router.navigate('/diet')}
-          />
         </Animated.View>
 
         {/* Saathi insight (AI), as a coach message */}
@@ -760,7 +763,7 @@ const st = StyleSheet.create({
   photoTitle: { color: C.white, fontSize: 22, lineHeight: 27, fontWeight: '900', letterSpacing: -0.5, marginTop: 2 },
   heroSub: { color: 'rgba(255,255,255,0.85)', fontSize: 12.5, fontWeight: '600', marginTop: 2 },
   heroCta: { width: 46, height: 46, borderRadius: 23, backgroundColor: C.white, alignItems: 'center', justifyContent: 'center', ...shadowSm },
-  workout: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14, borderRadius: R.xl, backgroundColor: ink(0.38), borderWidth: 1, borderColor: 'rgba(255,255,255,0.22)' },
+  workout: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14, borderRadius: R.xl, backgroundColor: INK, borderWidth: 1, borderColor: 'rgba(255,255,255,0.14)', ...shadow },
   workoutDay: { color: C.white, fontSize: 18, fontWeight: '900', fontVariant: ['tabular-nums'], lineHeight: 20 },
   workoutOf: { color: 'rgba(255,255,255,0.7)', fontSize: 10, fontWeight: '700' },
   glassBtn: { borderWidth: StyleSheet.hairlineWidth * 2, borderColor: 'rgba(255,255,255,0.28)' },
