@@ -7,7 +7,7 @@ import { PlanAccordion } from '@/components/program/PlanAccordion';
 import { Card, Dialog, Enter, Header, IconTile, Pill, PressableScale, ProgressBar, Screen, T, tap, useToast } from '@/components/ui';
 import { isRestDay, PROGRAM_DAYS, programById, type ProgramId } from '@/data/program';
 import { useStore } from '@/lib/store';
-import { C, R } from '@/theme';
+import { C, onFill, R } from '@/theme';
 
 const WEEKS = Array.from({ length: Math.ceil(PROGRAM_DAYS / 7) }, (_, w) => Array.from({ length: 7 }, (_, d) => w * 7 + d + 1).filter((d) => d <= PROGRAM_DAYS));
 
@@ -92,7 +92,7 @@ export default function SelectPlanScreen() {
                           onPress={() => tapDay(d)}
                           style={[s.day, done && { backgroundColor: tint, borderColor: tint }, cur && { borderColor: tint, borderWidth: 2.5, backgroundColor: C.card }]}>
                           {done ? (
-                            <Ionicons name="checkmark" size={18} color={C.white} />
+                            <Ionicons name="checkmark" size={18} color={onFill(tint)} />
                           ) : rest ? (
                             <Ionicons name={cur ? 'moon' : 'cafe-outline'} size={cur ? 15 : 16} color={cur ? tint : C.muted} />
                           ) : (

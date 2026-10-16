@@ -13,7 +13,7 @@ import { DEFAULT_MONTHS, PlanPicker, planFor } from '@/components/plans/PlanPick
 import { formatINR, type PlanTier } from '@/data/plans';
 import { bmi, targets } from '@/lib/calc';
 import type { Profile } from '@/lib/store';
-import { BRAND, C, glow, MOTION, R, shadow, shadowLg, shadowSm } from '@/theme';
+import { BRAND, C, glow, ink, MOTION, R, shadow, shadowLg, shadowSm } from '@/theme';
 import { IMG } from './assets';
 import { GoalCurve } from './GoalCurve';
 import { GUTTER, fmtWeight, toUnit, type WeightUnit } from './kit';
@@ -58,8 +58,8 @@ export function Intro({ onStart, onLogin }: { onStart: () => void; onLogin: () =
       <Animated.View style={[StyleSheet.absoluteFill, photo]}>
         <Image source={IMG.intro} style={StyleSheet.absoluteFill} contentFit="cover" contentPosition="top" transition={300} />
       </Animated.View>
-      <LinearGradient colors={['rgba(19,35,31,0.55)', 'rgba(19,35,31,0)']} style={st.introTopScrim} />
-      <LinearGradient colors={['rgba(19,35,31,0)', 'rgba(19,35,31,0.6)', 'rgba(19,35,31,0.94)', C.navy]} locations={[0.28, 0.48, 0.66, 1]} style={StyleSheet.absoluteFill} />
+      <LinearGradient colors={[ink(0.55), ink(0)]} style={st.introTopScrim} />
+      <LinearGradient colors={[ink(0), ink(0.6), ink(0.94), C.navy]} locations={[0.28, 0.48, 0.66, 1]} style={StyleSheet.absoluteFill} />
       <SafeAreaView style={{ flex: 1, paddingHorizontal: GUTTER + 4 }} edges={['top', 'bottom']}>
         <Animated.View entering={nativeOnly(FadeIn.duration(MOTION.enter).delay(100))} style={st.introBar}>
           <View style={st.introBrand} accessible accessibilityRole="header" accessibilityLabel={BRAND}>
@@ -209,7 +209,7 @@ export function Welcome({ onNext }: { onNext: () => void }) {
             <Animated.View entering={nativeOnly(FadeIn.duration(700))} style={st.wGlow} />
             <Animated.View entering={nativeOnly(FadeInUp.duration(640).easing(EASE_OUT).withInitialValues({ transform: [{ translateY: 40 }], opacity: 0 }))} style={[st.wArch, shadowLg]}>
               <Image source={IMG.coach} style={StyleSheet.absoluteFill} contentFit="cover" contentPosition="top" transition={200} />
-              <LinearGradient colors={['rgba(21,94,80,0)', 'rgba(21,94,80,0.28)']} locations={[0.6, 1]} style={StyleSheet.absoluteFill} />
+              <LinearGradient colors={[ink(0), ink(0.28)]} locations={[0.6, 1]} style={StyleSheet.absoluteFill} />
             </Animated.View>
 
             <CoachChip icon="barbell" label="Custom workouts" tint={C.primaryDark} bg={C.primarySoft} delay={520} bob={5} style={{ top: 96, left: -30 }} />
@@ -264,8 +264,8 @@ export function Motivation({ male, onNext, goal, reward }: { male: boolean; onNe
       <Animated.View style={[StyleSheet.absoluteFill, photo]}>
         <Image source={male ? IMG.motivationMale : IMG.motivation} style={StyleSheet.absoluteFill} contentFit="cover" contentPosition="top" transition={300} />
       </Animated.View>
-      <LinearGradient colors={['rgba(19,35,31,0.7)', 'rgba(19,35,31,0)']} locations={[0, 0.4]} style={StyleSheet.absoluteFill} />
-      <LinearGradient colors={['rgba(19,35,31,0)', 'rgba(19,35,31,0.94)']} locations={[0.38, 0.8]} style={StyleSheet.absoluteFill} />
+      <LinearGradient colors={[ink(0.7), ink(0)]} locations={[0, 0.4]} style={StyleSheet.absoluteFill} />
+      <LinearGradient colors={[ink(0), ink(0.94)]} locations={[0.38, 0.8]} style={StyleSheet.absoluteFill} />
       <SafeAreaView style={{ flex: 1, paddingHorizontal: 24 }} edges={['top', 'bottom']}>
         <Animated.View entering={nativeOnly(ZoomIn.duration(MOTION.enter).delay(100))} style={st.motPill}>
           <Ionicons name="sparkles" size={12} color={C.gold} />
@@ -385,10 +385,10 @@ export function Analysis({ p, units, onDone }: { p: Profile; units: WeightUnit; 
 
           <Animated.View entering={nativeOnly(ZoomIn.duration(MOTION.enter).delay(200))} style={st.anRingWrap}>
             <Halo />
-            <Ring size={196} stroke={12} value={t / TASKS.length} track="rgba(18,168,125,0.14)" gradient={[C.primary, C.primaryDark]}>
+            <Ring size={196} stroke={12} value={t / TASKS.length} track="rgba(86,214,97,0.14)" gradient={[C.primary, C.primaryDark]}>
               <View style={st.anRingInner}>
                 <Animated.View key={done ? 'done' : current} entering={nativeOnly(ZoomIn.duration(MOTION.base))} style={[st.anRingIcon, done && { backgroundColor: C.primary }]}>
-                  <Ionicons name={done ? 'checkmark' : TASKS[current][0]} size={20} color={done ? C.white : C.primaryDark} />
+                  <Ionicons name={done ? 'checkmark' : TASKS[current][0]} size={20} color={done ? C.onPrimary : C.primaryDark} />
                 </Animated.View>
                 <Text style={st.anPctBig}>
                   {pct}
@@ -416,7 +416,7 @@ export function Analysis({ p, units, onDone }: { p: Profile; units: WeightUnit; 
                   <View style={[st.anRowIcon, isDone && { backgroundColor: C.primary }]}>
                     {isDone ? (
                       <Animated.View entering={nativeOnly(ZoomIn.duration(MOTION.base))}>
-                        <Ionicons name="checkmark" size={15} color={C.white} />
+                        <Ionicons name="checkmark" size={15} color={C.onPrimary} />
                       </Animated.View>
                     ) : (
                       <Ionicons name={icon} size={15} color={isActive ? C.primaryDark : C.muted} />
@@ -526,7 +526,7 @@ function Check({ text }: { text: string }) {
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
       <View style={st.resCheckDot}>
-        <Ionicons name="checkmark" size={12} color={C.white} />
+        <Ionicons name="checkmark" size={12} color={C.onPrimary} />
       </View>
       <Text style={st.resCheck}>{text}</Text>
     </View>
@@ -560,7 +560,7 @@ export function Paywall({ male, gaining, onSkip, onPaid, onDone }: { male: boole
       <ScrollView contentContainerStyle={{ paddingBottom: 24 }} showsVerticalScrollIndicator={false} bounces={false}>
         <View style={st.payHero}>
           <Image source={male ? IMG.paywallMale : IMG.paywall} style={StyleSheet.absoluteFill} contentFit="cover" transition={300} />
-          <LinearGradient colors={['rgba(12,10,9,0.45)', 'rgba(12,10,9,0)', 'rgba(255,255,255,0)', C.bg]} locations={[0, 0.3, 0.7, 1]} style={StyleSheet.absoluteFill} />
+          <LinearGradient colors={[ink(0.45), ink(0), 'rgba(255,255,255,0)', C.bg]} locations={[0, 0.3, 0.7, 1]} style={StyleSheet.absoluteFill} />
           <SafeAreaView edges={['top']} style={st.payTop}>
             <Pressable onPress={() => { tap(); onSkip(); }} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close" style={st.payClose}>
               <Ionicons name="close" size={20} color={C.white} />
@@ -640,7 +640,7 @@ const st = StyleSheet.create({
   introBrandText: { fontSize: 20, fontWeight: '900', color: C.white, letterSpacing: -0.4 },
   introLoginPill: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: R.pill, backgroundColor: 'rgba(255,255,255,0.16)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.28)' },
   introLoginText: { fontSize: 14, fontWeight: '700', color: C.white },
-  introEyebrow: { flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 6, borderRadius: R.pill, backgroundColor: 'rgba(18,168,125,0.22)', borderWidth: 1, borderColor: 'rgba(18,168,125,0.5)' },
+  introEyebrow: { flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 6, borderRadius: R.pill, backgroundColor: 'rgba(86,214,97,0.22)', borderWidth: 1, borderColor: 'rgba(86,214,97,0.5)' },
   introDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: C.primary },
   introEyebrowText: { fontSize: 11, fontWeight: '800', color: C.primaryTint, letterSpacing: 1.2 },
   introTitle: { fontSize: 40, lineHeight: 44, fontWeight: '900', color: C.white, letterSpacing: -1.2, marginTop: 14 },
@@ -671,8 +671,8 @@ const st = StyleSheet.create({
   wChipIcon: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
   wChipText: { fontSize: 13, fontWeight: '700', color: C.text, letterSpacing: -0.1 },
   wStatus: { position: 'absolute', bottom: 2, flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: C.primaryDark, borderRadius: R.pill, paddingVertical: 8, paddingHorizontal: 14, borderWidth: 3, borderColor: C.white },
-  wLive: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#5EE3B3' },
-  wStatusText: { fontSize: 12.5, fontWeight: '700', color: C.white, letterSpacing: 0.1 },
+  wLive: { width: 7, height: 7, borderRadius: 4, backgroundColor: C.onPrimary },
+  wStatusText: { fontSize: 12.5, fontWeight: '700', color: C.onPrimary, letterSpacing: 0.1 },
   wCopy: { alignItems: 'center', marginTop: 30, paddingHorizontal: GUTTER + 12 },
   wHelloRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   hello: { fontSize: 44, fontWeight: '800', color: C.text, letterSpacing: -1.2 },
@@ -687,7 +687,7 @@ const st = StyleSheet.create({
   motPillText: { fontSize: 11, fontWeight: '800', color: C.white, letterSpacing: 1.4 },
   motTitle: { fontSize: 34, lineHeight: 40, fontWeight: '900', color: C.white, marginTop: 14, letterSpacing: -0.8, maxWidth: 320 },
   motSub: { fontSize: 15, lineHeight: 21, color: 'rgba(255,255,255,0.85)', marginTop: 10, maxWidth: 300 },
-  motGlass: { padding: 16, borderRadius: R.xl, backgroundColor: 'rgba(19,35,31,0.45)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.22)' },
+  motGlass: { padding: 16, borderRadius: R.xl, backgroundColor: ink(0.45), borderWidth: 1, borderColor: 'rgba(255,255,255,0.22)' },
   motGoal: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   motKey: { fontSize: 11.5, fontWeight: '700', color: 'rgba(255,255,255,0.7)' },
   motVal: { fontSize: 22, fontWeight: '900', color: C.white, letterSpacing: -0.4, marginTop: 1, fontVariant: ['tabular-nums'] },
@@ -751,7 +751,7 @@ const st = StyleSheet.create({
   payPerkIcon: { width: 26, height: 26, borderRadius: 13, backgroundColor: C.primarySoft, alignItems: 'center', justifyContent: 'center' },
   payPerkText: { flexShrink: 1, fontSize: 12, fontWeight: '700', color: C.text },
   payTop: { flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: 16 },
-  payClose: { width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(12,10,9,0.35)', alignItems: 'center', justifyContent: 'center', marginTop: 6 },
+  payClose: { width: 34, height: 34, borderRadius: 17, backgroundColor: ink(0.35), alignItems: 'center', justifyContent: 'center', marginTop: 6 },
   payBadge: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: C.accent, borderRadius: R.pill, paddingHorizontal: 12, paddingVertical: 6, marginBottom: 12 },
   payBadgeText: { color: C.white, fontWeight: '800', fontSize: 12 },
   payTitle: { fontSize: 30, lineHeight: 35, fontWeight: '900', color: C.text, letterSpacing: -0.8 },

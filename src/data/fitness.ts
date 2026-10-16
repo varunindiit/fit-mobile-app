@@ -49,7 +49,7 @@ export const WORKOUTS: Workout[] = [
     ],
   },
   {
-    id: 'brisk-walk', title: 'Brisk Walk', category: 'Walking', minutes: 30, kcal: 140, level: 'Beginner', equipment: 'None', emoji: '🚶', color: '#0EA472', coach: 'Self-paced',
+    id: 'brisk-walk', title: 'Brisk Walk', category: 'Walking', minutes: 30, kcal: 140, level: 'Beginner', equipment: 'None', emoji: '🚶', color: '#27AD15', coach: 'Self-paced',
     description: 'A steady, guided brisk walk. Perfect after meals to help control blood sugar.',
     exercises: [
       { name: 'Warm-up walk', detail: '5 min easy pace', seconds: 300 },

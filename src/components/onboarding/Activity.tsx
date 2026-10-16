@@ -58,11 +58,11 @@ function ActivityCard<T extends string>({ o, on, onPress }: { o: ActivityOption<
       }}
       style={{ flex: 1 }}>
       <Animated.View style={[s.card, on ? glow(C.primaryDark) : shadowSm, card]}>
-        <View style={[s.icon, { backgroundColor: on ? 'rgba(255,255,255,0.14)' : C.primarySoft }]}>
-          <Ionicons name={o.icon} size={26} color={on ? C.white : C.primaryDark} />
+        <View style={[s.icon, { backgroundColor: on ? 'rgba(4,8,11,0.10)' : C.primarySoft }]}>
+          <Ionicons name={o.icon} size={26} color={on ? C.onPrimary : C.primaryDark} />
         </View>
-        <Text style={[s.title, on && { color: C.white }]}>{o.t}</Text>
-        <Text style={[s.sub, { color: on ? 'rgba(255,255,255,0.75)' : C.muted }]}>{o.s}</Text>
+        <Text style={[s.title, on && { color: C.onPrimary }]}>{o.t}</Text>
+        <Text style={[s.sub, { color: on ? 'rgba(4,8,11,0.68)' : C.muted }]}>{o.s}</Text>
         <View style={[s.radio, on && s.radioOn]}>
           {on && (
             <Animated.View entering={nativeOnly(ZoomIn.duration(MOTION.base))}>

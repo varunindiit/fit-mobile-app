@@ -32,7 +32,7 @@ import Animated, {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
 
-import { C, glow, MOTION, R, shadow, shadowSm } from '@/theme';
+import { C, glow, MOTION, onFill, R, shadow, shadowSm } from '@/theme';
 import { EASE_OUT, nativeOnly, PressableScale, useHeldWhileVisible, usePresence } from './motion';
 import { Glyph } from '@/components/Glyph';
 
@@ -194,7 +194,7 @@ export const T = StyleSheet.create({
 /* ---------- Buttons ---------- */
 
 const BTN = {
-  primary: { bg: C.primaryDark, fg: C.white, border: C.primaryDark },
+  primary: { bg: C.primaryBright, fg: C.onPrimary, border: C.primaryBright },
   secondary: { bg: C.primarySoft, fg: C.primaryDark, border: C.primarySoft },
   outline: { bg: C.card, fg: C.text, border: C.border },
   ghost: { bg: 'transparent', fg: C.primaryDark, border: 'transparent' },
@@ -227,6 +227,7 @@ export function Button({
   const off = disabled || loading;
   const offPrimary = !!disabled && (variant === 'primary' || variant === 'dark');
   const fg = offPrimary ? C.white : v.fg;
+  const spinner = variant === 'primary' ? C.onPrimary : v.fg;
   return (
     <PressableScale
       disabled={off}
@@ -242,12 +243,12 @@ export function Button({
         s.btn,
         small && s.btnSmall,
         { backgroundColor: v.bg, borderColor: v.border },
-        variant === 'primary' && !off && !small && glow(C.primaryDark),
+        variant === 'primary' && !off && !small && glow(C.primaryBright),
         offPrimary && s.btnOff,
         style,
       ]}>
       {loading ? (
-        <ActivityIndicator color={v.fg} />
+        <ActivityIndicator color={spinner} />
       ) : (
         <>
           {icon && <Ionicons name={icon} size={small ? 16 : 19} color={fg} style={{ marginRight: 8 }} />}
@@ -273,8 +274,8 @@ export function Chip({ label, selected, onPress, icon, color = C.primaryDark, st
         onPress?.();
       }}
       style={[s.chip, selected && { backgroundColor: color, borderColor: color }, style]}>
-      {icon && <Ionicons name={icon} size={15} color={selected ? C.white : C.textSoft} style={{ marginRight: 6 }} />}
-      <Text style={[s.chipText, selected && { color: C.white }]}>{label}</Text>
+      {icon && <Ionicons name={icon} size={15} color={selected ? onFill(color) : C.textSoft} style={{ marginRight: 6 }} />}
+      <Text style={[s.chipText, selected && { color: onFill(color) }]}>{label}</Text>
     </PressableScale>
   );
 }
@@ -330,7 +331,7 @@ export function OptionCard({
         {subtitle && <Text style={s.optionSub}>{subtitle}</Text>}
       </View>
       <View style={[multi ? s.check : s.radio, selected && (multi ? s.checkOn : s.radioOn)]}>
-        {selected && (multi ? <Ionicons name="checkmark" size={15} color={C.white} /> : <View style={s.radioDot} />)}
+        {selected && (multi ? <Ionicons name="checkmark" size={15} color={C.onPrimary} /> : <View style={s.radioDot} />)}
       </View>
     </PressableScale>
   );
@@ -412,7 +413,7 @@ export function Stepper({ value, onChange, step = 1, min = 0, max = 999, format 
     <View style={s.stepper}>
       <IconButton icon="remove" bg={C.primarySoft} color={C.primaryDark} onPress={() => set(latest.current - step)} />
       <Text style={s.stepperValue}>{format ? format(value) : value}</Text>
-      <IconButton icon="add" bg={C.primaryDark} color={C.white} onPress={() => set(latest.current + step)} />
+      <IconButton icon="add" bg={C.primaryDark} color={C.onPrimary} onPress={() => set(latest.current + step)} />
     </View>
   );
 }
@@ -689,7 +690,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
           exiting={nativeOnly(FadeOutUp.duration(MOTION.base))}
           style={[s.toast, { top: insets.top + 10 }]}>
           <View style={s.toastIcon}>
-            <Ionicons name={msg.icon} size={16} color={C.white} />
+            <Ionicons name={msg.icon} size={16} color={C.onPrimary} />
           </View>
           <Text style={s.toastText}>{msg.text}</Text>
         </Animated.View>

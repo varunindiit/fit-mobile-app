@@ -20,7 +20,7 @@ import { EASE_OUT } from '@/components/ui';
 import { BRAND } from '@/theme';
 
 /** Must match the native splash in app.json (expo-splash-screen backgroundColor / image / imageWidth). */
-const SPLASH_BG = '#155E50';
+const SPLASH_BG = '#56D661';
 const ICON = require('@/assets/images/splash-icon.png');
 const ICON_SIZE = 88;
 
@@ -116,7 +116,7 @@ export function AnimatedSplash({ ready, onReveal, onDone }: { ready: boolean; /*
 const s = StyleSheet.create({
   root: { backgroundColor: SPLASH_BG, zIndex: 100 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  halo: { position: 'absolute', width: 120, height: 120, borderRadius: 60, backgroundColor: '#3BE3A6' },
+  halo: { position: 'absolute', width: 120, height: 120, borderRadius: 60, backgroundColor: '#FFFFFF' },
   nameWrap: { position: 'absolute', top: '50%', alignItems: 'center' },
   nameRow: { flexDirection: 'row' },
   letter: { fontSize: 34, fontWeight: '800', color: '#FFFFFF', letterSpacing: 0.5 },

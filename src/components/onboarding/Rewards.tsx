@@ -6,7 +6,7 @@ import Animated, { FadeIn, ZoomIn, interpolateColor, useAnimatedStyle } from 're
 
 import { useOn } from '@/components/onboarding/kit';
 import { nativeOnly, PressableScale, tap, type IconName } from '@/components/ui';
-import { C, MOTION, R, shadowSm } from '@/theme';
+import { C, ink, MOTION, R, shadowSm } from '@/theme';
 
 export type RewardOption = { t: string; label: string; icon: IconName; img: number };
 
@@ -35,7 +35,7 @@ export function RewardWall({ options, value, onToggle }: { options: RewardOption
         <View style={[s.stripIcon, { backgroundColor: n > 0 ? C.gold : C.skeleton }]}>
           <Ionicons name="trophy" size={16} color={n > 0 ? C.navy : C.muted} />
         </View>
-        <Text style={[s.stripText, n > 0 && { color: C.white }]}>
+        <Text style={[s.stripText, n > 0 && { color: C.onPrimary }]}>
           {n === 0 ? 'Pick at least one reward to keep in mind.' : `${n} reward${n === 1 ? '' : 's'} waiting at the finish line`}
         </Text>
       </Animated.View>
@@ -61,12 +61,12 @@ function RewardTile({ o, height, on, onPress }: { o: RewardOption; height: numbe
       <Animated.View style={[s.tile, { height }, press]}>
         <View style={s.clip}>
           <Image source={o.img} style={[StyleSheet.absoluteFill, { borderRadius: R.xl }]} contentFit="cover" transition={200} />
-          <LinearGradient colors={['rgba(19,35,31,0)', 'rgba(19,35,31,0.82)']} locations={[0.45, 1]} style={StyleSheet.absoluteFill} />
+          <LinearGradient colors={[ink(0), ink(0.82)]} locations={[0.45, 1]} style={StyleSheet.absoluteFill} />
         </View>
         <Animated.View pointerEvents="none" style={[s.ring, ring]} />
         <View style={s.foot}>
           <View style={[s.icon, on && { backgroundColor: C.primary }]}>
-            <Ionicons name={o.icon} size={13} color={C.white} />
+            <Ionicons name={o.icon} size={13} color={on ? C.onPrimary : C.white} />
           </View>
           <Text style={s.label} numberOfLines={2}>
             {o.label}
@@ -75,7 +75,7 @@ function RewardTile({ o, height, on, onPress }: { o: RewardOption; height: numbe
         <View style={[s.check, on && s.checkOn]}>
           {on && (
             <Animated.View entering={nativeOnly(ZoomIn.duration(MOTION.base))}>
-              <Ionicons name="checkmark" size={14} color={C.white} />
+              <Ionicons name="checkmark" size={14} color={C.onPrimary} />
             </Animated.View>
           )}
         </View>
@@ -93,7 +93,7 @@ const s = StyleSheet.create({
   foot: { position: 'absolute', left: 12, right: 12, bottom: 12, gap: 6 },
   icon: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.22)' },
   label: { fontSize: 15, fontWeight: '800', color: C.white, letterSpacing: -0.2, lineHeight: 19 },
-  check: { position: 'absolute', top: 10, right: 10, width: 26, height: 26, borderRadius: 13, borderWidth: 2, borderColor: 'rgba(255,255,255,0.85)', backgroundColor: 'rgba(19,35,31,0.25)', alignItems: 'center', justifyContent: 'center' },
+  check: { position: 'absolute', top: 10, right: 10, width: 26, height: 26, borderRadius: 13, borderWidth: 2, borderColor: 'rgba(255,255,255,0.85)', backgroundColor: ink(0.25), alignItems: 'center', justifyContent: 'center' },
   checkOn: { backgroundColor: C.primary, borderColor: C.white },
 
   strip: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 16, padding: 12, borderRadius: R.lg, backgroundColor: C.card, borderWidth: 1, borderColor: C.borderSoft },

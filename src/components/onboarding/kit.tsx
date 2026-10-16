@@ -112,8 +112,8 @@ export function ChoiceRow({
     backgroundColor: interpolateColor(p.get(), [0, 1], [C.card, C.primary]),
     borderColor: interpolateColor(p.get(), [0, 1], [C.border, C.primary]),
   }));
-  const label = useAnimatedStyle(() => ({ color: interpolateColor(p.get(), [0, 1], [C.text, C.white]) }));
-  const subStyle = useAnimatedStyle(() => ({ color: interpolateColor(p.get(), [0, 1], [C.muted, 'rgba(255,255,255,0.85)']) }));
+  const label = useAnimatedStyle(() => ({ color: interpolateColor(p.get(), [0, 1], [C.text, C.onPrimary]) }));
+  const subStyle = useAnimatedStyle(() => ({ color: interpolateColor(p.get(), [0, 1], [C.muted, 'rgba(4,8,11,0.68)']) }));
   const check = useAnimatedStyle(() => ({ opacity: p.get(), transform: [{ scale: 0.6 + p.get() * 0.4 }] }));
   return (
     <View>
@@ -138,7 +138,7 @@ export function ChoiceRow({
           )}
           {icon && (
             <View style={[s.rowEmoji, selected && { backgroundColor: 'rgba(255,255,255,0.22)' }]}>
-              <Ionicons name={icon} size={18} color={selected ? C.white : C.primaryDark} />
+              <Ionicons name={icon} size={18} color={selected ? C.onPrimary : C.primaryDark} />
             </View>
           )}
           <View style={{ flex: 1 }}>
@@ -305,7 +305,7 @@ export function UnitToggle<T extends string>({ options, value, onChange }: { opt
       <Animated.View style={[s.unitThumb, thumb]} />
       {options.map((o) => (
         <Pressable key={o} accessibilityRole="tab" accessibilityState={{ selected: value === o }} onPress={() => { tap(); onChange(o); }} style={s.unitItem}>
-          <Text style={[s.unitText, value === o && { color: C.white }]}>{o}</Text>
+          <Text style={[s.unitText, value === o && { color: C.onPrimary }]}>{o}</Text>
         </Pressable>
       ))}
     </View>

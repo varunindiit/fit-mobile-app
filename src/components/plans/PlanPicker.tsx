@@ -5,7 +5,7 @@ import Animated, { FadeIn, interpolate, interpolateColor, useAnimatedStyle, useS
 
 import { Card, CountUp, EASE_OUT, enter, IconTile, nativeOnly, PressableScale, SectionTitle, T, tap, type IconName } from '@/components/ui';
 import { formatINR, PLAN_TIERS, type PlanTier } from '@/data/plans';
-import { C, MOTION, R } from '@/theme';
+import { C, MOTION, onFill, R } from '@/theme';
 
 /** Presentation accents per tier: Smart = brand teal, Pro = green-ink + gold. */
 export const ACCENT: Record<PlanTier, { color: string; fill: string; check: string; icon: IconName; iconColor: string; tile: string }> = {
@@ -115,7 +115,7 @@ function TierCard({ tier, selected, onPress }: { tier: (typeof PLAN_TIERS)[numbe
       style={{ flex: 1 }}>
       <Animated.View style={[st.tier, box]}>
         <Animated.View style={[st.tierCheck, { backgroundColor: a.fill }, check]}>
-          <Ionicons name="checkmark" size={13} color={tier.id === 'pro' ? C.gold : C.white} />
+          <Ionicons name="checkmark" size={13} color={tier.id === 'pro' ? C.gold : C.onPrimary} />
         </Animated.View>
         <IconTile icon={a.icon} color={a.iconColor} bg={a.tile} size={38} />
         <Text style={st.tierName}>{tier.name.replace('Fittelo ', '')}</Text>
@@ -140,8 +140,8 @@ function DurationChip({ months, perMonth, off, badge, fill, selected, onPress }:
     backgroundColor: interpolateColor(sel.get(), [0, 1], [C.card, fill]),
     borderColor: interpolateColor(sel.get(), [0, 1], [C.border, fill]),
   }));
-  const strong = useAnimatedStyle(() => ({ color: interpolateColor(sel.get(), [0, 1], [C.text, C.white]) }));
-  const soft = useAnimatedStyle(() => ({ color: interpolateColor(sel.get(), [0, 1], [C.textSoft, 'rgba(255,255,255,0.78)']) }));
+  const strong = useAnimatedStyle(() => ({ color: interpolateColor(sel.get(), [0, 1], [C.text, onFill(fill)]) }));
+  const soft = useAnimatedStyle(() => ({ color: interpolateColor(sel.get(), [0, 1], [C.textSoft, onFill(fill) === C.white ? 'rgba(255,255,255,0.78)' : 'rgba(4,8,11,0.62)']) }));
   const best = badge === 'Best value';
   return (
     <PressableScale

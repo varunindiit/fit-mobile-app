@@ -7,7 +7,7 @@ import Animated, { cancelAnimation, Easing, useAnimatedStyle, useReducedMotion, 
 import { Glyph } from '@/components/Glyph';
 import { EXERCISE_ART, EXERCISE_ART_B } from '@/components/glyphs';
 
-const ART: [string, string] = ['#F6FBF8', '#E1F2EA'];
+const ART: [string, string] = ['#F5FDF4', '#E2F6DF'];
 /** 2-frame rep loop: hold each pose, then a quick cross-fade — reads like a GIF. */
 const HOLD = 420;
 const SWAP = 160;

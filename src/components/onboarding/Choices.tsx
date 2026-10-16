@@ -54,7 +54,7 @@ function StoryTile({ o, wide, on, onPress }: { o: StoryOption; wide: boolean; on
       style={wide ? s.cellWide : s.cell}>
       <Animated.View style={[s.tile, wide && s.tileWide, tile]}>
         <View style={[s.tileIcon, wide && { marginBottom: 0 }, { backgroundColor: on ? C.primary : C.surfaceAlt }]}>
-          <Ionicons name={o.icon} size={20} color={on ? C.white : C.primaryDark} />
+          <Ionicons name={o.icon} size={20} color={on ? C.onPrimary : C.primaryDark} />
         </View>
         <View style={wide ? { flex: 1 } : undefined}>
           <Text style={s.tileTitle}>{o.t}</Text>
@@ -62,7 +62,7 @@ function StoryTile({ o, wide, on, onPress }: { o: StoryOption; wide: boolean; on
         </View>
         {on && (
           <Animated.View entering={nativeOnly(ZoomIn.duration(MOTION.base))} style={[s.tick, wide && s.tickWide]}>
-            <Ionicons name="checkmark" size={13} color={C.white} />
+            <Ionicons name="checkmark" size={13} color={C.onPrimary} />
           </Animated.View>
         )}
       </Animated.View>
@@ -103,19 +103,19 @@ function IntensityCard({ o, on, onPress }: { o: IntensityOption; on: boolean; on
       }}>
       <Animated.View layout={layoutTransition} style={[s.card, on ? glow(C.primaryDark) : shadowSm, card]}>
         <View style={s.cardRow}>
-          <View style={[s.meter, { backgroundColor: on ? 'rgba(255,255,255,0.12)' : C.surfaceAlt }]}>
+          <View style={[s.meter, { backgroundColor: on ? 'rgba(4,8,11,0.12)' : C.surfaceAlt }]}>
             {[1, 2, 3].map((b) => (
               <View
                 key={b}
-                style={[s.bar, { height: 8 + b * 6 }, { backgroundColor: b <= o.bars ? (on ? C.gold : C.primary) : on ? 'rgba(255,255,255,0.22)' : C.border }]}
+                style={[s.bar, { height: 8 + b * 6 }, { backgroundColor: b <= o.bars ? (on ? C.onPrimary : C.primary) : on ? 'rgba(4,8,11,0.22)' : C.border }]}
               />
             ))}
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={[s.cardTitle, on && { color: C.white }]}>{o.t}</Text>
-            <Text style={[s.cardTag, { color: on ? C.primaryTint : C.muted }]}>{o.tag}</Text>
+            <Text style={[s.cardTitle, on && { color: C.onPrimary }]}>{o.t}</Text>
+            <Text style={[s.cardTag, { color: on ? 'rgba(4,8,11,0.62)' : C.muted }]}>{o.tag}</Text>
           </View>
-          <View style={[s.radio, on && s.radioOn]}>{on && <Ionicons name="checkmark" size={14} color={C.primaryDark} />}</View>
+          <View style={[s.radio, on && s.radioOn]}>{on && <Ionicons name="checkmark" size={14} color={C.onPrimary} />}</View>
         </View>
         {on && (
           <Animated.Text entering={nativeOnly(FadeIn.duration(MOTION.base).delay(80))} style={s.cardDetail}>
@@ -154,5 +154,5 @@ const s = StyleSheet.create({
   cardTag: { fontSize: 12.5, fontWeight: '700', marginTop: 2 },
   radio: { width: 24, height: 24, borderRadius: 12, borderWidth: 1.5, borderColor: C.border, alignItems: 'center', justifyContent: 'center' },
   radioOn: { backgroundColor: C.white, borderColor: C.white },
-  cardDetail: { fontSize: 13.5, color: 'rgba(255,255,255,0.85)', lineHeight: 19, marginTop: 12, paddingLeft: 64 },
+  cardDetail: { fontSize: 13.5, color: 'rgba(4,8,11,0.72)', lineHeight: 19, marginTop: 12, paddingLeft: 64 },
 });

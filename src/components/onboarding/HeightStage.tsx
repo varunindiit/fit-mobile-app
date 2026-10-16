@@ -10,7 +10,7 @@ import { IMG } from '@/components/onboarding/assets';
 import { PressableScale, tap } from '@/components/ui';
 import { cmToFtIn } from '@/lib/calc';
 import type { Profile } from '@/lib/store';
-import { C, G, R, shadowSm } from '@/theme';
+import { C, G, ink, R, shadowSm } from '@/theme';
 
 const STAGE_H = 250;
 const STAGE_W = 128;
@@ -149,7 +149,7 @@ const s = StyleSheet.create({
   markText: { width: 22, fontSize: 10, lineHeight: MARK_H, fontWeight: '700', color: C.muted, textAlign: 'right', fontVariant: ['tabular-nums'] },
   markTick: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: C.border },
   floor: { position: 'absolute', left: 26, right: 0, bottom: BASE - 1, height: 2, borderRadius: 1, backgroundColor: C.primaryTint },
-  shadow: { position: 'absolute', left: 52, right: 26, bottom: BASE - 5, height: 9, borderRadius: R.pill, backgroundColor: 'rgba(21,94,80,0.12)' },
+  shadow: { position: 'absolute', left: 52, right: 26, bottom: BASE - 5, height: 9, borderRadius: R.pill, backgroundColor: ink(0.12) },
   figure: { position: 'absolute', bottom: BASE },
   marker: { position: 'absolute', left: 22, right: 0, flexDirection: 'row', alignItems: 'center', height: 2 },
   markerDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: C.primary, borderWidth: 2, borderColor: C.card, marginRight: -2 },

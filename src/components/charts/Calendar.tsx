@@ -46,7 +46,7 @@ export function WeekStrip({ week, days, onPress }: { week: string[]; days: Set<s
             <Text style={[s.letter, isToday && { color: C.primaryDark }]}>{LETTERS[i]}</Text>
             <View style={[s.dayCircle, future && s.dayFuture, done && s.dayDone, isToday && !done && s.dayToday, isToday && done && s.dayTodayDone]}>
               {done ? (
-                <Ionicons name="checkmark" size={17} color={C.white} />
+                <Ionicons name="checkmark" size={17} color={C.onPrimary} />
               ) : (
                 <Text style={[s.dayNum, isToday && { color: C.primaryDark, fontWeight: '800' }, future && { color: C.muted }]}>{parseKey(k).getDate()}</Text>
               )}
@@ -103,7 +103,7 @@ export function MonthCalendar({ month, days, selected, onSelect }: { month: Date
               {joinL && <View style={[s.band, { left: 0, right: '50%' }]} />}
               {joinR && <View style={[s.band, { left: '50%', right: 0 }]} />}
               <View style={[s.mCircle, isToday && s.mToday, done && s.mDone, isToday && done && !isSel && s.mTodayDone, isSel && !done && s.mSel, isSel && done && s.mSelDone]}>
-                <Text style={[s.mNum, future && { color: C.muted }, (done || isSel) && { color: C.white, fontWeight: '700' }, isToday && !done && !isSel && { color: C.primaryDark, fontWeight: '800' }]}>{parseKey(k).getDate()}</Text>
+                <Text style={[s.mNum, future && { color: C.muted }, (done || isSel) && { color: done ? C.onPrimary : C.white, fontWeight: '700' }, isToday && !done && !isSel && { color: C.primaryDark, fontWeight: '800' }]}>{parseKey(k).getDate()}</Text>
               </View>
             </Pressable>
           );

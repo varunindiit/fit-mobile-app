@@ -145,7 +145,7 @@ export default function ReportsScreen() {
                 openLog();
               }}
               style={st.logPill}>
-              <Ionicons name="add" size={16} color={C.white} />
+              <Ionicons name="add" size={16} color={C.onPrimary} />
               <Text style={st.logPillText}>Log</Text>
             </PressableScale>
           </SectionHead>
@@ -197,7 +197,7 @@ export default function ReportsScreen() {
               <Text style={st.kgValue}>{val.toFixed(1)}</Text>
               <Text style={st.kgUnit}>{units}</Text>
             </View>
-            <IconButton icon="add" size={26} bg={C.primaryDark} color={C.white} onPress={() => adj(0.1)} style={st.kgBtnSolid} />
+            <IconButton icon="add" size={26} bg={C.primaryDark} color={C.onPrimary} onPress={() => adj(0.1)} style={st.kgBtnSolid} />
           </View>
           <View style={st.deltaRow}>
             <Ionicons name={!latest ? 'flag' : delta === 0 ? 'remove' : delta > 0 ? 'caret-up' : 'caret-down'} size={14} color={!latest ? C.primary : C.textSoft} />
@@ -611,7 +611,7 @@ const st = StyleSheet.create({
   streakNum: { ...T.num, fontSize: 17 },
   streakUnit: { fontSize: 13, fontWeight: '600', color: C.textSoft, letterSpacing: 0 },
   logPill: { flexDirection: 'row', alignItems: 'center', gap: 2, backgroundColor: C.primaryDark, borderRadius: R.pill, paddingLeft: 10, paddingRight: 14, height: 32, ...glow(C.primaryDark) },
-  logPillText: { color: C.white, fontSize: 14, fontWeight: '700' },
+  logPillText: { color: C.onPrimary, fontSize: 14, fontWeight: '700' },
   cardHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8 },
   titleWithIcon: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   wStats: { flexDirection: 'row', alignItems: 'flex-end' },

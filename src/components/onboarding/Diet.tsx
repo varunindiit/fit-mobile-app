@@ -7,7 +7,7 @@ import Animated, { ZoomIn, interpolateColor, useAnimatedStyle, useSharedValue, w
 
 import { useOn } from '@/components/onboarding/kit';
 import { CountUp, nativeOnly, PressableScale, tap } from '@/components/ui';
-import { C, MOTION, R, shadowSm } from '@/theme';
+import { C, ink, MOTION, R, shadowSm } from '@/theme';
 
 export type DietOption = { t: string; label: string; s: string; img: number };
 
@@ -56,7 +56,7 @@ function DietCard({ o, wide, on, onPress }: { o: DietOption; wide: boolean; on: 
         </View>
         {on && (
           <Animated.View entering={nativeOnly(ZoomIn.duration(MOTION.base))} style={[s.tick, wide && s.tickWide]}>
-            <Ionicons name="checkmark" size={13} color={C.white} />
+            <Ionicons name="checkmark" size={13} color={C.onPrimary} />
           </Animated.View>
         )}
       </Animated.View>
@@ -71,7 +71,7 @@ export function PlateHero({ img, label }: { img: number; label: string }) {
   return (
     <View style={s.hero}>
       <Image source={img} style={StyleSheet.absoluteFill} contentFit="cover" transition={200} />
-      <LinearGradient colors={['rgba(19,35,31,0)', 'rgba(19,35,31,0.85)']} locations={[0.4, 1]} style={StyleSheet.absoluteFill} />
+      <LinearGradient colors={[ink(0), ink(0.85)]} locations={[0.4, 1]} style={StyleSheet.absoluteFill} />
       <Animated.View entering={nativeOnly(ZoomIn.duration(MOTION.enter).delay(380))} style={s.heroBadge}>
         <Ionicons name="restaurant" size={12} color={C.primaryDark} />
         <Text style={s.heroBadgeText}>{label}</Text>

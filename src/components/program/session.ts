@@ -43,7 +43,7 @@ export const itemLabel = (it: SessionItem) => (it.seconds ? fmtClock(it.seconds)
 const FOCUS_COLORS: Record<string, string> = {
   'Rectus abdominis': '#3B82F6',
   Obliques: '#F59E0B',
-  'Full body': '#0EA472',
+  'Full body': '#27AD15',
   Cardio: '#E5484D',
   Quadriceps: '#8B5CF6',
   Glutes: '#EC4899',

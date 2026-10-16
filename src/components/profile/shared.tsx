@@ -162,7 +162,7 @@ export function Avatar({ name, size = 68, premium, ring }: { name: string; size?
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={{ width: size, height: size, borderRadius: size / 2, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' }}>
-        <Text style={{ color: premium ? C.navy : C.white, fontSize: size * 0.36, fontWeight: '800' }}>{initials(name)}</Text>
+        <Text style={{ color: premium ? C.navy : C.onPrimary, fontSize: size * 0.36, fontWeight: '800' }}>{initials(name)}</Text>
       </LinearGradient>
     );
   const outer = size + 10;

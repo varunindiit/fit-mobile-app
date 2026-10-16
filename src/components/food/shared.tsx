@@ -108,7 +108,7 @@ export function CheckMark({ on, size = 22 }: { on: boolean; size?: number }) {
     <View style={[st.check, { width: size, height: size, borderRadius: size * 0.32 }, on && st.checkOn]}>
       {on && (
         <Animated.View entering={nativeOnly(ZoomIn.duration(MOTION.base))}>
-          <Ionicons name="checkmark" size={size * 0.68} color={C.white} />
+          <Ionicons name="checkmark" size={size * 0.68} color={C.onPrimary} />
         </Animated.View>
       )}
     </View>

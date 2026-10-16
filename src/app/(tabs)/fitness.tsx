@@ -362,7 +362,7 @@ export default function TrainingScreen() {
                     </View>
                     {doneToday.has(w.id) && (
                       <View style={st.wDone}>
-                        <Ionicons name="checkmark" size={13} color={C.white} />
+                        <Ionicons name="checkmark" size={13} color={C.onPrimary} />
                       </View>
                     )}
                   </View>
@@ -404,7 +404,7 @@ export default function TrainingScreen() {
                   setGoalDraft(n);
                 }}
                 style={[st.goalOpt, on && st.goalOptOn]}>
-                <Text style={[st.goalOptText, on && { color: C.white }]}>{n}</Text>
+                <Text style={[st.goalOptText, on && { color: C.onPrimary }]}>{n}</Text>
               </PressableScale>
             );
           })}

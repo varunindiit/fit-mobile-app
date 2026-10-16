@@ -527,7 +527,7 @@ function SendButton({ enabled, onPress }: { enabled: boolean; onPress: () => voi
   return (
     <PressableScale scaleTo={0.9} onPress={onPress} disabled={!enabled} accessibilityRole="button" accessibilityLabel="Send" accessibilityState={{ disabled: !enabled }}>
       <Animated.View style={[st.send, fill]}>
-        <Ionicons name="arrow-up" size={22} color={C.white} />
+        <Ionicons name="arrow-up" size={22} color={C.onPrimary} />
       </Animated.View>
     </PressableScale>
   );
@@ -583,7 +583,7 @@ const st = StyleSheet.create({
   dayLabel: { ...T.tiny, textAlign: 'center', letterSpacing: 0.8 },
   bubble: { maxWidth: '86%', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 10 },
   user: { alignSelf: 'flex-end', backgroundColor: C.primaryDark, borderBottomRightRadius: 6 },
-  userText: { color: C.white, fontSize: 15, lineHeight: 21 },
+  userText: { color: C.onPrimary, fontSize: 15, lineHeight: 21 },
   botRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8 },
   botAvatar: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginBottom: 2, backgroundColor: C.aiSoft, borderWidth: 1, borderColor: C.aiBorder },
   bot: { backgroundColor: C.aiSoft, borderBottomLeftRadius: 6, borderWidth: 1, borderColor: C.aiBorder, maxWidth: '96%' },

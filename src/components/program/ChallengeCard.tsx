@@ -11,7 +11,7 @@ import { PressableScale, Ring, tap, type IconName } from '@/components/ui';
 import { C, R, glow } from '@/theme';
 
 /** Brand surface for the card, whatever the program: deep green ink with a mint glow. */
-const INK: [string, string, string] = ['#1F8A6E', '#155E50', '#0E3B33'];
+const INK: [string, string, string] = ['#269117', '#177A0A', '#0F4F06'];
 
 const DAYS = 30;
 
@@ -61,8 +61,8 @@ export function ChallengeCard({ title, bolts, colors, day, done, stats, note, em
         <Svg pointerEvents="none" width={320} height={320} style={s.glowA}>
           <Defs>
             <RadialGradient id="chGlow" cx="50%" cy="50%" r="50%">
-              <Stop offset="0" stopColor="#3BE3A6" stopOpacity={0.35} />
-              <Stop offset="1" stopColor="#3BE3A6" stopOpacity={0} />
+              <Stop offset="0" stopColor={C.primaryBright} stopOpacity={0.35} />
+              <Stop offset="1" stopColor={C.primaryBright} stopOpacity={0} />
             </RadialGradient>
           </Defs>
           <Circle cx={160} cy={160} r={160} fill="url(#chGlow)" />
@@ -79,7 +79,7 @@ export function ChallengeCard({ title, bolts, colors, day, done, stats, note, em
             </Text>
             <Bolts n={bolts} />
           </View>
-          <Ring size={42} stroke={4} value={done / DAYS} track="rgba(255,255,255,0.18)" gradient={['#3BE3A6', C.primaryTint]}>
+          <Ring size={42} stroke={4} value={done / DAYS} track="rgba(255,255,255,0.18)" gradient={[C.primaryBright, C.primaryTint]}>
             <Text style={s.pct}>{pct}%</Text>
           </Ring>
         </View>
@@ -118,7 +118,7 @@ export function ChallengeCard({ title, bolts, colors, day, done, stats, note, em
 
         <View style={s.cta}>
           <View style={s.ctaIcon}>
-            <Ionicons name={ctaIcon} size={14} color={C.white} style={ctaIcon === 'play' ? { marginLeft: 2 } : undefined} />
+            <Ionicons name={ctaIcon} size={14} color={C.onPrimary} style={ctaIcon === 'play' ? { marginLeft: 2 } : undefined} />
           </View>
           <Text style={s.ctaText}>{cta}</Text>
           <Ionicons name="arrow-forward" size={18} color={C.primaryDark} />
@@ -138,7 +138,7 @@ function Chip({ icon, text }: { icon: IconName; text: string }) {
 }
 
 const s = StyleSheet.create({
-  shell: { borderRadius: R.xl, backgroundColor: '#155E50' },
+  shell: { borderRadius: R.xl, backgroundColor: '#177A0A' },
   card: { borderRadius: R.xl, padding: 18, overflow: 'hidden' },
   glowA: { position: 'absolute', right: -110, top: -40 },
   glowB: { position: 'absolute', width: 180, height: 180, borderRadius: 90, left: -70, bottom: -90, backgroundColor: 'rgba(59,227,166,0.08)' },
@@ -159,7 +159,7 @@ const s = StyleSheet.create({
   artHalo: { position: 'absolute', bottom: 8, width: 116, height: 116, borderRadius: 58, backgroundColor: 'rgba(201,235,221,0.14)', borderWidth: 1, borderColor: 'rgba(201,235,221,0.3)' },
   strip: { flexDirection: 'row', gap: 2.5, marginTop: 16 },
   seg: { flex: 1, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.14)' },
-  segDone: { backgroundColor: '#3BE3A6' },
+  segDone: { backgroundColor: C.primaryBright },
   segNext: { backgroundColor: C.gold },
   foot: { color: 'rgba(255,255,255,0.75)', fontSize: 12, fontWeight: '700', marginTop: 10 },
   cta: { flexDirection: 'row', alignItems: 'center', gap: 10, height: 52, marginTop: 14, paddingLeft: 8, paddingRight: 16, borderRadius: R.pill, backgroundColor: C.white },

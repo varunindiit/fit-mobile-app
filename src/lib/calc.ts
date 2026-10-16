@@ -32,7 +32,7 @@ export const relDay = (k: string) => {
 
 export const bmi = (kg: number, cm: number) => kg / Math.pow(cm / 100, 2);
 export const bmiLabel = (b: number) =>
-  b < 18.5 ? { label: 'Underweight', color: '#3B82F6' } : b < 23 ? { label: 'Healthy', color: '#0EA472' } : b < 27.5 ? { label: 'Overweight', color: '#F59E0B' } : { label: 'Obese', color: '#E5484D' };
+  b < 18.5 ? { label: 'Underweight', color: '#3B82F6' } : b < 23 ? { label: 'Healthy', color: '#27AD15' } : b < 27.5 ? { label: 'Overweight', color: '#F59E0B' } : { label: 'Obese', color: '#E5484D' };
 
 const ACTIVITY_FACTOR: Record<string, number> = { sedentary: 1.2, light: 1.375, moderate: 1.55, very: 1.725 };
 

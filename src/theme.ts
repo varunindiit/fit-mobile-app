@@ -2,15 +2,23 @@ import { Platform } from 'react-native';
 
 /**
  * Fittelo design tokens.
- * Two-tier brand: `primary` (vivid) for progress, highlights and active states;
- * `primaryDark` (deep) for filled buttons, the quick-log button and text on mint.
+ * One brand green, #56D661, everywhere: buttons, text, sliders, progress, active states,
+ * the splash and the app icon. The three `primary*` keys are kept so a future shade split
+ * is a one-file edit, but today they all resolve to the same value.
+ *
+ * #56D661 is light (1.88:1 on white), so anything sitting ON a green fill uses `onPrimary`,
+ * never white. For a fill whose colour is only known at runtime, use `onFill()`.
  * Neutrals are warm "stone" greys; cards stay white on a warm canvas.
  */
 export const C = {
-  primary: '#12A87D',
-  primaryDark: '#155E50',
-  primarySoft: '#E4F5EE',
-  primaryTint: '#C9EBDD',
+  /** The brand green. Content on top of it must be `onPrimary`. */
+  primaryBright: '#56D661',
+  /** Ink for text and icons sitting on any green fill. */
+  onPrimary: '#04080B',
+  primary: '#56D661',
+  primaryDark: '#56D661',
+  primarySoft: '#E6FCE8',
+  primaryTint: '#B3F2B9',
   accent: '#F2703A',
   accentSoft: '#FEEDE4',
   bg: '#F5F5F4',
@@ -39,7 +47,7 @@ export const C = {
   warning: '#C98A06',
   warningSoft: '#FDF4DC',
   gold: '#F5C451',
-  navy: '#13231F',
+  navy: '#121417',
   white: '#FFFFFF',
   overlay: 'rgba(12,10,9,0.42)',
   /** AI (Saathi) surfaces: mint fill, tinted hairline, deep text. */
@@ -48,13 +56,34 @@ export const C = {
   aiBorder: '#BFE6D4',
 };
 
+/**
+ * Neutral ink used for every scrim laid over photography — kept free of brand hue so
+ * photos read as photos. `ink(0)` gives the fully transparent stop for a fade.
+ */
+export const INK = '#0B0B0C';
+export const ink = (opacity: number) => `rgba(11,11,12,${opacity})`;
+
+/**
+ * Readable ink for content sitting on `fill`: dark on light fills, white on dark ones.
+ * For fills chosen at runtime (a chip's colour prop, a plan's accent) — static green
+ * fills can just use `C.onPrimary`.
+ */
+export const onFill = (fill: string) => {
+  if (fill.length !== 7 || fill[0] !== '#') return C.white;
+  const srgb = [1, 3, 5].map((i) => parseInt(fill.slice(i, i + 2), 16) / 255);
+  const [r, g, b] = srgb.map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.45 ? C.onPrimary : C.white;
+};
+
 /** Gradient stops (always use sparingly: hero, premium, celebration). */
 export const G = {
-  brand: ['#16B98A', '#0F8C69'] as [string, string],
-  deep: ['#1C7A66', '#123F36'] as [string, string],
-  premium: ['#13231F', '#24463E'] as [string, string],
+  brand: ['#56D661', '#56D661'] as [string, string],
+  deep: ['#078511', '#044A0A'] as [string, string],
+  premium: ['#121417', '#2B3036'] as [string, string],
   warm: ['#FF8A4C', '#F0563D'] as [string, string],
-  glow: ['#DDF3EA', 'rgba(245,245,244,0)'] as [string, string],
+  glow: ['#DEF9E0', 'rgba(245,245,244,0)'] as [string, string],
+  /** Charcoal wash that sits behind or below a photo. */
+  photo: ['#1C2026', '#0B0B0C'] as [string, string],
 };
 
 export const R = { xs: 8, sm: 12, md: 16, lg: 20, xl: 28, pill: 999 };

@@ -27,7 +27,7 @@ function Tile({ i, on, icon, kg, units, onPress }: { i: number; on: boolean; ico
     borderColor: interpolateColor(p.get(), [0, 1], [C.borderSoft, C.primaryDark]),
     transform: [{ translateY: -6 * p.get() }],
   }));
-  const fg = on ? C.white : C.text;
+  const fg = on ? C.onPrimary : C.text;
   // kg paces are quarter steps; show them exactly rather than rounded to one decimal.
   const amount = units === 'kg' ? String(kg) : String(toUnit(kg, units));
   return (
@@ -49,7 +49,7 @@ function Tile({ i, on, icon, kg, units, onPress }: { i: number; on: boolean; ico
           </View>
         )}
         <View style={[s.icon, { backgroundColor: on ? 'rgba(255,255,255,0.16)' : C.primarySoft }]}>
-          <Ionicons name={icon} size={17} color={on ? C.white : C.primaryDark} />
+          <Ionicons name={icon} size={17} color={on ? C.onPrimary : C.primaryDark} />
         </View>
         <Text style={[s.value, { color: fg }]}>{amount}</Text>
         <Text style={[s.unit, { color: on ? 'rgba(255,255,255,0.7)' : C.muted }]}>{units}/wk</Text>

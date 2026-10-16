@@ -44,7 +44,7 @@ function FloatChip({ icon, text, delay, style }: { icon: IconName; text: string;
 export function BenefitsHero({ male }: { male: boolean }) {
   return (
     <View style={s.hero}>
-      <LinearGradient colors={G.brand} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[StyleSheet.absoluteFill, s.heroBg]} />
+      <LinearGradient colors={G.photo} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[StyleSheet.absoluteFill, s.heroBg]} />
       <View style={s.heroCopy}>
         <Text style={s.heroEyebrow}>YOUR {BRAND.toUpperCase()} PLAN</Text>
         <Text style={s.heroTitle}>Made for{'\n'}your body</Text>
@@ -78,7 +78,7 @@ export function CompareTable() {
           <Text style={s.rowText}>{r.label}</Text>
           <View style={[s.col, s.brandCol]}>
             <Animated.View entering={nativeOnly(ZoomIn.duration(MOTION.base).delay(600 + i * 110))} style={s.yes}>
-              <Ionicons name="checkmark" size={14} color={C.white} />
+              <Ionicons name="checkmark" size={14} color={C.onPrimary} />
             </Animated.View>
           </View>
           <View style={s.col}>

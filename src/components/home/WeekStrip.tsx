@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { memo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { C } from '@/theme';
+import { C, onFill } from '@/theme';
 
 const LETTERS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
@@ -17,7 +17,7 @@ export const WeekStrip = memo(function WeekStrip({ week, done, today, color = C.
         return (
           <View key={d} style={st.col}>
             <View style={[st.dot, { backgroundColor: hit ? color : future ? C.surfaceAlt : soft }, isToday && !hit && { borderWidth: 1.5, borderColor: color, backgroundColor: C.card }]}>
-              {hit && <Ionicons name="checkmark" size={10} color={C.white} />}
+              {hit && <Ionicons name="checkmark" size={10} color={onFill(color)} />}
             </View>
             <Text style={[st.letter, isToday && { color, fontWeight: '800' }]}>{LETTERS[i]}</Text>
           </View>

@@ -115,7 +115,7 @@ const st = StyleSheet.create({
   summary: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4, gap: 12 },
   summaryLeft: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
   countBadge: { minWidth: 22, height: 22, borderRadius: 11, paddingHorizontal: 6, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center' },
-  countText: { color: C.white, fontSize: 12, fontWeight: '800', fontVariant: ['tabular-nums'] },
+  countText: { color: C.onPrimary, fontSize: 12, fontWeight: '800', fontVariant: ['tabular-nums'] },
   markAll: { fontSize: 14, fontWeight: '700', color: C.primary },
   group: { ...T.label, marginTop: 22, marginBottom: 10 },
   item: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: C.card, borderRadius: R.lg, padding: 14, marginBottom: 10, borderWidth: StyleSheet.hairlineWidth * 2, borderColor: C.borderSoft, ...shadowSm },

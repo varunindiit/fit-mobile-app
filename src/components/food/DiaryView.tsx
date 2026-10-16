@@ -216,7 +216,7 @@ export function DiaryView({ tab = false }: { tab?: boolean }) {
               style={st.snap}
               accessibilityRole="button">
               <View style={st.snapIcon}>
-                <Ionicons name="camera" size={22} color={C.white} />
+                <Ionicons name="camera" size={22} color={C.onPrimary} />
                 <View style={st.snapSpark}>
                   <Ionicons name="sparkles" size={9} color={C.ai} />
                 </View>
@@ -265,7 +265,7 @@ export function DiaryView({ tab = false }: { tab?: boolean }) {
                   }}
                   style={st.mealHead}
                   accessibilityState={{ expanded: isOpen }}>
-                  <IconTile icon={m.icon as IconName} size={42} color={has ? C.white : C.primaryDark} bg={has ? C.primaryDark : C.primarySoft} />
+                  <IconTile icon={m.icon as IconName} size={42} color={has ? C.onPrimary : C.primaryDark} bg={has ? C.primaryDark : C.primarySoft} />
                   <View style={{ flex: 1 }}>
                     <Text style={st.mealTitle}>{m.label}</Text>
                     <Text style={st.mealSub}>
@@ -283,7 +283,7 @@ export function DiaryView({ tab = false }: { tab?: boolean }) {
                     style={st.addBtn}
                     accessibilityRole="button"
                     accessibilityLabel={`Add to ${m.label}`}>
-                    <Ionicons name="add" size={22} color={C.white} />
+                    <Ionicons name="add" size={22} color={C.onPrimary} />
                   </PressableScale>
                   <Chevron open={isOpen} />
                 </Pressable>
@@ -456,7 +456,7 @@ function WeekStrip({ week, date, today, logged, onPick }: { week: string[]; date
         return (
           <Pressable key={d} onPress={() => onPick(d)} disabled={d > today} style={st.day} accessibilityRole="button" accessibilityState={{ selected: sel, disabled: d > today }}>
             <Text style={[st.dayName, sel && { color: 'rgba(255,255,255,0.8)' }]}>{dayShort(d)}</Text>
-            <Text style={[st.dayNum, sel && { color: C.white }, d > today && !sel && { color: C.muted }]}>{parseKey(d).getDate()}</Text>
+            <Text style={[st.dayNum, sel && { color: C.onPrimary }, d > today && !sel && { color: C.muted }]}>{parseKey(d).getDate()}</Text>
             <View
               style={[
                 st.dayDot,

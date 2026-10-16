@@ -12,7 +12,7 @@ export const PLAN_TIERS: {
     id: 'smart',
     name: 'Fittelo Smart',
     tagline: 'AI-powered plan that adapts to you',
-    color: '#0EA472',
+    color: '#27AD15',
     features: [
       'Unlimited Snap meal scans',
       'Saathi AI coach, 24×7',

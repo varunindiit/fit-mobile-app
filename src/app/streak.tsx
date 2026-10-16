@@ -20,7 +20,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import Svg, { Circle } from 'react-native-svg';
 
-import { GradientButton, PRIMARY_COLORS } from '@/components/program/GradientButton';
+import { GradientButton, PRIMARY } from '@/components/program/GradientButton';
 import { findSession, sessionMeta } from '@/components/program/session';
 import { Button, CountUp, EASE_OUT, enter, IconButton, IconTile, nativeOnly, ProgressBar, Screen, Sheet, T, tap, type IconName } from '@/components/ui';
 import { PROGRAM_DAYS } from '@/data/program';
@@ -178,7 +178,7 @@ export default function StreakScreen() {
       </ScrollView>
 
       <Animated.View entering={nativeOnly(FadeIn.duration(MOTION.enter).delay(420))} style={s.ctaBar}>
-        <GradientButton title="Cool!" colors={PRIMARY_COLORS} onPress={toTraining} />
+        <GradientButton {...PRIMARY} title="Cool!" onPress={toTraining} />
       </Animated.View>
 
       <Sheet visible={details} onClose={() => setDetails(false)} title="Weekly reward">
@@ -262,7 +262,7 @@ function RewardTrack({ cycle, badgeStyle }: { cycle: number; badgeStyle: ReturnT
                 </View>
               ) : (
                 <View style={[s.node, on && s.nodeOn]}>
-                  <Ionicons name="checkmark" size={16} color={on ? C.white : C.border} />
+                  <Ionicons name="checkmark" size={16} color={on ? C.onPrimary : C.border} />
                 </View>
               )}
               <Text style={[s.nodeLabel, on && { color: C.primaryDark }]}>Day {d}</Text>

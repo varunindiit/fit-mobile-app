@@ -257,7 +257,7 @@ export default function SnapScreen() {
                         style={[st.miniBtn, { backgroundColor: C.primaryDark }]}
                         accessibilityRole="button"
                         accessibilityLabel={`More ${f.name}`}>
-                        <Ionicons name="add" size={16} color={C.white} />
+                        <Ionicons name="add" size={16} color={C.onPrimary} />
                       </PressableScale>
                     </View>
                   </ItemRow>
@@ -319,9 +319,9 @@ export default function SnapScreen() {
             )}
             {analyzing && (
               <>
-                <Animated.View entering={nativeOnly(FadeIn.duration(MOTION.base))} pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(18,168,125,0.08)' }]} />
+                <Animated.View entering={nativeOnly(FadeIn.duration(MOTION.base))} pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(86,214,97,0.08)' }]} />
                 <Animated.View pointerEvents="none" style={[st.scanWrap, scanStyle]}>
-                  <LinearGradient colors={['rgba(18,168,125,0)', 'rgba(18,168,125,0.28)']} style={st.scanTrail} />
+                  <LinearGradient colors={['rgba(86,214,97,0)', 'rgba(86,214,97,0.28)']} style={st.scanTrail} />
                   <View style={st.scanLine} />
                 </Animated.View>
               </>
@@ -444,7 +444,7 @@ function Plate({ size, items, detected }: { size: number; items: { foodId: strin
             key={it.foodId}
             style={[
               { position: 'absolute', left: size / 2 + Math.cos(a) * r - box / 2, top: size / 2 + Math.sin(a) * r - box / 2, width: box, height: box, alignItems: 'center', justifyContent: 'center', borderRadius: box * 0.22 },
-              detected && { borderWidth: 2, borderColor: C.primary, backgroundColor: 'rgba(18,168,125,0.1)' },
+              detected && { borderWidth: 2, borderColor: C.primary, backgroundColor: 'rgba(86,214,97,0.1)' },
             ]}>
             <Glyph emoji={f?.emoji} src={f ? FOOD_ART[f.id] : undefined} size={Math.round(emo * 1.3)} />
             {detected && size > 120 && (
@@ -480,7 +480,7 @@ const st = StyleSheet.create({
   scanLine: { height: 3, borderRadius: 2, backgroundColor: C.primary, shadowColor: C.primary, shadowOpacity: 0.9, shadowRadius: 10, shadowOffset: { width: 0, height: 0 }, elevation: 6 },
   plate: { backgroundColor: '#F6F2EA', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.45, shadowRadius: 16, shadowOffset: { width: 0, height: 8 }, elevation: 8 },
   conf: { position: 'absolute', top: -9, left: -2, backgroundColor: C.primary, borderRadius: 6, paddingHorizontal: 4, paddingVertical: 1 },
-  confText: { color: C.white, fontSize: 9, fontWeight: '800', fontVariant: ['tabular-nums'] },
+  confText: { color: C.onPrimary, fontSize: 9, fontWeight: '800', fontVariant: ['tabular-nums'] },
   sampleChip: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 20, paddingHorizontal: 14, height: 38, borderRadius: R.pill, backgroundColor: GLASS, borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.16)' },
   sampleText: { color: C.white, fontSize: 13, fontWeight: '600' },
   steps: { marginTop: 20, width: 236, padding: 14, borderRadius: R.md, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: StyleSheet.hairlineWidth, borderColor: 'rgba(255,255,255,0.12)', gap: 10 },

@@ -10,7 +10,7 @@ import Svg, { Circle } from 'react-native-svg';
 
 import { ExerciseArt } from '@/components/program/ExerciseArt';
 import { ExerciseSheet } from '@/components/program/ExerciseSheet';
-import { GradientButton, PRIMARY_COLORS } from '@/components/program/GradientButton';
+import { GradientButton, PRIMARY } from '@/components/program/GradientButton';
 import { findSession, fmtClock, itemLabel, logTitle, planItems, sessionMeta } from '@/components/program/session';
 import { Dialog, EASE_OUT, EmptyState, Header, IconButton, PressableScale, Screen, tap, useToast } from '@/components/ui';
 import { exerciseById, sessionStats, type Session } from '@/data/program';
@@ -366,8 +366,8 @@ function Player({ session, resume }: { session: Session; resume: boolean }) {
               <View style={{ marginTop: 10 }}>{nameRow}</View>
               {timed && (
                 <PressableScale scaleTo={0.94} accessibilityRole="button" onPress={() => (tap(), setPaused((p) => !p))} style={[s.pause, paused && { backgroundColor: C.primary, borderColor: C.primary }]}>
-                  <Ionicons name={paused ? 'play' : 'pause'} size={15} color={C.white} />
-                  <Text style={s.pauseText}>{paused ? 'RESUME' : 'PAUSE'}</Text>
+                  <Ionicons name={paused ? 'play' : 'pause'} size={15} color={paused ? C.onPrimary : C.white} />
+                  <Text style={[s.pauseText, { color: paused ? C.onPrimary : C.white }]}>{paused ? 'RESUME' : 'PAUSE'}</Text>
                 </PressableScale>
               )}
             </View>
@@ -379,7 +379,7 @@ function Player({ session, resume }: { session: Session; resume: boolean }) {
                 </View>
                 <Text style={s.sideText}>Previous</Text>
               </PressableScale>
-              <GradientButton icon="checkmark" iconSize={36} colors={PRIMARY_COLORS} height={70} onPress={complete} style={{ width: 150 }} />
+              <GradientButton {...PRIMARY} icon="checkmark" iconSize={36} height={70} onPress={complete} style={{ width: 150 }} />
               <PressableScale hitSlop={8} scaleTo={0.9} accessibilityRole="button" accessibilityLabel={idx >= n - 1 ? 'Finish workout' : 'Skip exercise'} onPress={() => (tap(), goNext())} style={s.side}>
                 <View style={s.sideIcon}>
                   <Ionicons name="play-skip-forward" size={22} color={C.white} />
@@ -459,7 +459,7 @@ const s = StyleSheet.create({
   skip: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: GLASS, borderWidth: 1, borderColor: GLASS_BORDER, paddingHorizontal: 16, height: 42, borderRadius: R.pill },
   skipText: { fontSize: 15, fontWeight: '700', color: C.white },
   pause: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 14, backgroundColor: GLASS, borderWidth: 1, borderColor: GLASS_BORDER, paddingHorizontal: 18, height: 40, borderRadius: R.pill },
-  pauseText: { fontSize: 13, fontWeight: '800', color: C.white, letterSpacing: 0.8 },
+  pauseText: { fontSize: 13, fontWeight: '800', letterSpacing: 0.8 },
   nextUp: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(255,255,255,0.07)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', borderRadius: R.md, padding: 8, paddingRight: 14, marginBottom: 6 },
   nextUpLabel: { color: 'rgba(255,255,255,0.55)', fontSize: 10, fontWeight: '800', letterSpacing: 1.2 },
   nextUpName: { color: C.white, fontSize: 14, fontWeight: '700', marginTop: 1 },

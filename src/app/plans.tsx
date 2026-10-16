@@ -404,8 +404,8 @@ function Line({ label, value, green, bold }: { label: string; value: string; gre
 
 const CONFETTI = [
   { cx: 22, cy: 60, r: 4, c: C.gold },
-  { cx: 198, cy: 46, r: 5, c: '#7FE0C3' },
-  { cx: 40, cy: 170, r: 3, c: '#7FE0C3' },
+  { cx: 198, cy: 46, r: 5, c: '#B2F5A9' },
+  { cx: 40, cy: 170, r: 3, c: '#B2F5A9' },
   { cx: 186, cy: 160, r: 4, c: C.gold },
   { cx: 110, cy: 8, r: 3, c: C.white },
   { cx: 8, cy: 112, r: 2.5, c: C.white },

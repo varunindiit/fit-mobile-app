@@ -57,7 +57,7 @@ export function AppleBadge({ size = 18 }: { size?: number }) {
 export function MailBadge({ size = 18 }: { size?: number }) {
   return (
     <View style={[st.badge, { width: size, height: size, borderRadius: size / 2, backgroundColor: C.primary, borderColor: C.primary }]}>
-      <Ionicons name="mail" size={size * 0.56} color={C.white} />
+      <Ionicons name="mail" size={size * 0.56} color={C.onPrimary} />
     </View>
   );
 }

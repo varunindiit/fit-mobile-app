@@ -24,7 +24,7 @@ import { scheduleOnRN } from 'react-native-worklets';
 
 import { ExerciseArt } from '@/components/program/ExerciseArt';
 import { ExerciseSheet } from '@/components/program/ExerciseSheet';
-import { GradientButton, PRIMARY_COLORS } from '@/components/program/GradientButton';
+import { GradientButton, PRIMARY } from '@/components/program/GradientButton';
 import { findSession, itemLabel, planItems, sessionMeta } from '@/components/program/session';
 import { WorkoutSettingsSheet } from '@/components/program/WorkoutSettingsSheet';
 import { Button, Card, EmptyState, enter, Header, IconTile, layoutTransition, nativeOnly, ListRow, PressableScale, Screen, SectionTitle, Sheet, T, tap, useToast, type IconName } from '@/components/ui';
@@ -265,7 +265,7 @@ function DayPlan({ session }: { session: Session }) {
                   </Animated.View>
                 )}
                 <PressableScale scaleTo={0.9} hitSlop={8} accessibilityRole="button" accessibilityLabel={editing ? 'Finish editing' : 'Edit plan'} onPress={toggleEdit} style={[s.pencil, editing && s.pencilOn]}>
-                  <Ionicons name={editing ? 'checkmark' : 'pencil'} size={18} color={editing ? C.white : C.text} />
+                  <Ionicons name={editing ? 'checkmark' : 'pencil'} size={18} color={editing ? C.onPrimary : C.text} />
                 </PressableScale>
                 {tip && (
                   <Animated.View exiting={nativeOnly(FadeOut.duration(160))} style={[s.tip, tipStyle]}>
@@ -325,7 +325,7 @@ function DayPlan({ session }: { session: Session }) {
                               <Ionicons name="remove" size={16} color={C.text} />
                             </PressableScale>
                             <PressableScale scaleTo={0.88} hitSlop={6} accessibilityLabel="More" onPress={() => (tap(), adjust(i, 1))} style={[s.adjBtn, s.adjBtnOn]}>
-                              <Ionicons name="add" size={16} color={C.white} />
+                              <Ionicons name="add" size={16} color={C.onPrimary} />
                             </PressableScale>
                           </Animated.View>
                         ) : (
@@ -357,7 +357,7 @@ function DayPlan({ session }: { session: Session }) {
           completed ? (
             <Button title="Rest day completed" icon="checkmark-circle" variant="secondary" onPress={goBack} />
           ) : (
-            <GradientButton title="Mark rest day as done" icon="moon" colors={PRIMARY_COLORS} onPress={markRest} />
+            <GradientButton {...PRIMARY} title="Mark rest day as done" icon="moon" onPress={markRest} />
           )
         ) : editing ? (
           <Animated.View entering={nativeOnly(FadeIn.duration(MOTION.base))} style={s.adjustPill}>
@@ -373,7 +373,7 @@ function DayPlan({ session }: { session: Session }) {
                 finishEdit();
               }}
               style={s.doneBtn}>
-              <Ionicons name="checkmark" size={18} color={C.white} />
+              <Ionicons name="checkmark" size={18} color={C.onPrimary} />
               <Text style={s.doneText}>Done</Text>
             </PressableScale>
           </Animated.View>
@@ -529,7 +529,7 @@ const s = StyleSheet.create({
   rail: { width: 26, alignItems: 'center', justifyContent: 'center' },
   railLine: { position: 'absolute', top: 0, bottom: 0, width: 2, borderRadius: 1, backgroundColor: C.primaryTint },
   railDot: { width: 26, height: 26, borderRadius: 13, backgroundColor: C.primaryDark, alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: C.bg },
-  railNum: { fontSize: 11, fontWeight: '900', color: C.white, fontVariant: ['tabular-nums'] },
+  railNum: { fontSize: 11, fontWeight: '900', color: C.onPrimary, fontVariant: ['tabular-nums'] },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 10, paddingRight: 14, marginVertical: 5, backgroundColor: C.card, borderRadius: R.lg, borderWidth: StyleSheet.hairlineWidth, borderColor: C.borderSoft, ...shadowSm },
   rowName: { fontSize: 15, fontWeight: '700', color: C.text, letterSpacing: -0.2 },
   amount: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', marginTop: 6, backgroundColor: C.primarySoft, paddingHorizontal: 8, paddingVertical: 3, borderRadius: R.pill },
@@ -550,7 +550,7 @@ const s = StyleSheet.create({
   adjustPill: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.navy, borderRadius: R.lg, paddingLeft: 20, paddingRight: 6, height: 60, ...shadowSm },
   adjustTitle: { color: C.white, fontSize: 16, fontWeight: '700' },
   adjustHint: { color: 'rgba(255,255,255,0.65)', fontSize: 12, marginTop: 1 },
-  doneBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: C.primary, height: 48, paddingHorizontal: 20, borderRadius: R.md },
-  doneText: { color: C.white, fontSize: 15, fontWeight: '700' },
+  doneBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: C.primaryBright, height: 48, paddingHorizontal: 20, borderRadius: R.md },
+  doneText: { color: C.onPrimary, fontSize: 15, fontWeight: '700' },
   restArt: { width: 96, height: 96, borderRadius: 32, backgroundColor: C.primarySoft, alignItems: 'center', justifyContent: 'center' },
 });

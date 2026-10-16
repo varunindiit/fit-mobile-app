@@ -49,7 +49,7 @@ export function RestPlanner({ days, value, onToggle, onChange }: { days: string[
                 onChange(p.days);
               }}
               style={[s.preset, on && s.presetOn]}>
-              <Text style={[s.presetText, on && { color: C.white }]}>{p.label}</Text>
+              <Text style={[s.presetText, on && { color: C.onPrimary }]}>{p.label}</Text>
             </PressableScale>
           );
         })}
@@ -112,9 +112,9 @@ function DayCapsule({ day, on, locked, onPress }: { day: string; on: boolean; lo
       }}
       style={{ flex: 1, opacity: locked ? 0.45 : 1 }}>
       <Animated.View style={[s.day, box, shadowSm]}>
-        <Text style={[s.dayShort, on && { color: C.white }]}>{day.slice(0, 3)}</Text>
-        <Animated.View key={on ? 'rest' : 'train'} entering={nativeOnly(ZoomIn.duration(MOTION.base))} style={[s.dayIcon, { backgroundColor: on ? 'rgba(255,255,255,0.18)' : C.primarySoft }]}>
-          <Ionicons name={on ? 'moon' : 'barbell'} size={14} color={on ? C.white : C.primaryDark} />
+        <Text style={[s.dayShort, on && { color: C.onPrimary }]}>{day.slice(0, 3)}</Text>
+        <Animated.View key={on ? 'rest' : 'train'} entering={nativeOnly(ZoomIn.duration(MOTION.base))} style={[s.dayIcon, { backgroundColor: on ? 'rgba(4,8,11,0.12)' : C.primarySoft }]}>
+          <Ionicons name={on ? 'moon' : 'barbell'} size={14} color={on ? C.onPrimary : C.primaryDark} />
         </Animated.View>
       </Animated.View>
     </PressableScale>

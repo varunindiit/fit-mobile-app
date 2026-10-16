@@ -121,7 +121,7 @@ export function WheelPicker({
         <LinearGradient colors={[bg, clear(bg)]} style={[s.fade, s.fadeTop]} />
         <LinearGradient colors={[clear(bg), bg]} style={[s.fade, s.fadeBottom]} />
       </View>
-      <IconButton icon="add" bg={C.primaryDark} color={C.white} onPress={() => step(1)} />
+      <IconButton icon="add" bg={C.primaryDark} color={C.onPrimary} onPress={() => step(1)} />
     </View>
   );
 }

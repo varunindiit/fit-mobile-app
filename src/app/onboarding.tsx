@@ -30,7 +30,7 @@ import { Button, CountUp, EASE_OUT, nativeOnly, PressableScale, tap, useToast, t
 import { PLAN_TIERS } from '@/data/plans';
 import { bmi, bmiLabel, dateKey, fmtDate, targets } from '@/lib/calc';
 import { DEFAULT_PROFILE, isPremiumActive, useStore, type Goal, type Profile } from '@/lib/store';
-import { BRAND, C, MOTION, R, shadowSm } from '@/theme';
+import { BRAND, C, ink, MOTION, R, shadowSm } from '@/theme';
 
 /* ---------------- Flow ---------------- */
 
@@ -381,7 +381,7 @@ export default function Onboarding() {
             <Rise i={1} style={st.shapeWrap}>
               <View style={st.shapeStage}>
                 <BodyShape level={level} gender={p.gender} style={StyleSheet.absoluteFill} />
-                <LinearGradient colors={['rgba(19,35,31,0)', 'rgba(19,35,31,0.78)']} locations={[0.5, 1]} style={StyleSheet.absoluteFill} pointerEvents="none" />
+                <LinearGradient colors={[ink(0), ink(0.78)]} locations={[0.5, 1]} style={StyleSheet.absoluteFill} pointerEvents="none" />
                 <View style={st.shapeBadge}>
                   <Ionicons name={desired ? 'flag' : 'body'} size={12} color={C.primaryDark} />
                   <Text style={st.shapeBadgeText}>{desired ? 'Your goal' : 'You today'}</Text>
@@ -761,7 +761,7 @@ function GenderCard({ label, icon, img, on, dim, onPress }: { label: string; ico
     transform: [{ scale: 1 + 0.08 * p.get() }],
   }));
   const pill = useAnimatedStyle(() => ({ backgroundColor: interpolateColor(p.get(), [0, 1], [C.card, C.primaryDark]) }));
-  const text = useAnimatedStyle(() => ({ color: interpolateColor(p.get(), [0, 1], [C.text, C.white]) }));
+  const text = useAnimatedStyle(() => ({ color: interpolateColor(p.get(), [0, 1], [C.text, C.onPrimary]) }));
   return (
     <PressableScale scaleTo={0.97} accessibilityRole="radio" accessibilityLabel={label} accessibilityState={{ checked: on }} onPress={() => { tap(); onPress(); }}>
       <Animated.View style={[st.genderCard, card]}>
@@ -777,7 +777,7 @@ function GenderCard({ label, icon, img, on, dim, onPress }: { label: string; ico
         <View style={[st.genderRadio, on && st.genderRadioOn]}>
           {on && (
             <Animated.View entering={nativeOnly(ZoomIn.duration(MOTION.base))}>
-              <Ionicons name="checkmark" size={14} color={C.white} />
+              <Ionicons name="checkmark" size={14} color={C.onPrimary} />
             </Animated.View>
           )}
         </View>
@@ -957,7 +957,7 @@ const st = StyleSheet.create({
   wheelCaption: { fontSize: 11, fontWeight: '800', color: C.primary, letterSpacing: 1.4 },
   agePill: { flexDirection: 'row', alignItems: 'baseline', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: R.pill, backgroundColor: C.primaryDark },
   agePillKey: { fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.75)' },
-  agePillVal: { fontSize: 15, fontWeight: '900', color: C.white, fontVariant: ['tabular-nums'] },
+  agePillVal: { fontSize: 15, fontWeight: '900', color: C.onPrimary, fontVariant: ['tabular-nums'] },
 
   rangeText: { fontSize: 12.5, color: C.muted, marginTop: 4, fontVariant: ['tabular-nums'] },
 

@@ -6,7 +6,7 @@ import Animated, { Easing, useAnimatedStyle, useSharedValue, withDelay, withSequ
 
 import { BodyShape, bodyFat } from '@/components/onboarding/BodyShape';
 import { EASE_OUT, tap } from '@/components/ui';
-import { C, R, shadow } from '@/theme';
+import { C, ink, R, shadow } from '@/theme';
 
 const HANDLE = 40;
 const EDGE = 0.06; // the divider never fully hides either side
@@ -68,14 +68,14 @@ export function BeforeAfter({ before, after, gender, onDrag }: { before: number;
             <BodyShape level={before} gender={gender} style={{ width: w, height: '100%' }} />
           </Animated.View>
 
-          <LinearGradient colors={['rgba(19,35,31,0)', 'rgba(19,35,31,0.82)']} locations={[0.55, 1]} style={StyleSheet.absoluteFill} pointerEvents="none" />
+          <LinearGradient colors={[ink(0), ink(0.82)]} locations={[0.55, 1]} style={StyleSheet.absoluteFill} pointerEvents="none" />
 
           <Animated.View style={[s.chip, s.chipLeft, leftText]} pointerEvents="none">
             <Text style={s.chipText}>BEFORE</Text>
           </Animated.View>
           <Animated.View style={[s.chip, s.chipRight, { backgroundColor: C.primary }, rightText]} pointerEvents="none">
-            <Ionicons name="sparkles" size={11} color={C.white} />
-            <Text style={s.chipText}>AFTER</Text>
+            <Ionicons name="sparkles" size={11} color={C.onPrimary} />
+            <Text style={[s.chipText, { color: C.onPrimary }]}>AFTER</Text>
           </Animated.View>
 
           <Animated.View style={[s.foot, { left: 18 }, leftText]} pointerEvents="none">
@@ -104,7 +104,7 @@ const s = StyleSheet.create({
   frame: { width: '100%', aspectRatio: 0.95, borderRadius: R.xl, overflow: 'hidden', backgroundColor: C.skeleton, ...shadow },
   clip: { position: 'absolute', left: 0, top: 0, bottom: 0, overflow: 'hidden' },
   chip: { position: 'absolute', top: 14, flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: R.pill },
-  chipLeft: { left: 14, backgroundColor: 'rgba(19,35,31,0.55)' },
+  chipLeft: { left: 14, backgroundColor: ink(0.55) },
   chipRight: { right: 14 },
   chipText: { fontSize: 11, fontWeight: '800', color: C.white, letterSpacing: 1 },
   foot: { position: 'absolute', bottom: 16 },

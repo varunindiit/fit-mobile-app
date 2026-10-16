@@ -270,7 +270,7 @@ function AddButton({ added, onPress }: { added: boolean; onPress: () => void }) 
           <Ionicons name="add" size={22} color={C.primaryDark} />
         </Animated.View>
         <Animated.View style={[st.glyph, check]}>
-          <Ionicons name="checkmark" size={20} color={C.white} />
+          <Ionicons name="checkmark" size={20} color={C.onPrimary} />
         </Animated.View>
       </Animated.View>
     </PressableScale>

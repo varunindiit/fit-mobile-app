@@ -43,7 +43,7 @@ import { programById, programDay, sessionStats } from '@/data/program';
 import { dayShort, fmtDate, kmFromSteps } from '@/lib/calc';
 import { burnedOn, dayTotals, isPremiumActive, useStore, weekProgress, workoutStreak } from '@/lib/store';
 import { useToday } from '@/lib/useToday';
-import { C, G, MOTION, R, shadow, shadowSm } from '@/theme';
+import { C, G, ink, MOTION, R, shadow, shadowSm } from '@/theme';
 
 const HERO_IMAGE = require('@/assets/images/home-hero.jpg');
 /** Visible photo height below the status bar (the sheet overlaps its last ~28 px). */
@@ -205,10 +205,10 @@ export default function Home() {
         {/* Photo + scrims stop short of the bottom edge so only the solid fade touches it (no seam line) */}
         <View style={st.photoLayer}>
           <Image source={HERO_IMAGE} style={StyleSheet.absoluteFill} contentFit="cover" contentPosition="center" transition={250} />
-          {/* Brand-tinted scrims: deep green-ink top & bottom, darker on the left where the copy sits */}
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(21,94,80,0.16)' }]} />
-          <LinearGradient colors={['rgba(8,22,19,0.72)', 'rgba(8,22,19,0.28)', 'rgba(8,22,19,0.82)']} locations={[0, 0.42, 1]} style={StyleSheet.absoluteFill} />
-          <LinearGradient colors={['rgba(8,22,19,0.55)', 'rgba(8,22,19,0)']} start={{ x: 0, y: 0.5 }} end={{ x: 0.85, y: 0.5 }} style={StyleSheet.absoluteFill} />
+          {/* Neutral ink scrims: top & bottom, darker on the left where the copy sits */}
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: ink(0.16) }]} />
+          <LinearGradient colors={[ink(0.72), ink(0.28), ink(0.82)]} locations={[0, 0.42, 1]} style={StyleSheet.absoluteFill} />
+          <LinearGradient colors={[ink(0.55), ink(0)]} start={{ x: 0, y: 0.5 }} end={{ x: 0.85, y: 0.5 }} style={StyleSheet.absoluteFill} />
         </View>
         <LinearGradient colors={['rgba(245,245,244,0)', C.bg, C.bg]} locations={[0, 0.82, 1]} style={st.heroFade} />
       </Animated.View>
@@ -333,7 +333,7 @@ export default function Home() {
             accessibilityLabel="Open Saathi, your AI coach">
             <View style={st.riaHead}>
               <LinearGradient colors={G.brand} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.riaIcon}>
-                <Ionicons name="sparkles" size={15} color={C.white} />
+                <Ionicons name="sparkles" size={15} color={C.onPrimary} />
               </LinearGradient>
               <View style={{ flex: 1 }}>
                 <Text style={st.riaTitle}>Saathi</Text>
@@ -384,7 +384,7 @@ export default function Home() {
               </View>
               <Text style={[T.small, { marginTop: 3 }]}>Instant calories & macros with AI</Text>
               <View style={st.snapCta}>
-                <Ionicons name="camera" size={14} color={C.white} />
+                <Ionicons name="camera" size={14} color={C.onPrimary} />
                 <Text style={st.snapCtaText}>Scan a meal</Text>
               </View>
             </View>
@@ -431,7 +431,7 @@ export default function Home() {
                       <IconTile icon={m.icon as IconName} size={42} color={tint.color} bg={tint.bg} />
                       {logged && (
                         <View style={st.mealCheck}>
-                          <Ionicons name="checkmark" size={10} color={C.white} />
+                          <Ionicons name="checkmark" size={10} color={C.onPrimary} />
                         </View>
                       )}
                     </View>
@@ -452,7 +452,7 @@ export default function Home() {
                       </Text>
                       <ProgressBar value={rec > 0 ? kcal / rec : 0} color={tint.bar} track={C.borderSoft} height={3} style={{ marginTop: 7 }} />
                     </View>
-                    <IconButton icon="add" size={20} bg={C.primaryDark} color={C.white} style={{ width: 34, height: 34 }} onPress={() => router.push({ pathname: '/food-search', params: { meal: m.key } })} />
+                    <IconButton icon="add" size={20} bg={C.primaryDark} color={C.onPrimary} style={{ width: 34, height: 34 }} onPress={() => router.push({ pathname: '/food-search', params: { meal: m.key } })} />
                   </Pressable>
                   {i < MEALS.length - 1 && <View style={st.sep} />}
                 </View>
@@ -760,14 +760,14 @@ const st = StyleSheet.create({
   photoTitle: { color: C.white, fontSize: 22, lineHeight: 27, fontWeight: '900', letterSpacing: -0.5, marginTop: 2 },
   heroSub: { color: 'rgba(255,255,255,0.85)', fontSize: 12.5, fontWeight: '600', marginTop: 2 },
   heroCta: { width: 46, height: 46, borderRadius: 23, backgroundColor: C.white, alignItems: 'center', justifyContent: 'center', ...shadowSm },
-  workout: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14, borderRadius: R.xl, backgroundColor: 'rgba(8,22,19,0.38)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.22)' },
+  workout: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14, borderRadius: R.xl, backgroundColor: ink(0.38), borderWidth: 1, borderColor: 'rgba(255,255,255,0.22)' },
   workoutDay: { color: C.white, fontSize: 18, fontWeight: '900', fontVariant: ['tabular-nums'], lineHeight: 20 },
   workoutOf: { color: 'rgba(255,255,255,0.7)', fontSize: 10, fontWeight: '700' },
   glassBtn: { borderWidth: StyleSheet.hairlineWidth * 2, borderColor: 'rgba(255,255,255,0.28)' },
   bar: { position: 'absolute', top: 0, left: 0, right: 0, justifyContent: 'flex-end', backgroundColor: C.card, borderBottomLeftRadius: 22, borderBottomRightRadius: 22, overflow: 'hidden', ...shadow },
   barRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16 },
   barAvatar: { width: 36, height: 36, borderRadius: 18, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
-  barAvatarText: { color: C.white, fontWeight: '800', fontSize: 15 },
+  barAvatarText: { color: C.onPrimary, fontWeight: '800', fontSize: 15 },
   barTitle: { fontSize: 16, fontWeight: '800', color: C.text, letterSpacing: -0.3 },
   barMeta: { fontSize: 12, fontWeight: '600', color: C.muted, marginTop: 1, fontVariant: ['tabular-nums'] },
   barStreak: { flexDirection: 'row', alignItems: 'center', gap: 4, height: 34, paddingHorizontal: 10, borderRadius: 17, backgroundColor: C.accentSoft },
@@ -778,7 +778,7 @@ const st = StyleSheet.create({
   avatarWrap: { width: 48, height: 48, borderRadius: 24, ...shadowSm },
   avatarRing: { width: 48, height: 48, borderRadius: 24, padding: 2, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: C.primaryDark, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: C.card },
-  avatarText: { color: C.white, fontWeight: '700', fontSize: 18 },
+  avatarText: { color: C.onPrimary, fontWeight: '700', fontSize: 18 },
   premiumDot: { position: 'absolute', bottom: -3, right: -3, width: 20, height: 20, borderRadius: 10, backgroundColor: C.navy, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: C.card },
   greetRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   greet: { flexShrink: 1, fontSize: 13, color: 'rgba(255,255,255,0.88)', fontWeight: '600' },
@@ -806,7 +806,7 @@ const st = StyleSheet.create({
   riaChipText: { fontSize: 13, fontWeight: '600', color: C.ai },
   snap: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 14, backgroundColor: C.card, borderRadius: R.lg, padding: 16, borderWidth: StyleSheet.hairlineWidth, borderColor: C.borderSoft, ...shadow },
   snapCta: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', marginTop: 12, height: 32, paddingHorizontal: 12, borderRadius: R.pill, backgroundColor: C.primaryDark },
-  snapCtaText: { color: C.white, fontWeight: '700', fontSize: 13 },
+  snapCtaText: { color: C.onPrimary, fontWeight: '700', fontSize: 13 },
   snapArt: { width: 92, height: 84, borderRadius: R.md, backgroundColor: C.primarySoft, alignItems: 'center', justifyContent: 'center' },
   snapTitle: { fontSize: 16, fontWeight: '700', color: C.text, letterSpacing: -0.2 },
   aiTag: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, backgroundColor: C.aiSoft, borderWidth: 1, borderColor: C.aiBorder },
