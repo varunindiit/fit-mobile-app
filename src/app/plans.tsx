@@ -20,14 +20,14 @@ import Svg, { Circle } from 'react-native-svg';
 
 import { Accordion, Decor, fmtFull, GOLD, planEnd, PREMIUM_BG } from '@/components/profile/shared';
 import { Button, Card, Dialog, EASE_OUT, enter, IconButton, IconTile, nativeOnly, PressableScale, Screen, SectionTitle, Sheet, T, tap, useToast, type IconName } from '@/components/ui';
-import { COACHES, formatINR, PLAN_TIERS, TESTIMONIALS, type PlanTier } from '@/data/plans';
+import { COACHES, formatUSD, PLAN_TIERS, TESTIMONIALS, type PlanTier } from '@/data/plans';
 import { fmtDate, todayKey } from '@/lib/calc';
 import { isPremiumActive, useStore } from '@/lib/store';
 import { C, G, glow, MOTION, R } from '@/theme';
 import { Glyph } from '@/components/Glyph';
 import { ACCENT, DEFAULT_MONTHS, pctOff, PlanPicker, planFor } from '@/components/plans/PlanPicker';
 
-const COUPON = { code: 'FIT40', off: 400 };
+const COUPON = { code: 'FIT40', off: 4 };
 const METHODS: { id: string; title: string; sub: string; icon: IconName }[] = [
   { id: 'upi', title: 'UPI', sub: 'Google Pay, PhonePe, Paytm, BHIM', icon: 'phone-portrait-outline' },
   { id: 'card', title: 'Credit / Debit card', sub: 'Visa, Mastercard, RuPay, Amex', icon: 'card-outline' },
@@ -276,7 +276,7 @@ export default function PlansScreen() {
         {/* Sticky CTA */}
         <View style={[st.cta, { paddingBottom: Math.max(insets.bottom, 12) }]}>
           <Button
-            title={`${cta} · ${formatINR(dur.price)}`}
+            title={`${cta} · ${formatUSD(dur.price)}`}
             variant={tier === 'pro' ? 'dark' : 'primary'}
             style={tier === 'pro' ? glow(C.navy) : undefined}
             onPress={() => setCheckout(true)}
@@ -297,11 +297,11 @@ export default function PlansScreen() {
                 </Text>
               </View>
             </View>
-            <Line label="Plan price (MRP)" value={formatINR(dur.was)} />
-            <Line label={`Plan discount (${pctOff(dur)}%)`} value={`−${formatINR(discount)}`} green />
-            {coupon && <Line label={`Coupon ${COUPON.code}`} value={`−${formatINR(COUPON.off)}`} green />}
+            <Line label="Plan price (MRP)" value={formatUSD(dur.was)} />
+            <Line label={`Plan discount (${pctOff(dur)}%)`} value={`−${formatUSD(discount)}`} green />
+            {coupon && <Line label={`Coupon ${COUPON.code}`} value={`−${formatUSD(COUPON.off)}`} green />}
             <View style={st.sumDivider} />
-            <Line label="Total payable" value={formatINR(total)} bold />
+            <Line label="Total payable" value={formatUSD(total)} bold />
             <Text style={[T.tiny, { marginTop: 2 }]}>Inclusive of all taxes</Text>
           </View>
 
@@ -311,13 +311,13 @@ export default function PlansScreen() {
             onPress={() => {
               tap();
               setCoupon(!coupon);
-              toast(coupon ? 'Coupon removed' : `${COUPON.code} applied · ₹400 off`, 'pricetag');
+              toast(coupon ? 'Coupon removed' : `${COUPON.code} applied · $4 off`, 'pricetag');
             }}
             style={[st.coupon, coupon && st.couponOn]}>
             <IconTile icon={coupon ? 'checkmark-circle' : 'pricetag-outline'} color={coupon ? C.primary : C.textSoft} bg={coupon ? C.card : C.surfaceAlt} size={34} />
             <View style={{ flex: 1 }}>
               <Text style={st.couponTitle}>{coupon ? `${COUPON.code} applied` : `Apply ${COUPON.code}`}</Text>
-              <Text style={T.small}>Extra {formatINR(COUPON.off)} off on this plan</Text>
+              <Text style={T.small}>Extra {formatUSD(COUPON.off)} off on this plan</Text>
             </View>
             <Text style={[st.couponAction, !coupon && { color: C.primaryDark }]}>{coupon ? 'Remove' : 'Apply'}</Text>
           </PressableScale>
@@ -352,7 +352,7 @@ export default function PlansScreen() {
           <Ionicons name="information-circle" size={18} color={C.warning} />
           <Text style={st.demoText}>Demo mode — no real payment will be made.</Text>
         </View>
-        <Button title={`Pay ${formatINR(total)}`} icon="lock-closed" loading={paying} onPress={pay} />
+        <Button title={`Pay ${formatUSD(total)}`} icon="lock-closed" loading={paying} onPress={pay} />
         <Text style={[T.tiny, { textAlign: 'center', marginTop: 8 }]}>100% secure · Cancel anytime</Text>
       </Sheet>
 

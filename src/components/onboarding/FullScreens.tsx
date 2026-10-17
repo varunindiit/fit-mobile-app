@@ -10,7 +10,7 @@ import Svg, { Circle } from 'react-native-svg';
 
 import { Button, CountUp, Dialog, EASE_OUT, nativeOnly, Ring, Sheet, tap, type IconName } from '@/components/ui';
 import { DEFAULT_MONTHS, PlanPicker, planFor } from '@/components/plans/PlanPicker';
-import { formatINR, type PlanTier } from '@/data/plans';
+import { formatUSD, type PlanTier } from '@/data/plans';
 import { bmi, targets } from '@/lib/calc';
 import type { Profile } from '@/lib/store';
 import { BRAND, C, glow, ink, MOTION, R, shadow, shadowLg, shadowSm } from '@/theme';
@@ -593,7 +593,7 @@ export function Paywall({ male, gaining, onSkip, onPaid, onDone }: { male: boole
       </ScrollView>
       <Cta>
         <Button
-          title={`Start my plan · ${formatINR(dur.price)}`}
+          title={`Start my plan · ${formatUSD(dur.price)}`}
           icon="arrow-forward"
           loading={loading}
           onPress={() => {

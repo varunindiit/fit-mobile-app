@@ -271,7 +271,7 @@ function reply(raw: string, c: Ctx): Reply {
     return {
       text: c.premium
         ? `You're already on Fittelo ${c.premium.tier === 'pro' ? 'Pro' : 'Smart'} — enjoy unlimited chats with me!`
-        : `Fittelo Smart starts at ₹1,799 for 3 months and unlocks unlimited Saathi chats, Snap scans and personalised plans. Pro adds your own nutritionist and trainer.`,
+        : `Fittelo Smart starts at $17.99 for 3 months and unlocks unlimited Saathi chats, Snap scans and personalised plans. Pro adds your own nutritionist and trainer.`,
       action: { label: 'See plans', icon: 'diamond', href: '/plans' },
     };
   }

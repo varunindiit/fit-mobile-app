@@ -4,7 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, interpolate, interpolateColor, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { Card, CountUp, EASE_OUT, enter, IconTile, nativeOnly, PressableScale, SectionTitle, T, tap, type IconName } from '@/components/ui';
-import { formatINR, PLAN_TIERS, type PlanTier } from '@/data/plans';
+import { formatUSD, PLAN_TIERS, type PlanTier } from '@/data/plans';
 import { C, MOTION, onFill, R } from '@/theme';
 
 /** Presentation accents per tier: Smart = brand teal, Pro = green-ink + gold. */
@@ -18,7 +18,6 @@ export const planFor = (tier: PlanTier, months: number) => {
   const plan = PLAN_TIERS.find((p) => p.id === tier) ?? PLAN_TIERS[0];
   return { plan, dur: plan.durations.find((x) => x.months === months) ?? plan.durations[1] };
 };
-const inr = (n: number) => formatINR(Math.round(n));
 
 /** Tier cards → tier features → duration chips → total. Shared by the Premium screen and the onboarding paywall so both sell the same plans. */
 export function PlanPicker({ tier, months, onTier, onMonths, enterAt = 0, titleTop = 22 }: { tier: PlanTier; months: number; onTier: (t: PlanTier) => void; onMonths: (m: number) => void; enterAt?: number; titleTop?: number }) {
@@ -60,7 +59,7 @@ export function PlanPicker({ tier, months, onTier, onMonths, enterAt = 0, titleT
             <DurationChip
               key={x.months}
               months={x.months}
-              perMonth={Math.round(x.price / x.months)}
+              perMonth={x.price / x.months}
               off={pctOff(x)}
               badge={x.badge}
               fill={accent.fill}
@@ -73,11 +72,11 @@ export function PlanPicker({ tier, months, onTier, onMonths, enterAt = 0, titleT
           <View style={{ flex: 1 }}>
             <Text style={T.label}>Total · {dur.months} months</Text>
             <View style={st.priceRow}>
-              <CountUp value={dur.price} format={inr} style={st.price} />
-              <Text style={st.was}>{formatINR(dur.was)}</Text>
+              <CountUp value={dur.price} format={formatUSD} style={st.price} />
+              <Text style={st.was}>{formatUSD(dur.was)}</Text>
             </View>
             <Text style={st.priceSub}>
-              You save <Text style={st.priceSave}>{formatINR(dur.was - dur.price)}</Text>
+              You save <Text style={st.priceSave}>{formatUSD(dur.was - dur.price)}</Text>
             </Text>
           </View>
           <View style={st.offBadge}>
@@ -102,7 +101,7 @@ function TierCard({ tier, selected, onPress }: { tier: (typeof PLAN_TIERS)[numbe
     transform: [{ scale: interpolate(sel.get(), [0, 1], [0.97, 1]) }],
   }));
   const check = useAnimatedStyle(() => ({ opacity: sel.get(), transform: [{ scale: interpolate(sel.get(), [0, 1], [0.4, 1]) }] }));
-  const from = Math.min(...tier.durations.map((x) => Math.round(x.price / x.months)));
+  const from = Math.min(...tier.durations.map((x) => x.price / x.months));
   return (
     <PressableScale
       scaleTo={0.97}
@@ -123,7 +122,7 @@ function TierCard({ tier, selected, onPress }: { tier: (typeof PLAN_TIERS)[numbe
           {tier.tagline}
         </Text>
         <Text style={st.tierFrom}>
-          from <Text style={st.tierFromNum}>{formatINR(from)}</Text>/mo
+          from <Text style={st.tierFromNum}>{formatUSD(from)}</Text>/mo
         </Text>
       </Animated.View>
     </PressableScale>
@@ -159,7 +158,7 @@ function DurationChip({ months, perMonth, off, badge, fill, selected, onPress }:
       <Animated.View style={[st.dur, box]}>
         <Animated.Text style={[st.durMonths, soft]}>{months} months</Animated.Text>
         <Animated.Text style={[st.durPer, strong]} numberOfLines={1} adjustsFontSizeToFit>
-          {formatINR(perMonth)}
+          {formatUSD(perMonth)}
         </Animated.Text>
         <Animated.Text style={[st.durPerUnit, soft]}>per month</Animated.Text>
         <Text style={[st.durOff, { color: selected ? C.gold : C.primary }]}>{off}% off</Text>

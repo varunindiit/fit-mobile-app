@@ -21,9 +21,9 @@ export const PLAN_TIERS: {
       'Ad-free experience',
     ],
     durations: [
-      { months: 3, price: 1799, was: 2999 },
-      { months: 6, price: 2399, was: 4999, badge: 'Popular' },
-      { months: 12, price: 2999, was: 7999, badge: 'Best value' },
+      { months: 3, price: 17.99, was: 29.99 },
+      { months: 6, price: 23.99, was: 49.99, badge: 'Popular' },
+      { months: 12, price: 29.99, was: 79.99, badge: 'Best value' },
     ],
   },
   {
@@ -39,9 +39,9 @@ export const PLAN_TIERS: {
       'Custom plans for diabetes, PCOS & thyroid',
     ],
     durations: [
-      { months: 3, price: 8999, was: 12999 },
-      { months: 6, price: 13999, was: 21999, badge: 'Popular' },
-      { months: 12, price: 19999, was: 34999, badge: 'Best value' },
+      { months: 3, price: 89.99, was: 129.99 },
+      { months: 6, price: 139.99, was: 219.99, badge: 'Popular' },
+      { months: 12, price: 199.99, was: 349.99, badge: 'Best value' },
     ],
   },
 ];
@@ -58,4 +58,9 @@ export const TESTIMONIALS = [
   { name: 'Neha, 26', text: 'Snap made logging meals effortless.', kg: '-6 kg' },
 ];
 
-export const formatINR = (n: number) => '₹' + n.toLocaleString('en-IN');
+/** USD price label: whole dollars stay clean ($30), cents show two digits ($17.99). */
+export const formatUSD = (n: number) => {
+  const v = Math.round(n * 100) / 100;
+  const [whole, cents] = (Number.isInteger(v) ? String(v) : v.toFixed(2)).split('.');
+  return '$' + whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + (cents ? '.' + cents : '');
+};
