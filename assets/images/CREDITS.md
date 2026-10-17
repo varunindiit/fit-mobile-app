@@ -9,6 +9,13 @@
 
 - `onboarding/*.webp` — original images generated with OpenAI image generation (via Codex) for Fittelo's onboarding, modelled on the reference onboarding storyboard. No real people, third-party likeness or branding. Resized and compressed to WebP.
 
+## Trainer portraits
+
+- `trainers/*.webp` — original images generated with OpenAI image generation for Fittelo's Pro coaching
+  feature, in the same style and pipeline as the onboarding imagery above. No real people, third-party
+  likeness or branding; the coaches they depict are fictional. Resized and compressed to WebP.
+  `trainers/arjun-mehta.webp` is the same asset as `onboarding/coach.webp`.
+
 ## Exercise animations
 
 - `exercises/*.webp` and `exercises/anim/*.webp` — exercise animations and their opening still frames.

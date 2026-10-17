@@ -42,6 +42,7 @@ function Routes() {
       <Stack.Screen name="food-search" options={{ animation: 'fade_from_bottom' }} />
       <Stack.Screen name="player" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom', gestureEnabled: false }} />
       <Stack.Screen name="streak" options={{ animation: 'fade', gestureEnabled: false }} />
+      <Stack.Screen name="pro-welcome" options={{ presentation: 'fullScreenModal', animation: 'fade', gestureEnabled: false }} />
     </Stack>
   );
 }

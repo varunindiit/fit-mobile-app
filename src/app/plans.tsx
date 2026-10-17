@@ -23,6 +23,8 @@ import { Button, Card, Dialog, EASE_OUT, enter, IconButton, IconTile, nativeOnly
 import { COACHES, formatUSD, PLAN_TIERS, TESTIMONIALS, type PlanTier } from '@/data/plans';
 import { fmtDate, todayKey } from '@/lib/calc';
 import { FREE_PROGRAM_DAYS, planStatus, TIER_LABEL } from '@/lib/entitlements';
+import { TrainerAvatar } from '@/components/trainer/parts';
+import { trainerById } from '@/data/trainers';
 import { useStore, type Premium } from '@/lib/store';
 import { C, glow, MOTION, R } from '@/theme';
 import { Glyph } from '@/components/Glyph';
@@ -498,6 +500,8 @@ const CONFETTI = [
 ];
 
 function Success({ tier, months }: { tier: PlanTier; months: number }) {
+  const { state, markProIntroSeen } = useStore();
+  const coach = trainerById(state.trainerId);
   const plan = PLAN_TIERS.find((p) => p.id === tier) ?? PLAN_TIERS[0];
   const insets = useSafeAreaInsets();
   const reduce = useReducedMotion();
@@ -544,18 +548,36 @@ function Success({ tier, months }: { tier: PlanTier; months: number }) {
           ))}
         </Animated.View>
         {tier === 'pro' && (
+          // Points at the coach the member actually gets, and promises nothing a demo can't keep.
           <Animated.View entering={enter(6)} style={st.coachNote}>
             <View style={st.coachNoteAvatar}>
-              <Glyph emoji={COACHES[0].emoji} size={44} />
+              <TrainerAvatar trainer={coach} size={44} />
             </View>
             <Text style={st.coachNoteText}>
-              {COACHES[0].name}, your nutritionist, will message you within 24 hours to book your first video check-in.
+              {coach.name} is your personal trainer. Your first week is already written — say hello whenever you are ready.
             </Text>
           </Animated.View>
         )}
         <Animated.View entering={enter(7)} style={{ alignSelf: 'stretch' }}>
-          <Button title="Start exploring" variant="dark" style={st.sBtn} textStyle={{ color: C.navy }} onPress={() => router.replace('/(tabs)')} />
-          <Button title="Say hi to Saathi" variant="ghost" textStyle={{ color: C.white }} style={{ marginTop: 6, alignSelf: 'stretch' }} onPress={() => router.replace('/coach')} />
+          {/* Pro hands off to the coach introduction; Smart keeps the original exits. */}
+          <Button
+            title={tier === 'pro' ? 'Meet my trainer' : 'Start exploring'}
+            variant="dark"
+            style={st.sBtn}
+            textStyle={{ color: C.navy }}
+            onPress={() => router.replace(tier === 'pro' ? '/pro-welcome' : '/(tabs)')}
+          />
+          <Button
+            title={tier === 'pro' ? 'Later, take me home' : 'Say hi to Saathi'}
+            variant="ghost"
+            textStyle={{ color: C.white }}
+            style={{ marginTop: 6, alignSelf: 'stretch' }}
+            onPress={() => {
+              // Choosing to skip the introduction is respected: don't re-open it on the tabs.
+              if (tier === 'pro') markProIntroSeen();
+              router.replace(tier === 'pro' ? '/(tabs)' : '/coach');
+            }}
+          />
         </Animated.View>
       </ScrollView>
     </LinearGradient>

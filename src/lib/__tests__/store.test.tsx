@@ -7,7 +7,7 @@ import { AppState } from 'react-native';
 import { addDays, todayKey } from '../calc';
 import { STORAGE_KEY } from '../persist';
 import { DEMO_DAYS } from '../demo';
-import { DEFAULT_PROFILE, isPremiumActive, StoreProvider, useStore } from '../store';
+import { DEFAULT_PROFILE, isPremiumActive, needsProWelcome, StoreProvider, useStore } from '../store';
 
 const wrapper = ({ children }: { children: React.ReactNode }) => <StoreProvider>{children}</StoreProvider>;
 
@@ -365,5 +365,61 @@ describe('Pro trainer slice', () => {
     expect(s.trainerId).toBeNull();
     expect(s.trainerChat.map((m) => m.id)).toEqual(['ok']);
     expect(s.calls.map((c) => c.id)).toEqual(['c1']);
+  });
+});
+
+describe('Pro welcome shows once per activation', () => {
+  const pro = (since: string, months = 3) => ({ tier: 'pro' as const, months, since });
+
+  it('never for Free or Smart', () => {
+    expect(needsProWelcome({ premium: null, proIntroFor: null })).toBe(false);
+    expect(needsProWelcome({ premium: { tier: 'smart', months: 6, since: todayKey() }, proIntroFor: null })).toBe(false);
+  });
+
+  it('once for a fresh Pro activation, then never again', () => {
+    const p = pro(todayKey());
+    expect(needsProWelcome({ premium: p, proIntroFor: null })).toBe(true);
+    expect(needsProWelcome({ premium: p, proIntroFor: p.since })).toBe(false);
+  });
+
+  it('a renewal extends months but keeps `since`, so it does not repeat', () => {
+    const since = addDays(todayKey(), -20);
+    expect(needsProWelcome({ premium: pro(since, 3), proIntroFor: since })).toBe(false);
+    expect(needsProWelcome({ premium: pro(since, 6), proIntroFor: since })).toBe(false);
+  });
+
+  it('a new activation after a lapse shows it again', () => {
+    const old = addDays(todayKey(), -400);
+    expect(needsProWelcome({ premium: pro(todayKey()), proIntroFor: old })).toBe(true);
+  });
+
+  it('an expired Pro plan does not trigger it', () => {
+    expect(needsProWelcome({ premium: pro(addDays(todayKey(), -400)), proIntroFor: null })).toBe(false);
+  });
+
+  it('upgrading Smart to Pro triggers it, and marking it seen survives a restart', async () => {
+    let h = await launch();
+    await act(async () => h.result.current.subscribe('smart', 3, 1));
+    expect(needsProWelcome(h.result.current.state)).toBe(false);
+
+    await act(async () => h.result.current.subscribe('pro', 6, 1));
+    expect(needsProWelcome(h.result.current.state)).toBe(true);
+
+    await act(async () => h.result.current.markProIntroSeen());
+    expect(h.result.current.state.proIntroFor).toBe(h.result.current.state.premium!.since);
+
+    h = await restart(h);
+    expect(needsProWelcome(h.result.current.state)).toBe(false);
+  });
+
+  it('restoring the same Pro plan does not show it a second time', async () => {
+    const h = await launch();
+    await act(async () => h.result.current.subscribe('pro', 3, 1));
+    await act(async () => h.result.current.markProIntroSeen());
+    const restored = h.result.current.state.premium!;
+
+    await act(async () => h.result.current.setPremium(null));
+    await act(async () => h.result.current.setPremium(restored));
+    expect(needsProWelcome(h.result.current.state)).toBe(false);
   });
 });

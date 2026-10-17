@@ -30,6 +30,12 @@ export type Trainer = {
   languages: string[];
   intro: string;
   certifications: Certification[];
+  /**
+   * Portrait for this coach. These are generated images of fictional people (see
+   * assets/images/CREDITS.md) — never a photograph of a real person presented as
+   * the member's coach. Optional: a trainer without one falls back to initials.
+   */
+  photo?: number;
   /** Brand accent for this trainer's surfaces. */
   color: string;
   icon: IconName;
@@ -58,6 +64,7 @@ export const TRAINERS: Trainer[] = [
       { title: 'Level 2 Personal Trainer', body: 'ACE', year: 2017 },
       { title: 'Functional Movement Screen L1', body: 'FMS', year: 2021 },
     ],
+    photo: require('@/assets/images/trainers/arjun-mehta.webp'),
     color: '#2563EB',
     icon: 'barbell',
     hours: {

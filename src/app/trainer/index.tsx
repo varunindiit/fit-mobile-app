@@ -8,7 +8,7 @@ import Animated from 'react-native-reanimated';
 import { Glyph } from '@/components/Glyph';
 import { sessionArt } from '@/components/glyphs';
 import { AvailabilityLine, TrainerAction, TrainerAvatar, TrainerPlanCard, openPlan } from '@/components/trainer/parts';
-import { Card, CountUp, Divider, Header, IconTile, Pill, PressableScale, ProgressBar, Screen, SectionTitle, T, enter, tap, type IconName } from '@/components/ui';
+import { Card, CountUp, Divider, Header, IconTile, ListRow, Pill, PressableScale, ProgressBar, Screen, SectionTitle, T, enter, tap, type IconName } from '@/components/ui';
 import { planOnDay, weekPlan, type TrainerPlan } from '@/data/trainerPlans';
 import { WEEKDAYS, availability, bookedFor, firstName, trainerById, weekdayOf, type BookedSession, type Trainer } from '@/data/trainers';
 import { useStore } from '@/lib/store';
@@ -231,6 +231,23 @@ export default function TrainerDashboardScreen() {
                 </View>
               </View>
             ))}
+          </Card>
+        </Animated.View>
+
+        <Animated.View entering={enter(7)}>
+          {/* The welcome runs once on activation, so this is the way back to it. */}
+          <Card style={{ marginTop: 14, paddingVertical: 4 }}>
+            <ListRow
+              icon="sparkles"
+              iconColor={C.warning}
+              iconBg={C.warningSoft}
+              title="Replay your Pro introduction"
+              subtitle={`Meet ${firstName(trainer)} again and see everything Pro unlocks`}
+              onPress={() => {
+                tap();
+                router.push('/pro-welcome');
+              }}
+            />
           </Card>
         </Animated.View>
 

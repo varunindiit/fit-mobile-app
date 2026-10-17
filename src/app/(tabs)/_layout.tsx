@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
+import { router, usePathname } from "expo-router";
 import { Tabs } from "expo-router/js-tabs";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, {
   useAnimatedStyle,
@@ -10,6 +11,7 @@ import Animated, {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { tap, type IconName } from "@/components/ui";
+import { needsProWelcome, useStore } from "@/lib/store";
 import { C, MOTION } from "@/theme";
 
 const TABS: Record<
@@ -106,7 +108,24 @@ function TabBar({ state, navigation }: any) {
   );
 }
 
+/** The five tab routes — the welcome only opens while one of them is on screen. */
+const TAB_PATHS = ["/", "/fitness", "/diet", "/progress", "/me"];
+
 export default function TabsLayout() {
+  const { state } = useStore();
+  const sent = useRef(false);
+  const path = usePathname();
+  // Activations that don't pass through the paywall's own success screen (onboarding,
+  // a restore) still owe the member their welcome, so it is triggered from here. It
+  // waits until the tabs are the visible route, so it never cuts into the success
+  // celebration or stacks a second copy on top of the paywall.
+  const show = needsProWelcome(state) && TAB_PATHS.includes(path);
+  useEffect(() => {
+    if (!show || sent.current) return;
+    sent.current = true;
+    router.push("/pro-welcome");
+  }, [show]);
+
   return (
     <Tabs screenOptions={{ headerShown: false, animation: "none" }} tabBar={(p: any) => <TabBar {...p} />}>
       <Tabs.Screen name="index" />

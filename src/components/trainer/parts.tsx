@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { StyleSheet, Text, View, type ViewStyle } from 'react-native';
@@ -14,7 +15,11 @@ import { planSummary, type TrainerPlan } from '@/data/trainerPlans';
 import { availability, firstName, type Trainer } from '@/data/trainers';
 import { C, R, fade, shadowSm } from '@/theme';
 
-/** Initials avatar for a trainer, tinted with their accent. No stock photography is used. */
+/**
+ * A trainer's portrait, or their initials tinted with their accent when there is no
+ * portrait for them yet. Portraits are generated images of fictional coaches — see
+ * assets/images/CREDITS.md — never a real person presented as the member's trainer.
+ */
 export function TrainerAvatar({ trainer, size = 52, online, style }: { trainer: Trainer; size?: number; online?: boolean; style?: ViewStyle }) {
   const initials = trainer.name
     .split(/\s+/)
@@ -23,11 +28,16 @@ export function TrainerAvatar({ trainer, size = 52, online, style }: { trainer: 
     .join('')
     .toUpperCase();
   const dot = Math.round(size * 0.26);
+  const disc = { width: size, height: size, borderRadius: size / 2, borderWidth: 1.5, borderColor: fade(trainer.color, 0.3) } as const;
   return (
     <View style={[{ width: size, height: size }, style]}>
-      <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: fade(trainer.color, 0.14), borderWidth: 1.5, borderColor: fade(trainer.color, 0.3), alignItems: 'center', justifyContent: 'center' }}>
-        <Text style={{ color: trainer.color, fontWeight: '800', fontSize: Math.round(size * 0.36), letterSpacing: -0.4 }}>{initials}</Text>
-      </View>
+      {trainer.photo ? (
+        <Image source={trainer.photo} style={[disc, { backgroundColor: fade(trainer.color, 0.1) }]} contentFit="cover" accessibilityLabel={`${trainer.name}, coach portrait`} />
+      ) : (
+        <View style={[disc, { backgroundColor: fade(trainer.color, 0.14), alignItems: 'center', justifyContent: 'center' }]}>
+          <Text style={{ color: trainer.color, fontWeight: '800', fontSize: Math.round(size * 0.36), letterSpacing: -0.4 }}>{initials}</Text>
+        </View>
+      )}
       {online !== undefined && (
         <View
           style={{
@@ -112,9 +122,10 @@ export function TrainerPlanCard({
   return (
     <View style={[s.card, style]}>
       <View style={[s.cardHead, { backgroundColor: fade(plan.colors[1], 0.1) }]}>
-        <LinearGradient colors={plan.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.cardIcon}>
+        <View style={s.cardIcon}>
+          <LinearGradient colors={plan.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
           <Glyph emoji={plan.emoji} src={sessionArt(plan.key)} size={28} />
-        </LinearGradient>
+        </View>
         <View style={{ flex: 1 }}>
           <Text style={s.cardTitle} numberOfLines={1}>
             {plan.title}
@@ -203,7 +214,7 @@ const s = StyleSheet.create({
   noteText: { flex: 1, fontSize: 11, color: C.muted, fontWeight: '600' },
   card: { backgroundColor: C.card, borderRadius: R.lg, borderWidth: 1, borderColor: C.border, overflow: 'hidden', ...shadowSm },
   cardHead: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12 },
-  cardIcon: { width: 40, height: 40, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  cardIcon: { width: 40, height: 40, borderRadius: 14, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
   cardTitle: { fontSize: 16, fontWeight: '800', color: C.text, letterSpacing: -0.3 },
   cardMeta: { fontSize: 12, color: C.textSoft, fontWeight: '600', marginTop: 2, fontVariant: ['tabular-nums'] },
   noteRow: { flexDirection: 'row', gap: 10, paddingHorizontal: 12, paddingTop: 12, alignItems: 'flex-start' },

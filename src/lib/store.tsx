@@ -133,6 +133,12 @@ export type AppState = {
   trainerChat: TrainerMsg[];
   /** Pro: simulated call history. */
   calls: CallSession[];
+  /**
+   * The `premium.since` of the Pro activation whose welcome screen has been shown.
+   * Keyed on `since` rather than a boolean so a renewal or a restore never repeats
+   * it, while a genuinely new Pro activation after a lapse does.
+   */
+  proIntroFor: string | null;
 };
 
 export const DEFAULT_PROFILE: Profile = {
@@ -201,6 +207,7 @@ const INITIAL: AppState = {
   trainerId: null,
   trainerChat: [],
   calls: [],
+  proIntroFor: null,
 };
 
 let idSeq = 0;
@@ -220,6 +227,7 @@ export function sanitize(s: AppState): AppState {
     trainerChat: s.trainerChat.filter((m) => m && typeof m.id === 'string' && typeof m.text === 'string' && (m.from === 'user' || m.from === 'trainer') && isNum(m.at)).slice(-MAX_TRAINER_CHAT),
     calls: s.calls.filter((c) => c && typeof c.id === 'string' && isNum(c.at) && isNum(c.seconds) && (c.kind === 'audio' || c.kind === 'video')),
     trainerId: typeof s.trainerId === 'string' ? s.trainerId : null,
+    proIntroFor: typeof s.proIntroFor === 'string' ? s.proIntroFor : null,
     recentSearches: s.recentSearches.filter((x) => typeof x === 'string').slice(0, MAX_RECENT),
     favoriteFoods: s.favoriteFoods.filter((x) => typeof x === 'string'),
     premium: s.premium && typeof s.premium.since === 'string' && isNum(s.premium.months) ? s.premium : null,
@@ -475,6 +483,9 @@ function useAppStore() {
       /** Replaces the plan outright, e.g. with the one an account brings along at log-in (null = Free). */
       setPremium: (premium: Premium | null) => update((s) => ({ ...s, premium })),
       cancelPremium: () => update((s) => (s.premium ? { ...s, premium: { ...s.premium, cancelledAt: todayKey() } } : s)),
+      /** The Pro welcome has been shown for the current activation; don't show it again. */
+      markProIntroSeen: () => update((s) => (s.premium ? { ...s, proIntroFor: s.premium.since } : s)),
+
       /* ---------- Pro trainer ---------- */
 
       /** Assign (or change) the member's trainer. Keeps the conversation — a coach swap is handled by the screen. */
@@ -523,6 +534,15 @@ export function useStore() {
   const s = useContext(Ctx);
   if (!s) throw new Error('useStore outside provider');
   return s;
+}
+
+/**
+ * Whether this account should be shown the Pro welcome experience.
+ * True only for an active Pro plan whose activation hasn't been introduced yet —
+ * so Free and Smart never see it, and a renewal or restore never repeats it.
+ */
+export function needsProWelcome(s: Pick<AppState, 'premium' | 'proIntroFor'>, today = todayKey()) {
+  return !!s.premium && s.premium.tier === 'pro' && isPremiumActive(s.premium, today) && s.proIntroFor !== s.premium.since;
 }
 
 /** Premium is active until its paid period ends (also after a cancel). */
