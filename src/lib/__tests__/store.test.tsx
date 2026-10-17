@@ -307,3 +307,63 @@ describe('actions handle edge cases', () => {
     expect(isPremiumActive(null)).toBe(false);
   });
 });
+
+describe('Pro trainer slice', () => {
+  it('messages append, advance delivery state and survive a restart', async () => {
+    let h = await launch();
+    let id = '';
+    await act(async () => {
+      h.result.current.assignTrainer('arjun-mehta');
+      id = h.result.current.addTrainerMsg({ from: 'user', text: 'Chest workout please?', status: 'sending' });
+      h.result.current.addTrainerMsg({ from: 'trainer', text: 'Here you go.', status: 'delivered', planKey: 'trainer:chest-triceps' });
+    });
+    await act(async () => h.result.current.setMsgStatus(id, 'read'));
+    expect(h.result.current.state.trainerChat.map((m) => m.status)).toEqual(['read', 'delivered']);
+
+    h = await restart(h);
+    const s = h.result.current.state;
+    expect(s.trainerId).toBe('arjun-mehta');
+    expect(s.trainerChat).toHaveLength(2);
+    expect(s.trainerChat[1].planKey).toBe('trainer:chest-triceps');
+  });
+
+  it('opening the thread marks only the trainer’s messages read', async () => {
+    const h = await launch();
+    await act(async () => {
+      h.result.current.addTrainerMsg({ from: 'trainer', text: 'Hi', status: 'delivered' });
+      h.result.current.addTrainerMsg({ from: 'user', text: 'Hey', status: 'sent' });
+    });
+    await act(async () => h.result.current.markTrainerChatRead());
+    const [coach, me] = h.result.current.state.trainerChat;
+    expect(coach.status).toBe('read');
+    expect(me.status).toBe('sent');
+  });
+
+  it('calls are logged newest first and clearing the chat keeps them', async () => {
+    const h = await launch();
+    await act(async () => {
+      h.result.current.logCall({ trainerId: 'arjun-mehta', kind: 'audio', seconds: 90, outcome: 'ended' });
+      h.result.current.logCall({ trainerId: 'arjun-mehta', kind: 'video', seconds: 0, outcome: 'declined' });
+      h.result.current.addTrainerMsg({ from: 'trainer', text: 'Hi', status: 'sent' });
+    });
+    await act(async () => h.result.current.clearTrainerChat());
+    expect(h.result.current.state.trainerChat).toEqual([]);
+    expect(h.result.current.state.calls.map((c) => c.kind)).toEqual(['video', 'audio']);
+  });
+
+  it('drops malformed trainer records on load', async () => {
+    await AsyncStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        onboarded: true,
+        trainerId: 42,
+        trainerChat: [{ id: 'ok', from: 'trainer', text: 'hi', at: 1, status: 'sent' }, { id: 'bad', from: 'alien', text: 'hi', at: 1 }, null],
+        calls: [{ id: 'c1', trainerId: 'x', kind: 'audio', at: 1, seconds: 10, outcome: 'ended' }, { id: 'bad', kind: 'telepathy', at: 'nope', seconds: 1 }],
+      }),
+    );
+    const s = (await launch()).result.current.state;
+    expect(s.trainerId).toBeNull();
+    expect(s.trainerChat.map((m) => m.id)).toEqual(['ok']);
+    expect(s.calls.map((c) => c.id)).toEqual(['c1']);
+  });
+});

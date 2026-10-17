@@ -22,10 +22,11 @@ import { Accordion, Decor, fmtFull, GOLD, planEnd, PREMIUM_BG } from '@/componen
 import { Button, Card, Dialog, EASE_OUT, enter, IconButton, IconTile, nativeOnly, PressableScale, Screen, SectionTitle, Sheet, T, tap, useToast, type IconName } from '@/components/ui';
 import { COACHES, formatUSD, PLAN_TIERS, TESTIMONIALS, type PlanTier } from '@/data/plans';
 import { fmtDate, todayKey } from '@/lib/calc';
-import { isPremiumActive, useStore } from '@/lib/store';
+import { FREE_PROGRAM_DAYS, planStatus, TIER_LABEL } from '@/lib/entitlements';
+import { useStore, type Premium } from '@/lib/store';
 import { C, G, glow, MOTION, R } from '@/theme';
 import { Glyph } from '@/components/Glyph';
-import { ACCENT, DEFAULT_MONTHS, pctOff, PlanPicker, planFor } from '@/components/plans/PlanPicker';
+import { ACCENT, DEFAULT_MONTHS, pctOff, PlanComparison, PlanPicker, planFor } from '@/components/plans/PlanPicker';
 
 const COUPON = { code: 'FIT40', off: 4 };
 const METHODS: { id: string; title: string; sub: string; icon: IconName }[] = [
@@ -42,15 +43,21 @@ const FAQ = [
 
 export default function PlansScreen() {
   const params = useLocalSearchParams<{ tier?: string }>();
-  const { state, subscribe, cancelPremium } = useStore();
+  const { state, subscribe, cancelPremium, setPremium } = useStore();
   const toast = useToast();
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const focused = useIsFocused();
   const bar = <StatusBar style={focused ? 'light' : 'dark'} />;
-  const premium = isPremiumActive(state.premium) ? state.premium : null;
+  // One read of the entitlement rules covers every state this screen shows: Free, active, cancelled and lapsed.
+  const status = planStatus(state.premium);
+  const premium = status.active ? state.premium : null;
+  /** The tier that was paid for but has run out — the one a Renew should bring back. */
+  const lapsed = status.expired ? status.purchased : null;
 
-  const [tier, setTier] = useState<PlanTier>(params.tier === 'pro' || params.tier === 'smart' ? params.tier : premium ? 'pro' : 'smart');
+  const [tier, setTier] = useState<PlanTier>(
+    params.tier === 'pro' || params.tier === 'smart' ? params.tier : lapsed ?? (premium ? 'pro' : 'smart'),
+  );
   const [months, setMonths] = useState(DEFAULT_MONTHS);
   const [checkout, setCheckout] = useState(false);
   const [method, setMethod] = useState('upi');
@@ -72,7 +79,7 @@ export default function PlansScreen() {
   const { plan, dur } = planFor(tier, months);
   const discount = dur.was - dur.price;
   const total = Math.max(0, dur.price - (coupon ? COUPON.off : 0));
-  const cta = premium?.tier === tier ? 'Renew' : premium?.tier === 'smart' && tier === 'pro' ? 'Upgrade' : 'Continue';
+  const cta = status.purchased === tier ? 'Renew' : status.tier === 'smart' && tier === 'pro' ? 'Upgrade' : 'Continue';
   const slideW = width - 100;
   const accent = ACCENT[tier];
 
@@ -88,6 +95,27 @@ export default function PlansScreen() {
       setCheckout(false);
       setSuccess({ tier, months: dur.months });
     }, 1500);
+  };
+
+  /**
+   * Local-only restore: the last saved purchase is replayed through the same status rules,
+   * so a plan that has since run out reports "nothing to restore" instead of coming back.
+   */
+  const restore = () => {
+    const last = state.purchases[state.purchases.length - 1];
+    if (!last) {
+      toast('No purchases saved on this device', 'information-circle');
+      return;
+    }
+    const found: Premium = { tier: last.tier, months: last.months, since: last.date };
+    const next = planStatus(found);
+    if (!next.active) {
+      toast('Nothing to restore — that plan has ended', 'information-circle');
+      return;
+    }
+    setPremium(found);
+    setTier(last.tier);
+    toast(`Fittelo ${TIER_LABEL[last.tier]} restored${next.endsOn ? ` · till ${fmtFull(next.endsOn)}` : ''}`, 'checkmark-circle');
   };
 
   if (success)
@@ -165,7 +193,48 @@ export default function PlansScreen() {
               </Animated.View>
             )}
 
-            <PlanPicker tier={tier} months={months} onTier={setTier} onMonths={setMonths} enterAt={3} titleTop={premium ? 24 : 22} />
+            {!premium && lapsed && (
+              <Animated.View entering={enter(3)}>
+                <Card style={st.lapsed}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                    <IconTile icon="time-outline" color={C.warning} bg={C.warningSoft} size={40} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={T.h3}>{`Your ${TIER_LABEL[lapsed]} plan ended${status.endsOn ? ` on ${fmtFull(status.endsOn)}` : ''}`}</Text>
+                      <Text style={T.small}>{"You're back on Free. Every log and finished program day is still here."}</Text>
+                    </View>
+                  </View>
+                  <Button
+                    title={`Renew ${TIER_LABEL[lapsed]}`}
+                    small
+                    icon={lapsed === 'pro' ? 'diamond' : 'sparkles'}
+                    style={{ marginTop: 14 }}
+                    onPress={() => {
+                      setTier(lapsed);
+                      setMonths(DEFAULT_MONTHS);
+                    }}
+                  />
+                </Card>
+              </Animated.View>
+            )}
+
+            {!premium && !lapsed && (
+              <Animated.View entering={enter(3)}>
+                <Card style={st.free}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                    <IconTile icon="leaf-outline" color={C.textSoft} bg={C.surfaceAlt} size={40} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={T.h3}>{"You're on Fittelo Free"}</Text>
+                      <Text style={T.small}>{`Day ${FREE_PROGRAM_DAYS} of the program and our beginner workouts stay free.`}</Text>
+                    </View>
+                  </View>
+                </Card>
+              </Animated.View>
+            )}
+
+            {/* A status card now always sits above the picker, so the title keeps the same gap in every state. */}
+            <PlanPicker tier={tier} months={months} onTier={setTier} onMonths={setMonths} enterAt={3} titleTop={24} />
+
+            <PlanComparison current={status.tier} recommended="smart" enterAt={5} />
 
             {/* Saathi (Smart) */}
             {tier === 'smart' && (
@@ -184,7 +253,7 @@ export default function PlansScreen() {
             )}
 
             {/* Coaches + testimonials on deep teal */}
-            <Animated.View entering={enter(5)}>
+            <Animated.View entering={enter(6)}>
               <LinearGradient colors={G.deep} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.band}>
                 <Decor />
                 {tier === 'pro' && (
@@ -257,8 +326,24 @@ export default function PlansScreen() {
               </LinearGradient>
             </Animated.View>
 
+            {/* Restore */}
+            <Animated.View entering={enter(7)}>
+              <SectionTitle title="Already subscribed?" />
+              <Card>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                  <IconTile icon="refresh-outline" color={C.textSoft} bg={C.surfaceAlt} size={40} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={T.h3}>Restore purchases</Text>
+                    <Text style={T.small}>Bring back a plan you already bought on this device.</Text>
+                  </View>
+                </View>
+                <Button title="Restore purchases" variant="outline" small icon="refresh" style={{ marginTop: 14 }} onPress={restore} />
+                <Text style={[T.tiny, { marginTop: 8, lineHeight: 16 }]}>Demo store — purchases are saved on this device only, so there is no app-store receipt to check.</Text>
+              </Card>
+            </Animated.View>
+
             {/* FAQ */}
-            <Animated.View entering={enter(6)}>
+            <Animated.View entering={enter(8)}>
               <SectionTitle title="FAQs" />
               <Card style={{ paddingVertical: 2 }}>
                 {FAQ.map((f, i) => (
@@ -497,6 +582,8 @@ const st = StyleSheet.create({
   hsLabel: { color: 'rgba(255,255,255,0.65)', fontSize: 11, marginTop: 2, fontWeight: '600' },
   body: { paddingHorizontal: 16 },
   active: { marginTop: 16, borderWidth: 1.5, borderColor: C.gold },
+  lapsed: { marginTop: 16, borderWidth: 1.5, borderColor: C.warning, backgroundColor: C.warningSoft },
+  free: { marginTop: 16, borderWidth: 1, borderColor: C.border },
   activeIcon: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   feature: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6 },
   featureText: { flex: 1, fontSize: 15, color: C.text, fontWeight: '500' },

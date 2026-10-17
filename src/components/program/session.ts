@@ -1,4 +1,6 @@
 import { FOCUS_SESSIONS, PROGRAM_DAYS, PROGRAMS, programById, sessionByKey, type Session, type SessionItem } from '@/data/program';
+import { trainerPlanByKey } from '@/data/trainerPlans';
+import { trainerById } from '@/data/trainers';
 import { pad } from '@/lib/calc';
 import { fade, onFill } from '@/theme';
 
@@ -8,6 +10,8 @@ export const planItems = (s: Session, planEdits: Record<string, SessionItem[]>) 
 /** Like sessionByKey, but rejects malformed program keys (unknown plan / out-of-range day). */
 export function findSession(key: string): Session | undefined {
   if (!key) return undefined;
+  // Coach-assigned plans run through the same day screen and player as everything else.
+  if (key.startsWith('trainer:')) return trainerPlanByKey(key);
   if (key.startsWith('program:')) {
     const [, pid, d] = key.split(':');
     const day = Number(d);
@@ -19,6 +23,11 @@ export function findSession(key: string): Session | undefined {
 const LEVEL_BOLTS: Record<string, number> = { Beginner: 1, Intermediate: 2, Advanced: 3 };
 
 export function sessionMeta(s: Session) {
+  if (s.key.startsWith('trainer:')) {
+    const plan = trainerPlanByKey(s.key);
+    const coach = trainerById(plan?.trainerId);
+    return { program: undefined, day: undefined, level: 'Coach plan', bolts: 2, eyebrow: `Written by ${coach.name}` };
+  }
   if (s.key.startsWith('program:')) {
     const [, pid, d] = s.key.split(':');
     const program = programById(pid);

@@ -5,6 +5,8 @@ import Animated, { FadeIn, interpolate, interpolateColor, useAnimatedStyle, useS
 
 import { Card, CountUp, EASE_OUT, enter, IconTile, nativeOnly, PressableScale, SectionTitle, T, tap, type IconName } from '@/components/ui';
 import { formatUSD, PLAN_TIERS, type PlanTier } from '@/data/plans';
+import { PROGRAM_DAYS } from '@/data/program';
+import { can, FREE_PROGRAM_DAYS, TIER_LABEL, type Feature, type Tier } from '@/lib/entitlements';
 import { C, MOTION, onFill, R } from '@/theme';
 
 /** Presentation accents per tier: Smart = brand teal, Pro = green-ink + gold. */
@@ -86,6 +88,92 @@ export function PlanPicker({ tier, months, onTier, onMonths, enterAt = 0, titleT
         </Card>
       </Animated.View>
     </>
+  );
+}
+
+/** Free sits in the comparison but is never purchasable, so the matrix has its own column order. */
+const COLS: Tier[] = ['free', 'smart', 'pro'];
+
+/**
+ * Comparison rows. Each row only names a `Feature` — every tick, lock and dash is
+ * answered by `can()`, so the matrix follows `entitlements.ts` instead of restating it.
+ * `partial` is what Free still gets when the feature is trimmed rather than absent.
+ */
+const ROWS: { feature: Feature; label: string; partial?: string }[] = [
+  { feature: 'program.allDays', label: `All ${PROGRAM_DAYS} program days`, partial: `Day ${FREE_PROGRAM_DAYS}` },
+  { feature: 'library.full', label: 'Full workout library', partial: 'Beginner' },
+  { feature: 'progress.full', label: 'Progress & analytics', partial: 'Recent' },
+  { feature: 'plan.customise', label: 'Customise any workout' },
+  { feature: 'trainer', label: 'Personal trainer' },
+  { feature: 'trainer.chat', label: 'Trainer chat' },
+  { feature: 'trainer.call', label: 'Trainer audio call' },
+  { feature: 'trainer.call', label: 'Trainer video call' },
+  { feature: 'trainer.plans', label: 'Trainer-built plans' },
+  { feature: 'trainer.demos', label: 'Trainer photo demos' },
+];
+
+/** Free / Smart / Pro feature matrix. Read-only — picking a plan stays with `PlanPicker`. */
+export function PlanComparison({ current, recommended = 'smart', enterAt = 0 }: { current: Tier; recommended?: PlanTier; enterAt?: number }) {
+  return (
+    <Animated.View entering={enter(enterAt)}>
+      <SectionTitle title="Compare plans" />
+      <Card style={st.cmpCard}>
+        <View style={st.cmpHead}>
+          <Text style={[T.label, st.cmpHeadLabel]}>What you get</Text>
+          {COLS.map((t) => (
+            <View key={t} style={[st.cmpCol, st.cmpColHead, t === recommended && st.cmpColOn]}>
+              <Text style={[st.cmpTier, t === recommended && { color: C.primaryDark }]}>{TIER_LABEL[t]}</Text>
+              {current === t ? (
+                <View style={[st.cmpChip, { backgroundColor: C.text }]}>
+                  <Text style={st.cmpChipText}>NOW</Text>
+                </View>
+              ) : t === recommended ? (
+                <View style={[st.cmpChip, { backgroundColor: C.gold }]}>
+                  <Text style={[st.cmpChipText, { color: C.navy }]}>BEST</Text>
+                </View>
+              ) : (
+                <View style={st.cmpChipGap} />
+              )}
+            </View>
+          ))}
+        </View>
+        {ROWS.map((r, i) => (
+          <View key={r.label} style={[st.cmpRow, i === ROWS.length - 1 && { borderBottomWidth: 0 }]}>
+            <Text style={st.cmpLabel}>{r.label}</Text>
+            {COLS.map((t) => (
+              <View key={t} style={[st.cmpCol, t === recommended && st.cmpColOn, t === recommended && i === ROWS.length - 1 && st.cmpColLast]}>
+                <CompareCell tier={t} feature={r.feature} partial={r.partial} />
+              </View>
+            ))}
+          </View>
+        ))}
+      </Card>
+      <View style={st.cmpLegend}>
+        <Ionicons name="lock-closed" size={11} color={C.muted} />
+        <Text style={T.tiny}>unlocks with an upgrade · — not part of that plan</Text>
+      </View>
+    </Animated.View>
+  );
+}
+
+function CompareCell({ tier, feature, partial }: { tier: Tier; feature: Feature; partial?: string }) {
+  // A tick, text or dash alone means nothing to a screen reader, so every cell names its column.
+  const col = TIER_LABEL[tier];
+  if (can(tier, feature)) return <Ionicons name="checkmark-circle" size={20} color={tier === 'pro' ? C.warning : C.primary} accessibilityLabel={`${col}: included`} />;
+  if (tier === 'free') {
+    // Free can buy its way in, so it reads as a lock; a paid tier simply doesn't carry the feature.
+    if (partial)
+      return (
+        <Text style={st.cmpPartial} accessibilityLabel={`${col}: ${partial} only`}>
+          {partial}
+        </Text>
+      );
+    return <Ionicons name="lock-closed" size={13} color={C.muted} accessibilityLabel={`${col}: locked`} />;
+  }
+  return (
+    <Text style={st.cmpDash} accessibilityLabel={`${col}: not included`}>
+      —
+    </Text>
   );
 }
 
@@ -192,6 +280,22 @@ const st = StyleSheet.create({
   durOff: { fontSize: 12, fontWeight: '800', marginTop: 6 },
   durBadge: { position: 'absolute', top: -9, alignSelf: 'center', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6 },
   durBadgeText: { fontSize: 9, fontWeight: '800', color: C.white, letterSpacing: 0.5 },
+  cmpCard: { marginTop: 6, paddingVertical: 0, paddingHorizontal: 12 },
+  cmpHead: { flexDirection: 'row', alignItems: 'flex-end', borderBottomWidth: StyleSheet.hairlineWidth * 2, borderBottomColor: C.border },
+  cmpHeadLabel: { flex: 1, paddingRight: 8, paddingBottom: 10 },
+  cmpCol: { width: 48, alignSelf: 'stretch', alignItems: 'center', justifyContent: 'center' },
+  cmpColHead: { paddingTop: 12, paddingBottom: 8, borderTopLeftRadius: R.xs, borderTopRightRadius: R.xs },
+  cmpColOn: { backgroundColor: C.primarySoft },
+  cmpColLast: { borderBottomLeftRadius: R.xs, borderBottomRightRadius: R.xs },
+  cmpTier: { fontSize: 13, fontWeight: '800', color: C.text, letterSpacing: -0.2 },
+  cmpChip: { marginTop: 4, paddingHorizontal: 5, paddingVertical: 2, borderRadius: 5 },
+  cmpChipText: { fontSize: 8, fontWeight: '800', color: C.white, letterSpacing: 0.5 },
+  cmpChipGap: { height: 15, marginTop: 4 },
+  cmpRow: { flexDirection: 'row', alignItems: 'center', minHeight: 46, borderBottomWidth: StyleSheet.hairlineWidth * 2, borderBottomColor: C.borderSoft },
+  cmpLabel: { flex: 1, fontSize: 13, fontWeight: '600', color: C.text, lineHeight: 18, paddingRight: 8, paddingVertical: 8 },
+  cmpPartial: { fontSize: 11, fontWeight: '800', color: C.textSoft },
+  cmpDash: { fontSize: 14, fontWeight: '700', color: C.muted },
+  cmpLegend: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, marginTop: 10 },
   priceCard: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 12 },
   priceRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, marginTop: 4 },
   price: { fontSize: 30, fontWeight: '800', color: C.text, letterSpacing: -0.8, fontVariant: ['tabular-nums'] },

@@ -42,6 +42,8 @@ import { PLAN_TIERS } from '@/data/plans';
 import { programById, programDay, sessionStats } from '@/data/program';
 import { dayShort, fmtDate, kmFromSteps } from '@/lib/calc';
 import { burnedOn, dayTotals, isPremiumActive, useStore, weekProgress, workoutStreak } from '@/lib/store';
+import { useAccess } from '@/lib/useAccess';
+import { trainerById, firstName as trainerFirstName } from '@/data/trainers';
 import { useToday } from '@/lib/useToday';
 import { C, G, ink, MOTION, R, shadow, shadowSm } from '@/theme';
 
@@ -107,6 +109,14 @@ export default function Home() {
   const weightProgress = tracksWeight ? Math.abs(start - p.weightKg) / Math.max(0.1, Math.abs(start - p.targetKg)) : 1;
   const proteinGap = Math.max(0, targets.protein - total.protein);
   const premiumTier = isPremiumActive(state.premium) ? PLAN_TIERS.find((x) => x.id === state.premium!.tier) : null;
+  const access = useAccess();
+  // Pro members land on their coaching dashboard; Smart on the AI coach; Free on the paywall.
+  const coach = trainerById(state.trainerId);
+  const premiumCard = access.can('trainer')
+    ? { href: '/trainer' as const, label: 'YOUR COACH', title: `${trainerFirstName(coach)} is your personal trainer`, sub: 'Plans, chat and calls — all in one place', cta: 'Open coaching' }
+    : premiumTier
+      ? { href: '/coach' as const, label: 'ACTIVE PLAN', title: `You're on ${premiumTier.name}`, sub: 'Ask your coach anything, anytime', cta: 'Talk to coach' }
+      : { href: '/plans' as const, label: 'FITTELO PRO', title: 'Get a personal nutritionist & trainer', sub: 'Custom plans · weekly check-ins · up to 40% off', cta: 'Explore plans' };
   const todaysWorkout = state.workouts.find((w) => w.date === today);
   const streak = workoutStreak(state);
   const program = programById(p.program);
@@ -598,7 +608,7 @@ export default function Home() {
             scaleTo={0.98}
             onPress={() => {
               tap();
-              router.push(premiumTier ? '/coach' : '/plans');
+              router.push(premiumCard.href);
             }}
             style={st.premiumWrap}
             accessibilityRole="button">
@@ -610,12 +620,12 @@ export default function Home() {
               <View style={{ flex: 1 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <Ionicons name="diamond" size={12} color={C.gold} />
-                  <Text style={st.premiumLabel}>{premiumTier ? 'ACTIVE PLAN' : 'FITTELO PRO'}</Text>
+                  <Text style={st.premiumLabel}>{premiumCard.label}</Text>
                 </View>
-                <Text style={st.premiumTitle}>{premiumTier ? `You're on ${premiumTier.name}` : 'Get a personal nutritionist & trainer'}</Text>
-                <Text style={st.premiumSub}>{premiumTier ? 'Ask your coach anything, anytime' : 'Custom plans · weekly check-ins · up to 40% off'}</Text>
+                <Text style={st.premiumTitle}>{premiumCard.title}</Text>
+                <Text style={st.premiumSub}>{premiumCard.sub}</Text>
                 <View style={st.premiumBtn}>
-                  <Text style={st.premiumBtnText}>{premiumTier ? 'Talk to coach' : 'Explore plans'}</Text>
+                  <Text style={st.premiumBtnText}>{premiumCard.cta}</Text>
                   <Ionicons name="arrow-forward" size={14} color={C.navy} />
                 </View>
               </View>

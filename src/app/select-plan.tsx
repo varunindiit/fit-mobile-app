@@ -3,16 +3,19 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { LockedCard } from '@/components/premium/locked';
 import { PlanAccordion } from '@/components/program/PlanAccordion';
 import { Card, Dialog, Enter, Header, IconTile, Pill, PressableScale, ProgressBar, Screen, T, tap, useToast } from '@/components/ui';
 import { isRestDay, PROGRAM_DAYS, programById, type ProgramId } from '@/data/program';
 import { useStore } from '@/lib/store';
+import { useAccess } from '@/lib/useAccess';
 import { C, onFill, R } from '@/theme';
 
 const WEEKS = Array.from({ length: Math.ceil(PROGRAM_DAYS / 7) }, (_, w) => Array.from({ length: 7 }, (_, d) => w * 7 + d + 1).filter((d) => d <= PROGRAM_DAYS));
 
 export default function SelectPlanScreen() {
   const { state, setProgram, resetProgram } = useStore();
+  const access = useAccess();
   const toast = useToast();
   const [selected, setSelected] = useState<ProgramId>(state.profile.program);
   const [askReset, setAskReset] = useState(false);
@@ -21,6 +24,8 @@ export default function SelectPlanScreen() {
   const tint = plan.colors[1];
   const progress = state.programProgress[selected] ?? 0;
   const current = Math.min(PROGRAM_DAYS, progress + 1);
+  /** Highest day this plan lets the account open; the rest show a lock. */
+  const open = access.daysOpen();
   const isActive = state.profile.program === selected;
   const openDay = (day: number) => router.push({ pathname: '/program-day', params: { key: `program:${selected}:${day}` } });
 
@@ -34,7 +39,8 @@ export default function SelectPlanScreen() {
 
   const tapDay = (day: number) => {
     tap();
-    if (day <= current) openDay(day);
+    // A plan-locked day still opens: the day screen is where the upgrade is offered.
+    if (day > open || day <= current) openDay(day);
     else toast(`Complete Day ${current} first`, 'lock-closed');
   };
 
@@ -83,16 +89,20 @@ export default function SelectPlanScreen() {
                       const done = d <= progress;
                       const cur = d === current && !done;
                       const rest = isRestDay(d);
+                      const locked = d > open;
                       return (
                         <PressableScale
                           key={d}
                           scaleTo={0.88}
                           accessibilityRole="button"
-                          accessibilityLabel={`Day ${d}${rest ? ', rest day' : ''}${done ? ', completed' : ''}`}
+                          accessibilityLabel={`Day ${d}${rest ? ', rest day' : ''}${done ? ', completed' : ''}${locked ? ', locked — upgrade to unlock' : ''}`}
                           onPress={() => tapDay(d)}
-                          style={[s.day, done && { backgroundColor: tint, borderColor: tint }, cur && { borderColor: tint, borderWidth: 2.5, backgroundColor: C.card }]}>
+                          style={[s.day, done && !locked && { backgroundColor: tint, borderColor: tint }, cur && { borderColor: tint, borderWidth: 2.5, backgroundColor: C.card }, locked && s.dayLocked]}>
                           {done ? (
-                            <Ionicons name="checkmark" size={18} color={onFill(tint)} />
+                            // A day trained on a paid plan keeps its tick after a downgrade; it just can't be replayed.
+                            <Ionicons name={locked ? 'lock-closed' : 'checkmark'} size={locked ? 13 : 18} color={locked ? C.muted : onFill(tint)} />
+                          ) : locked ? (
+                            <Ionicons name="lock-closed" size={14} color={C.muted} />
                           ) : rest ? (
                             <Ionicons name={cur ? 'moon' : 'cafe-outline'} size={cur ? 15 : 16} color={cur ? tint : C.muted} />
                           ) : (
@@ -123,9 +133,21 @@ export default function SelectPlanScreen() {
                 <Ionicons name="cafe-outline" size={13} color={C.muted} />
                 <Text style={s.legendText}>Rest day</Text>
               </View>
+              {open < PROGRAM_DAYS && (
+                <View style={s.legendItem}>
+                  <Ionicons name="lock-closed" size={12} color={C.muted} />
+                  <Text style={s.legendText}>Locked</Text>
+                </View>
+              )}
             </View>
           </Card>
         </Enter>
+
+        {open < PROGRAM_DAYS && (
+          <Enter index={2}>
+            <LockedCard lock={access.lock('program.allDays')!} style={{ marginTop: 16 }} />
+          </Enter>
+        )}
       </ScrollView>
 
       <Dialog
@@ -165,6 +187,7 @@ const s = StyleSheet.create({
   weekTitle: { fontSize: 13, fontWeight: '700', color: C.text },
   weekCount: { fontSize: 12, fontWeight: '700', color: C.muted, fontVariant: ['tabular-nums'] },
   weekRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  dayLocked: { backgroundColor: C.borderSoft, borderColor: C.border, borderStyle: 'dashed' },
   day: { width: 36, height: 36, borderRadius: 18, backgroundColor: C.surfaceAlt, borderWidth: 1.5, borderColor: C.borderSoft, alignItems: 'center', justifyContent: 'center' },
   dayText: { fontSize: 13, fontWeight: '700', color: C.textSoft, fontVariant: ['tabular-nums'] },
   trophy: { backgroundColor: C.warningSoft, borderColor: C.gold },

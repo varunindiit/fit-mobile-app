@@ -10,9 +10,11 @@ import { fromUnit, toUnit } from '@/components/onboarding/kit';
 import { BarChart, fmtNum, GoalLegend, LineChart } from '@/components/charts/Charts';
 import { HeaderAction, HeaderActions, TabHeader, TabHeaderText } from '@/components/TabHeader';
 import { NOTIFICATIONS } from '@/data/notifications';
+import { LockedCard } from '@/components/premium/locked';
 import { Button, Card, Chip, CountUp, Dialog, EmptyState, enter, fadeEnter, IconButton, IconTile, layoutTransition, nativeOnly, Pill, PressableScale, ProgressBar, Screen, SectionTitle, Segmented, Sheet, T, tap, useToast, type IconName } from '@/components/ui';
 import { addDays, bmi, bmiLabel, dayShort, fmtDate, kmFromSteps, parseKey, relDay, round1, todayKey } from '@/lib/calc';
 import { burnedOn, dayTotals, useStore, weekProgress, workoutDays, workoutStreak, type WeightEntry } from '@/lib/store';
+import { useAccess } from '@/lib/useAccess';
 import { C, G, glow, MOTION, R, shadow, shadowSm } from '@/theme';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -24,6 +26,7 @@ const openHistory = (date?: string) => router.push(date ? { pathname: '/history'
 
 export default function ReportsScreen() {
   const { state, addWeight } = useStore();
+  const access = useAccess();
   const toast = useToast();
   const { log } = useLocalSearchParams<{ log?: string }>();
   const [tab, setTab] = useState<'steps' | 'calories'>('steps');
@@ -152,7 +155,14 @@ export default function ReportsScreen() {
           <WeightSection onLog={openLog} />
         </Animated.View>
 
-        {/* Weekly calories */}
+        {/* Weekly calories — trend charts are a Smart feature; Free keeps totals, streaks and weight. */}
+        {!access.can('progress.full') ? (
+          <Animated.View entering={enter(4)}>
+            <SectionHead title="Trends" />
+            <LockedCard lock={access.lock('progress.full')!} />
+          </Animated.View>
+        ) : (
+          <>
         <Animated.View entering={enter(4)}>
           <SectionHead title="Weekly Calories">
             <Text style={st.sectionMeta}>from workouts</Text>
@@ -187,6 +197,8 @@ export default function ReportsScreen() {
             {tab === 'steps' ? <StepsView /> : <CaloriesView />}
           </Animated.View>
         </Animated.View>
+          </>
+        )}
       </Animated.ScrollView>
 
       <Sheet visible={sheet} onClose={() => setSheet(false)} title="Log weight" scroll>

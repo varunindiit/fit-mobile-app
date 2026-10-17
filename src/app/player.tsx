@@ -16,6 +16,7 @@ import { accentTheme, findSession, fmtClock, itemLabel, logTitle, planItems, ses
 import { Dialog, EASE_OUT, EmptyState, Header, IconButton, PressableScale, Screen, tap, useToast } from '@/components/ui';
 import { exerciseById, sessionStats, type Session } from '@/data/program';
 import { useStore } from '@/lib/store';
+import { useAccess } from '@/lib/useAccess';
 import { C, R } from '@/theme';
 
 type Phase = 'ready' | 'work' | 'rest';
@@ -47,6 +48,7 @@ export default function PlayerScreen() {
 
 function Player({ session, resume }: { session: Session; resume: boolean }) {
   const { state, completeSession, updateSettings, saveResume, clearResume } = useStore();
+  const proDemos = useAccess().can('trainer.demos');
   const toast = useToast();
   const insets = useSafeAreaInsets();
   const { height: winH } = useWindowDimensions();
@@ -286,7 +288,7 @@ function Player({ session, resume }: { session: Session; resume: boolean }) {
             </View>
           </View>
           <PressableScale scaleTo={0.98} accessibilityRole="button" accessibilityLabel={`About ${ex.name}`} onPress={() => (tap(), setInfo(idx))} style={[s.preview, { backgroundColor: C.surfaceAlt, borderColor: C.border }]}>
-            <ExerciseArt id={ex.id} emoji={ex.emoji} width="100%" height={Math.round(artH * 0.62)} animated radius={R.lg} tint={pal.art} />
+            <ExerciseArt id={ex.id} emoji={ex.emoji} width="100%" height={Math.round(artH * 0.62)} animated radius={R.lg} tint={pal.art} pro={proDemos} />
             <View style={[s.previewInfo, { backgroundColor: pal.accent }]}>
               <Ionicons name="information-circle" size={22} color={pal.on} />
             </View>
@@ -335,7 +337,7 @@ function Player({ session, resume }: { session: Session; resume: boolean }) {
 
       <Animated.View style={[s.flex, fadeStyle]}>
         <View style={s.artFrame}>
-          <ExerciseArt id={ex.id} emoji={ex.emoji} width="100%" height={artH} animated radius={R.xl} tint={pal.art} />
+          <ExerciseArt id={ex.id} emoji={ex.emoji} width="100%" height={artH} animated radius={R.xl} tint={pal.art} pro={proDemos} />
         </View>
 
         {phase === 'ready' ? (
@@ -380,7 +382,7 @@ function Player({ session, resume }: { session: Session; resume: boolean }) {
                 </PressableScale>
               )}
             </View>
-            {roomy && upNext && <NextUp id={upNext.exerciseId} emoji={exerciseById(upNext.exerciseId).emoji} name={exerciseById(upNext.exerciseId).name} value={itemLabel(upNext)} tint={pal.art} />}
+            {roomy && upNext && <NextUp id={upNext.exerciseId} emoji={exerciseById(upNext.exerciseId).emoji} name={exerciseById(upNext.exerciseId).name} value={itemLabel(upNext)} tint={pal.art} pro={proDemos} />}
             <View style={s.controls}>
               <PressableScale hitSlop={8} scaleTo={0.9} accessibilityRole="button" accessibilityLabel="Previous exercise" onPress={goPrev} style={[s.side, idx === 0 && { opacity: 0.45 }]}>
                 <View style={s.sideIcon}>
@@ -404,10 +406,10 @@ function Player({ session, resume }: { session: Session; resume: boolean }) {
   );
 }
 
-function NextUp({ id, emoji, name, value, tint }: { id: string; emoji: string; name: string; value: string; tint: [string, string] }) {
+function NextUp({ id, emoji, name, value, tint, pro }: { id: string; emoji: string; name: string; value: string; tint: [string, string]; pro: boolean }) {
   return (
     <View style={s.nextUp}>
-      <ExerciseArt id={id} emoji={emoji} size={40} animated radius={12} tint={tint} />
+      <ExerciseArt id={id} emoji={emoji} size={40} animated radius={12} tint={tint} pro={pro} />
       <View style={{ flex: 1 }}>
         <Text style={s.nextUpLabel}>NEXT UP</Text>
         <Text style={s.nextUpName} numberOfLines={1}>

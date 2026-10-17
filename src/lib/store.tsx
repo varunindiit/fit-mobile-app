@@ -52,6 +52,20 @@ export type FoodEntry = { id: string; foodId: string; meal: MealKey; qty: number
 /** A meal logged from the camera, kept so the user has a snap history. */
 export type SnapLog = { id: string; date: string; meal: MealKey; title: string; score: number; kcal: number; items: { foodId: string; qty: number }[] };
 export type ChatMsg = { id: string; from: 'bot' | 'user'; text: string; action?: { label: string; icon: string; href?: string; water?: boolean }; at: number };
+/** Delivery state of a chat message, mirroring what a messaging backend would report. */
+export type MsgStatus = 'sending' | 'sent' | 'delivered' | 'read';
+/** One message in the Pro member's conversation with their trainer. */
+export type TrainerMsg = {
+  id: string;
+  from: 'user' | 'trainer';
+  text: string;
+  at: number;
+  status: MsgStatus;
+  /** A workout the coach shared: a `trainer:` session key the player can run. */
+  planKey?: string;
+};
+/** A finished (simulated) call with the trainer, kept so the dashboard can show history. */
+export type CallSession = { id: string; trainerId: string; kind: 'audio' | 'video'; at: number; seconds: number; outcome: 'ended' | 'missed' | 'declined' };
 export type WorkoutLog = { id: string; workoutId?: string; sessionKey?: string; title: string; emoji: string; minutes: number; kcal: number; date: string };
 export type WeightEntry = { id: string; date: string; kg: number };
 /** `cancelledAt` keeps access until the paid period ends. */
@@ -113,6 +127,12 @@ export type AppState = {
   rating: number | null;
   /** Set once the demo history has been filled in — or skipped because real logs already exist. */
   demoSeeded: boolean;
+  /** Pro: the trainer assigned to this member (null until they get Pro). */
+  trainerId: string | null;
+  /** Pro: conversation with the assigned trainer. */
+  trainerChat: TrainerMsg[];
+  /** Pro: simulated call history. */
+  calls: CallSession[];
 };
 
 export const DEFAULT_PROFILE: Profile = {
@@ -178,6 +198,9 @@ const INITIAL: AppState = {
   rating: null,
   purchases: [],
   demoSeeded: false,
+  trainerId: null,
+  trainerChat: [],
+  calls: [],
 };
 
 let idSeq = 0;
@@ -194,6 +217,9 @@ export function sanitize(s: AppState): AppState {
     weights: s.weights.filter((w) => w && typeof w.id === 'string' && isDate(w.date) && isNum(w.kg) && w.kg > 0),
     readNotifs: s.readNotifs.filter((x) => typeof x === 'string'),
     coachChat: s.coachChat.filter((m) => m && typeof m.text === 'string' && (m.from === 'bot' || m.from === 'user')).slice(-MAX_CHAT),
+    trainerChat: s.trainerChat.filter((m) => m && typeof m.id === 'string' && typeof m.text === 'string' && (m.from === 'user' || m.from === 'trainer') && isNum(m.at)).slice(-MAX_TRAINER_CHAT),
+    calls: s.calls.filter((c) => c && typeof c.id === 'string' && isNum(c.at) && isNum(c.seconds) && (c.kind === 'audio' || c.kind === 'video')),
+    trainerId: typeof s.trainerId === 'string' ? s.trainerId : null,
     recentSearches: s.recentSearches.filter((x) => typeof x === 'string').slice(0, MAX_RECENT),
     favoriteFoods: s.favoriteFoods.filter((x) => typeof x === 'string'),
     premium: s.premium && typeof s.premium.since === 'string' && isNum(s.premium.months) ? s.premium : null,
@@ -214,6 +240,7 @@ export function sanitize(s: AppState): AppState {
 }
 
 const MAX_CHAT = 100;
+const MAX_TRAINER_CHAT = 200;
 const MAX_RECENT = 8;
 const clampWater = (n: number) => Math.max(0, Math.min(16, Math.round(n)));
 const EXERCISE_IDS = new Set(EXERCISES.map((e) => e.id));
@@ -448,6 +475,32 @@ function useAppStore() {
       /** Replaces the plan outright, e.g. with the one an account brings along at log-in (null = Free). */
       setPremium: (premium: Premium | null) => update((s) => ({ ...s, premium })),
       cancelPremium: () => update((s) => (s.premium ? { ...s, premium: { ...s.premium, cancelledAt: todayKey() } } : s)),
+      /* ---------- Pro trainer ---------- */
+
+      /** Assign (or change) the member's trainer. Keeps the conversation — a coach swap is handled by the screen. */
+      assignTrainer: (trainerId: string) => update((s) => (s.trainerId === trainerId ? s : { ...s, trainerId })),
+      /** Append a message. Returns its id so the caller can advance its delivery state. */
+      addTrainerMsg: (m: Omit<TrainerMsg, 'id' | 'at'> & { at?: number }) => {
+        const id = uid();
+        update((s) => ({ ...s, trainerChat: [...s.trainerChat, { ...m, id, at: m.at ?? Date.now() }].slice(-MAX_TRAINER_CHAT) }));
+        return id;
+      },
+      setMsgStatus: (id: string, status: MsgStatus) =>
+        update((s) => ({ ...s, trainerChat: s.trainerChat.map((m) => (m.id === id ? { ...m, status } : m)) })),
+      /** The member opened the thread: everything the coach sent is now read. */
+      markTrainerChatRead: () =>
+        update((s) => {
+          if (!s.trainerChat.some((m) => m.from === 'trainer' && m.status !== 'read')) return s;
+          return { ...s, trainerChat: s.trainerChat.map((m) => (m.from === 'trainer' ? { ...m, status: 'read' as MsgStatus } : m)) };
+        }),
+      clearTrainerChat: () => update((s) => ({ ...s, trainerChat: [] })),
+      /** Record a finished call. Demo only — no audio or video is transmitted. */
+      logCall: (c: Omit<CallSession, 'id' | 'at'>) => {
+        const id = uid();
+        update((s) => ({ ...s, calls: [{ ...c, id, at: Date.now() }, ...s.calls].slice(0, 50) }));
+        return id;
+      },
+
       markNotifsRead: (ids: string[]) => update((s) => ({ ...s, readNotifs: Array.from(new Set([...s.readNotifs, ...ids])) })),
     }),
     [update],

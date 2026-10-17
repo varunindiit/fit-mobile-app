@@ -81,6 +81,7 @@ function DayPlan({ session }: { session: Session }) {
   const { state, completeSession, setPlanEdit, clearResume, markTipSeen } = useStore();
   const access = useAccess();
   const canEdit = access.can('plan.customise');
+  const proDemos = access.can('trainer.demos');
   const toast = useToast();
   const insets = useSafeAreaInsets();
   const meta = sessionMeta(session);
@@ -321,7 +322,7 @@ function DayPlan({ session }: { session: Session }) {
                             </Pressable>
                           </Animated.View>
                         )}
-                        <ExerciseArt id={ex.id} emoji={ex.emoji} size={60} animated radius={R.sm} tint={t.art} />
+                        <ExerciseArt id={ex.id} emoji={ex.emoji} size={60} animated radius={R.sm} tint={t.art} pro={proDemos} />
                         <View style={{ flex: 1 }}>
                           <Text style={s.rowName} numberOfLines={2}>
                             {ex.name}

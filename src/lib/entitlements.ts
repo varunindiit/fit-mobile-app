@@ -126,11 +126,12 @@ export const isFreeSession = (key: string) => FOCUS_SESSIONS.some((s) => s.key =
 /**
  * Lock for a session key, or `null` when it is open.
  *
- * `programDone` is the user's completed-day count for that program: a day they have
- * already finished stays open forever, so a lapsed or downgraded plan never hides
- * work the user has done.
+ * Free is capped at `FREE_PROGRAM_DAYS` regardless of how far the account has got:
+ * a completed day still shows its tick and its log, it just can't be trained again
+ * until the plan is renewed. Nothing is ever deleted — the progress is waiting when
+ * they upgrade.
  */
-export function sessionLock(tier: Tier, key: string, programDone = 0): Lock | null {
+export function sessionLock(tier: Tier, key: string): Lock | null {
   if (key.startsWith('trainer:'))
     return can(tier, 'trainer.plans')
       ? null
@@ -139,8 +140,7 @@ export function sessionLock(tier: Tier, key: string, programDone = 0): Lock | nu
   if (key.startsWith('program:')) {
     const day = Number(key.split(':')[2]);
     if (!Number.isInteger(day) || day < 1 || day > PROGRAM_DAYS) return null;
-    if (can(tier, 'program.allDays')) return null;
-    if (day <= Math.max(FREE_PROGRAM_DAYS, programDone)) return null;
+    if (can(tier, 'program.allDays') || day <= FREE_PROGRAM_DAYS) return null;
     return upgradeLock(
       'smart',
       `Day ${day} is locked`,
@@ -155,6 +155,12 @@ export function sessionLock(tier: Tier, key: string, programDone = 0): Lock | nu
   }
 
   return null;
+}
+
+/** Guided classes follow the focus-library rule: Free trains the beginner ones. */
+export function classLock(tier: Tier, level: string): Lock | null {
+  if (can(tier, 'library.full') || level === 'Beginner') return null;
+  return upgradeLock('smart', 'Class locked', 'Free includes our beginner classes. Smart unlocks every guided class at every level.', 'SMART');
 }
 
 /** Gate for anything that is not a session. */
@@ -176,6 +182,5 @@ export function featureLock(tier: Tier, f: Feature): Lock | null {
   return upgradeLock(need, title, text, need === 'pro' ? 'PRO' : 'SMART');
 }
 
-/** The highest program day a Free account may open (completed days always stay open). */
-export const unlockedProgramDays = (tier: Tier, programDone: number) =>
-  can(tier, 'program.allDays') ? PROGRAM_DAYS : Math.max(FREE_PROGRAM_DAYS, programDone);
+/** The highest program day this plan may train. */
+export const unlockedProgramDays = (tier: Tier) => (can(tier, 'program.allDays') ? PROGRAM_DAYS : FREE_PROGRAM_DAYS);

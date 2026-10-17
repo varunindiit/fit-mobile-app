@@ -8,10 +8,12 @@ import Animated, { FadeIn, ZoomIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 
+import { LockedScreen } from '@/components/premium/locked';
 import { Button, Card, Dialog, EmptyState, enter, Header, nativeOnly, IconButton, IconTile, PressableScale, Ring, Screen, SectionTitle, T, tap, useToast, type IconName } from '@/components/ui';
 import { workoutById, type Workout } from '@/data/fitness';
 import { pad } from '@/lib/calc';
 import { useStore } from '@/lib/store';
+import { useAccess } from '@/lib/useAccess';
 import { C, glow, MOTION, R, shadow, shadowSm } from '@/theme';
 import { Glyph } from '@/components/Glyph';
 import { WORKOUT_ART } from '@/components/glyphs';
@@ -44,6 +46,7 @@ export default function WorkoutScreen() {
   const { id: rawId } = useLocalSearchParams<{ id: string | string[] }>();
   const id = Array.isArray(rawId) ? rawId[0] : rawId;
   const w = workoutById(String(id ?? ''));
+  const access = useAccess();
   if (!w)
     return (
       <Screen>
@@ -51,6 +54,9 @@ export default function WorkoutScreen() {
         <EmptyState icon="barbell-outline" title="Workout not found" text="This workout may have been removed or the link is incorrect." action="Back to Fitness" onAction={goBack} />
       </Screen>
     );
+  // Plan gate: beyond the Free beginner classes, the class sells the upgrade instead of opening.
+  const lock = access.lockClass(w.level);
+  if (lock) return <LockedScreen lock={lock} eyebrow={`${w.category} class`} onBack={goBack} />;
   return <WorkoutFlow w={w} />;
 }
 

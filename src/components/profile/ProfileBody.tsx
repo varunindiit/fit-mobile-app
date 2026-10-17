@@ -46,6 +46,8 @@ import { PLAN_TIERS } from "@/data/plans";
 import { PROGRAM_DAYS, programById } from "@/data/program";
 import { bmiLabel, cmToFtIn } from "@/lib/calc";
 import { isPremiumActive, useStore, workoutStreak } from "@/lib/store";
+import { useAccess } from "@/lib/useAccess";
+import { trainerById, firstName as trainerFirstName } from "@/data/trainers";
 import { C, R, shadowSm } from "@/theme";
 import { BackupCard } from "./backup";
 import {
@@ -182,6 +184,8 @@ export function ProfileBody({ mode }: { mode: "tab" | "stack" }) {
   const restrictions = realRestrictions(p.restrictions);
   const conditions = realConditions(p.conditions);
   const premium = isPremiumActive(state.premium) ? state.premium : null;
+  const access = useAccess();
+  const coach = trainerById(state.trainerId);
   const tier = premium ? PLAN_TIERS.find((x) => x.id === premium.tier) : null;
   const planTill = premium
     ? fmtFull(planEnd(premium.since, premium.months))
@@ -615,6 +619,19 @@ export function ProfileBody({ mode }: { mode: "tab" | "stack" }) {
               subtitle="Units, reminders, connected apps"
               onPress={() => router.push("/settings")}
             />
+            {access.can("trainer") && (
+              <>
+                <Divider style={shared.inset} />
+                <Row
+                  icon="person"
+                  color={coach.color}
+                  bg={tint(coach.color)}
+                  title="Your personal trainer"
+                  subtitle={`${coach.name} · ${trainerFirstName(coach)}'s plans, chat & calls`}
+                  onPress={() => router.push("/trainer")}
+                />
+              </>
+            )}
             <Divider style={shared.inset} />
             <Row
               icon="barbell"

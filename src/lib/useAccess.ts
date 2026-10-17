@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 
-import { can, featureLock, planStatus, sessionLock, unlockedProgramDays, type Feature, type Lock, type PlanStatus, type Tier } from './entitlements';
+import { can, classLock, featureLock, planStatus, sessionLock, unlockedProgramDays, type Feature, type Lock, type PlanStatus, type Tier } from './entitlements';
 import { useStore } from './store';
 
 export type Access = PlanStatus & {
@@ -13,8 +13,10 @@ export type Access = PlanStatus & {
   lock: (f: Feature) => Lock | null;
   /** Lock for a session key (program day, focus session, trainer plan). */
   lockFor: (key: string) => Lock | null;
-  /** Highest program day this account may open, for `programId`. */
-  daysOpen: (programId: string) => number;
+  /** Lock for a guided class of this level. */
+  lockClass: (level: string) => Lock | null;
+  /** Highest program day this plan may train. */
+  daysOpen: () => number;
 };
 
 /**
@@ -28,12 +30,11 @@ export type Access = PlanStatus & {
  */
 export function useAccess(): Access {
   const { state } = useStore();
-  const { premium, programProgress } = state;
+  const { premium } = state;
 
   return useMemo(() => {
     const status = planStatus(premium);
     const tier: Tier = status.tier;
-    const doneFor = (key: string) => (key.startsWith('program:') ? programProgress[key.split(':')[1]] ?? 0 : 0);
     return {
       ...status,
       isFree: tier === 'free',
@@ -41,8 +42,9 @@ export function useAccess(): Access {
       isPro: tier === 'pro',
       can: (f) => can(tier, f),
       lock: (f) => featureLock(tier, f),
-      lockFor: (key) => sessionLock(tier, key, doneFor(key)),
-      daysOpen: (programId) => unlockedProgramDays(tier, programProgress[programId] ?? 0),
+      lockFor: (key) => sessionLock(tier, key),
+      lockClass: (level) => classLock(tier, level),
+      daysOpen: () => unlockedProgramDays(tier),
     };
-  }, [premium, programProgress]);
+  }, [premium]);
 }

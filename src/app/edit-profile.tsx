@@ -208,7 +208,7 @@ export default function EditProfile() {
         ))}
 
         {/* Live preview */}
-        <LinearGradient colors={G.deep} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.preview}>
+        <LinearGradient colors={G.premium} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.preview}>
           <Decor />
           <View style={st.pvHead}>
             <Ionicons name="sparkles" size={13} color={C.gold} />

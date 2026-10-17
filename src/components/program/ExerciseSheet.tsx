@@ -6,6 +6,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, EASE_OUT, IconButton, IconTile, nativeOnly, PressableScale, Segmented, T, tap, usePresence, type IconName } from '@/components/ui';
 import { exerciseById, type SessionItem } from '@/data/program';
+import { hasProDemo } from '@/data/proDemos';
+import { ProDemoNote } from '@/components/trainer/parts';
+import { useAccess } from '@/lib/useAccess';
 import { C, MOTION, R } from '@/theme';
 import { ExerciseArt } from './ExerciseArt';
 import { fmtClock, focusColor, type Accent } from './session';
@@ -23,6 +26,7 @@ const ART_H = 230;
 export function ExerciseSheet({ visible, onClose, items, index, accent }: { visible: boolean; onClose: () => void; items: SessionItem[]; index: number; /** The session's palette, so the sheet matches the screen it opened from. */ accent: Accent }) {
   const insets = useSafeAreaInsets();
   const { height: winH } = useWindowDimensions();
+  const pro = useAccess().can('trainer.demos');
   const [i, setI] = useState(index);
   const [tab, setTab] = useState<Tab>('animation');
   const [wasOpen, setWasOpen] = useState(false);
@@ -77,7 +81,12 @@ export function ExerciseSheet({ visible, onClose, items, index, accent }: { visi
 
           <ScrollView key={i} style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 24 }} showsVerticalScrollIndicator={false}>
             <Animated.View key={tab} entering={nativeOnly(FadeIn.duration(MOTION.base))}>
-              {tab === 'animation' && <ExerciseArt key={ex.id} id={ex.id} emoji={ex.emoji} width="100%" height={ART_H} animated radius={R.lg} tint={accent.art} />}
+              {tab === 'animation' && (
+                <>
+                  <ExerciseArt key={ex.id} id={ex.id} emoji={ex.emoji} width="100%" height={ART_H} animated radius={R.lg} tint={accent.art} pro={pro} />
+                  {pro && hasProDemo(ex.id) && <ProDemoNote />}
+                </>
+              )}
               {tab === 'muscle' && (
                 <View style={[s.box, { flexDirection: 'row', alignItems: 'center' }]}>
                   <View style={s.body}>

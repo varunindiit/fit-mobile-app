@@ -7,6 +7,10 @@ import Animated, { FadeIn, FadeOut, useAnimatedScrollHandler, useSharedValue } f
 import Svg, { Circle } from 'react-native-svg';
 
 import { WeekStrip } from '@/components/charts/Calendar';
+import { LockBadge, LockedCard } from '@/components/premium/locked';
+import { TrainerAvatar, AvailabilityLine } from '@/components/trainer/parts';
+import { trainerById, weekdayOf, firstName as trainerFirstName } from '@/data/trainers';
+import { planOnDay, planSummary } from '@/data/trainerPlans';
 import { fmtNum } from '@/components/charts/Charts';
 import { ChallengeCard } from '@/components/program/ChallengeCard';
 import { HeaderAction, HeaderActions, TabHeader, TabHeaderText } from '@/components/TabHeader';
@@ -16,6 +20,7 @@ import { ACTIVITIES, WORKOUT_CATEGORIES, WORKOUTS } from '@/data/fitness';
 import { BODY_PARTS, FOCUS_SESSIONS, programById, programDay, PROGRAM_DAYS, sessionStats, type Session } from '@/data/program';
 import { kcalFromSteps, kmFromSteps } from '@/lib/calc';
 import { burnedOn, useStore, weekProgress, workoutStreak, type WorkoutLog } from '@/lib/store';
+import { useAccess } from '@/lib/useAccess';
 import { useToday } from '@/lib/useToday';
 import { C, G, MOTION, R, shadowSm } from '@/theme';
 import { Glyph } from '@/components/Glyph';
@@ -37,6 +42,7 @@ const rowOut = nativeOnly(FadeOut.duration(MOTION.fast));
 
 export default function TrainingScreen() {
   const { state, targets, addSteps, logWorkout, removeWorkout, updateProfile, updateSettings, resetProgram } = useStore();
+  const access = useAccess();
   const toast = useToast();
   const today = useToday();
 
@@ -219,6 +225,12 @@ export default function TrainingScreen() {
           />
         </Animated.View>
 
+        {/* Your coach — the Pro surface, an upsell for everyone else */}
+        <Animated.View entering={enter(3)}>
+          <SectionTitle title="Your coach" />
+          {access.can('trainer') ? <CoachCard trainerId={state.trainerId} restSeconds={state.settings.restSeconds} /> : <LockedCard lock={access.lock('trainer')!} />}
+        </Animated.View>
+
         {/* Today */}
         <Animated.View entering={enter(3)}>
           <SectionTitle title="Your activity" action="Add activity" onAction={openLog} />
@@ -280,13 +292,13 @@ export default function TrainingScreen() {
         {/* Push your limits */}
         <Animated.View entering={enter(4)}>
           <SectionTitle title="Level up" />
-          <Carousel items={PUSH} />
+          <Carousel items={PUSH} lockOf={access.lockFor} />
         </Animated.View>
 
         {/* With equipment */}
         <Animated.View entering={enter(5)}>
           <SectionTitle title="Got gear? Try these" />
-          <Carousel items={EQUIP} />
+          <Carousel items={EQUIP} lockOf={access.lockFor} />
         </Animated.View>
 
         {/* Body focus */}
@@ -298,7 +310,9 @@ export default function TrainingScreen() {
             ))}
           </ScrollView>
           <Card style={{ paddingVertical: 6 }}>
-            {partList.map((s, i) => (
+            {partList.map((s, i) => {
+              const lock = access.lockFor(s.key);
+              return (
               <Animated.View key={s.key} entering={rowIn}>
                 <Pressable
                   onPress={() => {
@@ -325,10 +339,11 @@ export default function TrainingScreen() {
                       )}
                     </View>
                   </View>
-                  <Ionicons name="chevron-forward" size={18} color={C.muted} />
+                  {lock ? <LockBadge need={lock.need} /> : <Ionicons name="chevron-forward" size={18} color={C.muted} />}
                 </Pressable>
               </Animated.View>
-            ))}
+              );
+            })}
           </Card>
         </Animated.View>
 
@@ -341,7 +356,9 @@ export default function TrainingScreen() {
             ))}
           </ScrollView>
           <View style={st.grid}>
-            {classes.map((w) => (
+            {classes.map((w) => {
+              const lock = access.lockClass(w.level);
+              return (
               <Animated.View key={w.id} entering={rowIn} layout={listLayout} style={st.wCell}>
                 <PressableScale
                   scaleTo={0.97}
@@ -360,11 +377,11 @@ export default function TrainingScreen() {
                     <View style={st.wLevel}>
                       <Text style={st.wLevelText}>{w.level}</Text>
                     </View>
-                    {doneToday.has(w.id) && (
+                    {lock ? <LockBadge need={lock.need} style={st.wLock} /> : doneToday.has(w.id) ? (
                       <View style={st.wDone}>
                         <Ionicons name="checkmark" size={13} color={C.onPrimary} />
                       </View>
-                    )}
+                    ) : null}
                   </View>
                   <View style={{ padding: 12, paddingTop: 10 }}>
                     <Text style={st.wTitle} numberOfLines={2}>
@@ -382,7 +399,8 @@ export default function TrainingScreen() {
                   </View>
                 </PressableScale>
               </Animated.View>
-            ))}
+              );
+            })}
           </View>
         </Animated.View>
       </Animated.ScrollView>
@@ -523,10 +541,34 @@ function Deco({ size, style }: { size: number; style: ViewStyle }) {
   );
 }
 
-function Carousel({ items }: { items: Focus[] }) {
+/** Pro only: today's coach-written session, or a way into the coaching dashboard. */
+function CoachCard({ trainerId, restSeconds }: { trainerId: string | null; restSeconds: number }) {
+  const coach = trainerById(trainerId);
+  const today = planOnDay(coach.id, weekdayOf());
+  const stats = today ? planSummary(today, restSeconds) : null;
+  return (
+    <Card onPress={() => router.push('/trainer')} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+      <TrainerAvatar trainer={coach} size={48} online />
+      <View style={{ flex: 1 }}>
+        <Text style={st.actTitle} numberOfLines={1}>
+          {coach.name}
+        </Text>
+        <AvailabilityLine trainer={coach} style={{ marginTop: 2 }} />
+        <Text style={[T.small, { marginTop: 4 }]} numberOfLines={1}>
+          {today && stats ? `Today: ${today.title} · ${stats.minutes} min` : `No session today — ${trainerFirstName(coach)} scheduled a rest day`}
+        </Text>
+      </View>
+      <Ionicons name="chevron-forward" size={18} color={C.muted} />
+    </Card>
+  );
+}
+
+function Carousel({ items, lockOf }: { items: Focus[]; lockOf: (key: string) => { need: 'smart' | 'pro' } | null }) {
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -16 }} contentContainerStyle={st.carousel} decelerationRate="fast" snapToInterval={252}>
-      {items.map((s) => (
+      {items.map((s) => {
+        const lock = lockOf(s.key);
+        return (
         <PressableScale
           key={s.key}
           scaleTo={0.97}
@@ -546,12 +588,14 @@ function Carousel({ items }: { items: Focus[] }) {
               {s.level} · {focusMinutes(s)} min
             </Text>
             <View style={st.cStart}>
-              <Ionicons name="play" size={11} color={s.colors[1]} />
-              <Text style={[st.cStartText, { color: s.colors[1] }]}>Start</Text>
+              <Ionicons name={lock ? 'lock-closed' : 'play'} size={11} color={s.colors[1]} />
+              <Text style={[st.cStartText, { color: s.colors[1] }]}>{lock ? 'Unlock' : 'Start'}</Text>
             </View>
+            {lock && <LockBadge need={lock.need} style={st.cLock} />}
           </LinearGradient>
         </PressableScale>
-      ))}
+        );
+      })}
     </ScrollView>
   );
 }
@@ -569,6 +613,8 @@ function SumCol({ icon, color, bg, value, label, format }: { icon: IconName; col
 }
 
 const st = StyleSheet.create({
+  cLock: { position: 'absolute', top: 12, right: 12 },
+  wLock: { position: 'absolute', top: 8, right: 8 },
   content: { paddingHorizontal: 16, paddingBottom: 40 },
   dayBadge: { width: 38, height: 38, borderRadius: 19, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
   dayBadgeText: { color: C.white, fontSize: 16, fontWeight: '800', fontVariant: ['tabular-nums'] },
