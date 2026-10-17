@@ -8,34 +8,40 @@ import Animated, { cancelAnimation, Easing, useAnimatedProps, useAnimatedStyle, 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 
+import { LockedScreen } from '@/components/premium/locked';
 import { ExerciseArt } from '@/components/program/ExerciseArt';
 import { ExerciseSheet } from '@/components/program/ExerciseSheet';
-import { GradientButton, PRIMARY } from '@/components/program/GradientButton';
+import { GradientButton } from '@/components/program/GradientButton';
 import { accentTheme, findSession, fmtClock, itemLabel, logTitle, planItems, sessionMeta } from '@/components/program/session';
 import { Dialog, EASE_OUT, EmptyState, Header, IconButton, PressableScale, Screen, tap, useToast } from '@/components/ui';
 import { exerciseById, sessionStats, type Session } from '@/data/program';
 import { useStore } from '@/lib/store';
-import { C, G, R } from '@/theme';
+import { C, R } from '@/theme';
 
 type Phase = 'ready' | 'work' | 'rest';
-/** Rest is the one light screen in the player: work is dark, rest is a white breather. */
-const REST_BG: [string, string] = ['#FFFFFF', C.bg];
-const GLASS = 'rgba(255,255,255,0.12)';
-const GLASS_BORDER = 'rgba(255,255,255,0.16)';
+/** The player is a white surface throughout; accents come from the session's own gradient. */
+const PLAYER_BG: [string, string] = ['#FFFFFF', C.bg];
+const CHIP = C.surfaceAlt;
+const CHIP_BORDER = C.border;
 
 export default function PlayerScreen() {
   const params = useLocalSearchParams<{ key?: string | string[]; resume?: string | string[] }>();
   const key = Array.isArray(params.key) ? params.key[0] : params.key;
   const resume = Array.isArray(params.resume) ? params.resume[0] : params.resume;
   const { state } = useStore();
+  const access = useAccess();
   const session = useMemo(() => findSession(String(key ?? '')), [key]);
+  const back = () => (router.canGoBack() ? router.back() : router.replace('/fitness'));
   if (!session || session.restDay || planItems(session, state.planEdits).length === 0)
     return (
       <Screen>
         <Header title="Workout" />
-        <EmptyState icon="barbell-outline" title="Nothing to play here" text="This workout doesn't exist or has no exercises." action="Go back" onAction={() => (router.canGoBack() ? router.back() : router.replace('/fitness'))} />
+        <EmptyState icon="barbell-outline" title="Nothing to play here" text="This workout doesn't exist or has no exercises." action="Go back" onAction={back} />
       </Screen>
     );
+  // Second gate behind program-day: a deep link straight into a locked session can't start it either.
+  const lock = access.lockFor(session.key);
+  if (lock) return <LockedScreen lock={lock} eyebrow={session.title} onBack={back} />;
   return <Player session={session} resume={resume === '1'} />;
 }
 
@@ -213,15 +219,15 @@ function Player({ session, resume }: { session: Session; resume: boolean }) {
     toast(on ? 'Coach voice on' : 'Coach voice muted', on ? 'volume-high' : 'volume-mute');
   };
 
-  const segments = (rest = false) => (
+  const segments = () => (
     <View style={s.segments}>
       {items.map((_, i) => {
         const isDone = done.includes(i);
         const cur = i === idx && phase === 'work';
         const frac = cur ? (timed ? 1 - left / (item.seconds || 1) : 0.5) : 0;
         return (
-          <View key={i} style={[s.seg, { backgroundColor: rest ? C.border : 'rgba(255,255,255,0.14)' }]}>
-            {(isDone || cur) && <View style={{ height: '100%', width: isDone ? '100%' : `${Math.max(8, frac * 100)}%`, backgroundColor: rest ? pal.accent : C.primary, borderRadius: 2 }} />}
+          <View key={i} style={s.seg}>
+            {(isDone || cur) && <View style={{ height: '100%', width: isDone ? '100%' : `${Math.max(8, frac * 100)}%`, backgroundColor: pal.accent, borderRadius: 2 }} />}
           </View>
         );
       })}
@@ -233,13 +239,13 @@ function Player({ session, resume }: { session: Session; resume: boolean }) {
       <Text style={s.name} numberOfLines={2}>
         {ex.name}
       </Text>
-      <Ionicons name="information-circle-outline" size={22} color="rgba(255,255,255,0.6)" />
+      <Ionicons name="information-circle-outline" size={22} color={C.muted} />
     </Pressable>
   );
 
   const overlays = (
     <>
-      <ExerciseSheet visible={info !== null} index={info ?? idx} items={items} onClose={() => setInfo(null)} />
+      <ExerciseSheet visible={info !== null} index={info ?? idx} items={items} onClose={() => setInfo(null)} accent={pal} />
       <Dialog
         visible={askQuit}
         icon="🥺"
@@ -259,12 +265,12 @@ function Player({ session, resume }: { session: Session; resume: boolean }) {
   /* ---------- REST ---------- */
   if (phase === 'rest')
     return (
-      <LinearGradient colors={REST_BG} start={{ x: 0, y: 0 }} end={{ x: 0.4, y: 1 }} style={[s.flex, frame]}>
+      <LinearGradient colors={PLAYER_BG} start={{ x: 0, y: 0 }} end={{ x: 0.4, y: 1 }} style={[s.flex, frame]}>
         <StatusBar style="dark" />
-        {segments(true)}
+        {segments()}
         <View style={s.topRow}>
           <IconButton icon="close" color={C.text} bg={C.surfaceAlt} onPress={requestQuit} />
-          <Text style={[s.topTitle, { color: C.textSoft }]}>Rest</Text>
+          <Text style={s.topTitle}>Rest</Text>
           <View style={{ width: 40 }} />
         </View>
         <Animated.View style={[s.flex, fadeStyle]}>
@@ -317,37 +323,37 @@ function Player({ session, resume }: { session: Session; resume: boolean }) {
 
   /* ---------- GET READY / EXERCISE ---------- */
   return (
-    <LinearGradient colors={G.premium} start={{ x: 0, y: 0 }} end={{ x: 0.4, y: 1 }} style={[s.flex, frame]}>
-      <StatusBar style="light" />
+    <LinearGradient colors={PLAYER_BG} start={{ x: 0, y: 0 }} end={{ x: 0.4, y: 1 }} style={[s.flex, frame]}>
+      <StatusBar style="dark" />
       {segments()}
       <View style={s.topRow}>
-        <IconButton icon="close" color={C.white} bg={GLASS} onPress={requestQuit} />
+        <IconButton icon="close" color={C.text} bg={CHIP} onPress={requestQuit} />
         <Text style={s.topTitle}>{phase === 'ready' ? 'Get ready' : `${idx + 1} of ${n}`}</Text>
-        <IconButton icon={state.settings.coachVoice ? 'volume-high' : 'volume-mute'} color={C.white} bg={GLASS} onPress={toggleSound} style={{ marginRight: 8 }} />
-        <IconButton icon="information-circle-outline" color={C.white} bg={GLASS} onPress={() => setInfo(idx)} />
+        <IconButton icon={state.settings.coachVoice ? 'volume-high' : 'volume-mute'} color={C.text} bg={CHIP} onPress={toggleSound} style={{ marginRight: 8 }} />
+        <IconButton icon="information-circle-outline" color={C.text} bg={CHIP} onPress={() => setInfo(idx)} />
       </View>
 
       <Animated.View style={[s.flex, fadeStyle]}>
         <View style={s.artFrame}>
-          <ExerciseArt id={ex.id} emoji={ex.emoji} width="100%" height={artH} animated radius={R.xl} />
+          <ExerciseArt id={ex.id} emoji={ex.emoji} width="100%" height={artH} animated radius={R.xl} tint={pal.art} />
         </View>
 
         {phase === 'ready' ? (
           <>
             <View style={s.center}>
-              <Text style={s.readyLabel}>READY TO GO!</Text>
+              <Text style={[s.readyLabel, { color: pal.accent }]}>READY TO GO!</Text>
               {nameRow}
               <Text style={s.readySub}>{itemLabel(item)}</Text>
             </View>
             <View style={s.controls}>
               <View style={s.flex} />
-              <CountdownRing key={`ready-${idx}`} size={116} stroke={9} left={left} total={readyTotal} ticking={ticking} color={C.primary} track="rgba(255,255,255,0.12)">
+              <CountdownRing key={`ready-${idx}`} size={116} stroke={9} left={left} total={readyTotal} ticking={ticking} color={pal.accent} track={C.border}>
                 <Text style={s.ringNum}>{left}</Text>
               </CountdownRing>
               <View style={[s.flex, { alignItems: 'flex-end' }]}>
                 <PressableScale scaleTo={0.94} accessibilityRole="button" onPress={() => startWork(idx)} style={s.skip}>
                   <Text style={s.skipText}>Skip</Text>
-                  <Ionicons name="play-forward" size={15} color={C.white} />
+                  <Ionicons name="play-forward" size={15} color={C.text} />
                 </PressableScale>
               </View>
             </View>
@@ -356,9 +362,9 @@ function Player({ session, resume }: { session: Session; resume: boolean }) {
           <>
             <View style={s.center}>
               {timed ? (
-                <CountdownRing key={`work-${idx}`} size={ringSize} stroke={10} left={left} total={item.seconds ?? 1} ticking={ticking} color={C.primary} track="rgba(255,255,255,0.12)">
-                  <Text style={[s.clock, { fontSize: Math.round(ringSize * 0.25) }, paused && { color: 'rgba(255,255,255,0.45)' }]}>{fmtClock(left)}</Text>
-                  {paused && <Text style={s.pausedTag}>PAUSED</Text>}
+                <CountdownRing key={`work-${idx}`} size={ringSize} stroke={10} left={left} total={item.seconds ?? 1} ticking={ticking} color={pal.accent} track={C.border}>
+                  <Text style={[s.clock, { fontSize: Math.round(ringSize * 0.25) }, paused && { color: C.muted }]}>{fmtClock(left)}</Text>
+                  {paused && <Text style={[s.pausedTag, { color: pal.accent }]}>PAUSED</Text>}
                 </CountdownRing>
               ) : (
                 <View style={{ alignItems: 'center' }}>
@@ -368,24 +374,24 @@ function Player({ session, resume }: { session: Session; resume: boolean }) {
               )}
               <View style={{ marginTop: 10 }}>{nameRow}</View>
               {timed && (
-                <PressableScale scaleTo={0.94} accessibilityRole="button" onPress={() => (tap(), setPaused((p) => !p))} style={[s.pause, paused && { backgroundColor: C.primary, borderColor: C.primary }]}>
-                  <Ionicons name={paused ? 'play' : 'pause'} size={15} color={paused ? C.onPrimary : C.white} />
-                  <Text style={[s.pauseText, { color: paused ? C.onPrimary : C.white }]}>{paused ? 'RESUME' : 'PAUSE'}</Text>
+                <PressableScale scaleTo={0.94} accessibilityRole="button" onPress={() => (tap(), setPaused((p) => !p))} style={[s.pause, paused && { backgroundColor: pal.accent, borderColor: pal.accent }]}>
+                  <Ionicons name={paused ? 'play' : 'pause'} size={15} color={paused ? pal.on : C.text} />
+                  <Text style={[s.pauseText, { color: paused ? pal.on : C.text }]}>{paused ? 'RESUME' : 'PAUSE'}</Text>
                 </PressableScale>
               )}
             </View>
-            {roomy && upNext && <NextUp id={upNext.exerciseId} emoji={exerciseById(upNext.exerciseId).emoji} name={exerciseById(upNext.exerciseId).name} value={itemLabel(upNext)} />}
+            {roomy && upNext && <NextUp id={upNext.exerciseId} emoji={exerciseById(upNext.exerciseId).emoji} name={exerciseById(upNext.exerciseId).name} value={itemLabel(upNext)} tint={pal.art} />}
             <View style={s.controls}>
               <PressableScale hitSlop={8} scaleTo={0.9} accessibilityRole="button" accessibilityLabel="Previous exercise" onPress={goPrev} style={[s.side, idx === 0 && { opacity: 0.45 }]}>
                 <View style={s.sideIcon}>
-                  <Ionicons name="play-skip-back" size={22} color={C.white} />
+                  <Ionicons name="play-skip-back" size={22} color={C.text} />
                 </View>
                 <Text style={s.sideText}>Previous</Text>
               </PressableScale>
-              <GradientButton {...PRIMARY} icon="checkmark" iconSize={36} height={70} onPress={complete} style={{ width: 150 }} />
+              <GradientButton colors={pal.cta} fg={pal.on} icon="checkmark" iconSize={36} height={70} onPress={complete} style={{ width: 150 }} />
               <PressableScale hitSlop={8} scaleTo={0.9} accessibilityRole="button" accessibilityLabel={idx >= n - 1 ? 'Finish workout' : 'Skip exercise'} onPress={() => (tap(), goNext())} style={s.side}>
                 <View style={s.sideIcon}>
-                  <Ionicons name="play-skip-forward" size={22} color={C.white} />
+                  <Ionicons name="play-skip-forward" size={22} color={C.text} />
                 </View>
                 <Text style={s.sideText}>{idx >= n - 1 ? 'Finish' : 'Skip'}</Text>
               </PressableScale>
@@ -398,10 +404,10 @@ function Player({ session, resume }: { session: Session; resume: boolean }) {
   );
 }
 
-function NextUp({ id, emoji, name, value }: { id: string; emoji: string; name: string; value: string }) {
+function NextUp({ id, emoji, name, value, tint }: { id: string; emoji: string; name: string; value: string; tint: [string, string] }) {
   return (
     <View style={s.nextUp}>
-      <ExerciseArt id={id} emoji={emoji} size={40} animated radius={12} />
+      <ExerciseArt id={id} emoji={emoji} size={40} animated radius={12} tint={tint} />
       <View style={{ flex: 1 }}>
         <Text style={s.nextUpLabel}>NEXT UP</Text>
         <Text style={s.nextUpName} numberOfLines={1}>
@@ -445,32 +451,32 @@ function CountdownRing({ size, stroke, left, total, ticking, color, track, child
 const s = StyleSheet.create({
   flex: { flex: 1 },
   segments: { flexDirection: 'row', gap: 3 },
-  seg: { flex: 1, height: 4, borderRadius: 2, overflow: 'hidden' },
+  seg: { flex: 1, height: 4, borderRadius: 2, overflow: 'hidden', backgroundColor: C.border },
   topRow: { flexDirection: 'row', alignItems: 'center', marginTop: 12, marginBottom: 8 },
-  topTitle: { flex: 1, textAlign: 'center', color: 'rgba(255,255,255,0.85)', fontSize: 14, fontWeight: '700', letterSpacing: 0.3, fontVariant: ['tabular-nums'] },
-  artFrame: { marginTop: 4, borderRadius: R.xl + 4, padding: 4, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
+  topTitle: { flex: 1, textAlign: 'center', color: C.textSoft, fontSize: 14, fontWeight: '700', letterSpacing: 0.3, fontVariant: ['tabular-nums'] },
+  artFrame: { marginTop: 4, borderRadius: R.xl + 4, padding: 4, backgroundColor: C.surfaceAlt, borderWidth: 1, borderColor: C.border },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 8 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12 },
-  name: { fontSize: 22, fontWeight: '700', color: C.white, letterSpacing: -0.4, textAlign: 'center', flexShrink: 1 },
-  clock: { fontWeight: '800', color: C.white, letterSpacing: -1.5, fontVariant: ['tabular-nums'] },
-  pausedTag: { color: C.primary, fontSize: 11, fontWeight: '800', letterSpacing: 1.5, marginTop: 2 },
-  huge: { fontSize: 72, fontWeight: '800', color: C.white, letterSpacing: -2, fontVariant: ['tabular-nums'] },
-  repsTag: { color: 'rgba(255,255,255,0.55)', fontSize: 12, fontWeight: '800', letterSpacing: 2, marginTop: -4 },
-  readyLabel: { fontSize: 24, fontWeight: '800', color: C.primary, letterSpacing: 0.5, marginBottom: 8 },
-  readySub: { fontSize: 16, fontWeight: '700', color: 'rgba(255,255,255,0.7)', marginTop: 6, fontVariant: ['tabular-nums'] },
-  ringNum: { fontSize: 42, fontWeight: '800', color: C.white, fontVariant: ['tabular-nums'], letterSpacing: -1 },
-  skip: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: GLASS, borderWidth: 1, borderColor: GLASS_BORDER, paddingHorizontal: 16, height: 42, borderRadius: R.pill },
-  skipText: { fontSize: 15, fontWeight: '700', color: C.white },
-  pause: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 14, backgroundColor: GLASS, borderWidth: 1, borderColor: GLASS_BORDER, paddingHorizontal: 18, height: 40, borderRadius: R.pill },
+  name: { fontSize: 22, fontWeight: '700', color: C.text, letterSpacing: -0.4, textAlign: 'center', flexShrink: 1 },
+  clock: { fontWeight: '800', color: C.text, letterSpacing: -1.5, fontVariant: ['tabular-nums'] },
+  pausedTag: { fontSize: 11, fontWeight: '800', letterSpacing: 1.5, marginTop: 2 },
+  huge: { fontSize: 72, fontWeight: '800', color: C.text, letterSpacing: -2, fontVariant: ['tabular-nums'] },
+  repsTag: { color: C.muted, fontSize: 12, fontWeight: '800', letterSpacing: 2, marginTop: -4 },
+  readyLabel: { fontSize: 24, fontWeight: '800', letterSpacing: 0.5, marginBottom: 8 },
+  readySub: { fontSize: 16, fontWeight: '700', color: C.textSoft, marginTop: 6, fontVariant: ['tabular-nums'] },
+  ringNum: { fontSize: 42, fontWeight: '800', color: C.text, fontVariant: ['tabular-nums'], letterSpacing: -1 },
+  skip: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: CHIP, borderWidth: 1, borderColor: CHIP_BORDER, paddingHorizontal: 16, height: 42, borderRadius: R.pill },
+  skipText: { fontSize: 15, fontWeight: '700', color: C.text },
+  pause: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 14, backgroundColor: CHIP, borderWidth: 1, borderColor: CHIP_BORDER, paddingHorizontal: 18, height: 40, borderRadius: R.pill },
   pauseText: { fontSize: 13, fontWeight: '800', letterSpacing: 0.8 },
-  nextUp: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(255,255,255,0.07)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', borderRadius: R.md, padding: 8, paddingRight: 14, marginBottom: 6 },
-  nextUpLabel: { color: 'rgba(255,255,255,0.55)', fontSize: 10, fontWeight: '800', letterSpacing: 1.2 },
-  nextUpName: { color: C.white, fontSize: 14, fontWeight: '700', marginTop: 1 },
-  nextUpVal: { color: 'rgba(255,255,255,0.85)', fontSize: 14, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  nextUp: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: C.card, borderWidth: 1, borderColor: C.border, borderRadius: R.md, padding: 8, paddingRight: 14, marginBottom: 6 },
+  nextUpLabel: { color: C.muted, fontSize: 10, fontWeight: '800', letterSpacing: 1.2 },
+  nextUpName: { color: C.text, fontSize: 14, fontWeight: '700', marginTop: 1 },
+  nextUpVal: { color: C.textSoft, fontSize: 14, fontWeight: '700', fontVariant: ['tabular-nums'] },
   controls: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 8, paddingBottom: 4 },
   side: { width: 76, alignItems: 'center', gap: 6 },
-  sideIcon: { width: 48, height: 48, borderRadius: 24, backgroundColor: GLASS, borderWidth: 1, borderColor: GLASS_BORDER, alignItems: 'center', justifyContent: 'center' },
-  sideText: { fontSize: 12, fontWeight: '600', color: 'rgba(255,255,255,0.75)' },
+  sideIcon: { width: 48, height: 48, borderRadius: 24, backgroundColor: CHIP, borderWidth: 1, borderColor: CHIP_BORDER, alignItems: 'center', justifyContent: 'center' },
+  sideText: { fontSize: 12, fontWeight: '600', color: C.textSoft },
   nextLabel: { fontSize: 12, fontWeight: '800', letterSpacing: 1.4, marginTop: 4, fontVariant: ['tabular-nums'] },
   nextRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 4, marginBottom: 14 },
   nextName: { flex: 1, fontSize: 24, fontWeight: '800', letterSpacing: -0.6 },

@@ -22,6 +22,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 import { scheduleOnRN } from 'react-native-worklets';
 
+import { LockBadge, LockedScreen, openUpgrade } from '@/components/premium/locked';
 import { ExerciseArt } from '@/components/program/ExerciseArt';
 import { ExerciseSheet } from '@/components/program/ExerciseSheet';
 import { GradientButton } from '@/components/program/GradientButton';
@@ -30,6 +31,7 @@ import { WorkoutSettingsSheet } from '@/components/program/WorkoutSettingsSheet'
 import { Button, Card, EmptyState, enter, Header, IconTile, layoutTransition, nativeOnly, ListRow, PressableScale, Screen, SectionTitle, Sheet, T, tap, useToast, type IconName } from '@/components/ui';
 import { exerciseById, sessionStats, type Session, type SessionItem } from '@/data/program';
 import { useStore } from '@/lib/store';
+import { useAccess } from '@/lib/useAccess';
 import { C, MOTION, R, shadowLg, shadowSm } from '@/theme';
 import { Glyph } from '@/components/Glyph';
 import { sessionArt } from '@/components/glyphs';
@@ -52,6 +54,7 @@ export default function ProgramDayScreen() {
   const { key: rawKey } = useLocalSearchParams<{ key?: string | string[] }>();
   const key = Array.isArray(rawKey) ? rawKey[0] : rawKey;
   const session = useMemo(() => findSession(String(key ?? '')), [key]);
+  const access = useAccess();
   if (!session)
     return (
       <Screen>
@@ -59,6 +62,9 @@ export default function ProgramDayScreen() {
         <EmptyState icon="barbell-outline" title="Workout not found" text="This plan day doesn't exist or the link is incorrect." action="Go back" onAction={goBack} />
       </Screen>
     );
+  // Plan gate: a locked day sells the upgrade instead of opening. Progress is never touched.
+  const lock = access.lockFor(session.key);
+  if (lock) return <LockedScreen lock={lock} eyebrow={sessionMeta(session).eyebrow} onBack={goBack} />;
   return <DayPlan key={session.key} session={session} />;
 }
 
@@ -73,6 +79,8 @@ const rowKeys = (items: SessionItem[]) => {
 
 function DayPlan({ session }: { session: Session }) {
   const { state, completeSession, setPlanEdit, clearResume, markTipSeen } = useStore();
+  const access = useAccess();
+  const canEdit = access.can('plan.customise');
   const toast = useToast();
   const insets = useSafeAreaInsets();
   const meta = sessionMeta(session);
@@ -81,7 +89,7 @@ function DayPlan({ session }: { session: Session }) {
 
   const [items, setItems] = useState<SessionItem[]>(() => planItems(session, state.planEdits));
   const [editing, setEditing] = useState(false);
-  const [tip, setTip] = useState(() => !state.seenTips.includes('plan-edit') && !session.restDay);
+  const [tip, setTip] = useState(() => canEdit && !state.seenTips.includes('plan-edit') && !session.restDay);
   const [sheetIdx, setSheetIdx] = useState<number | null>(null);
   const [more, setMore] = useState(false);
   const [settings, setSettings] = useState(false);
@@ -141,6 +149,8 @@ function DayPlan({ session }: { session: Session }) {
   const dismissTip = () => setTip(false);
   const toggleEdit = () => {
     if (tip) dismissTip();
+    // Tuning a routine is a Smart feature; Free taps go to the paywall instead.
+    if (!canEdit) return openUpgrade(access.lock('plan.customise')!.need);
     setEditing((e) => !e);
   };
   const finishEdit = () => {
@@ -267,6 +277,7 @@ function DayPlan({ session }: { session: Session }) {
                 )}
                 <PressableScale scaleTo={0.9} hitSlop={8} accessibilityRole="button" accessibilityLabel={editing ? 'Finish editing' : 'Edit plan'} onPress={toggleEdit} style={[s.pencil, editing && { backgroundColor: t.accent, borderColor: t.accent }]}>
                   <Ionicons name={editing ? 'checkmark' : 'pencil'} size={18} color={editing ? t.on : C.text} />
+                  {!canEdit && <LockBadge need="smart" compact style={{ position: 'absolute', top: -5, right: -5 }} />}
                 </PressableScale>
                 {tip && (
                   <Animated.View exiting={nativeOnly(FadeOut.duration(160))} style={[s.tip, tipStyle]}>
@@ -398,7 +409,7 @@ function DayPlan({ session }: { session: Session }) {
         )}
       </View>
 
-      <ExerciseSheet visible={sheetIdx !== null} index={sheetIdx ?? 0} items={items} onClose={() => setSheetIdx(null)} />
+      <ExerciseSheet visible={sheetIdx !== null} index={sheetIdx ?? 0} items={items} onClose={() => setSheetIdx(null)} accent={t} />
       <WorkoutSettingsSheet visible={settings} onClose={() => setSettings(false)} />
       <Sheet visible={more} onClose={() => setMore(false)} title="Options">
         {!session.restDay && (

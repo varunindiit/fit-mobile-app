@@ -8,7 +8,7 @@ import { Button, EASE_OUT, IconButton, IconTile, nativeOnly, PressableScale, Seg
 import { exerciseById, type SessionItem } from '@/data/program';
 import { C, MOTION, R } from '@/theme';
 import { ExerciseArt } from './ExerciseArt';
-import { fmtClock, focusColor } from './session';
+import { fmtClock, focusColor, type Accent } from './session';
 import { Glyph } from '@/components/Glyph';
 
 type Tab = 'animation' | 'muscle' | 'how';
@@ -20,7 +20,7 @@ const TABS: { value: Tab; label: string }[] = [
 const ART_H = 230;
 
 /** Full-height exercise detail sheet with paging through the session's exercises. */
-export function ExerciseSheet({ visible, onClose, items, index }: { visible: boolean; onClose: () => void; items: SessionItem[]; index: number }) {
+export function ExerciseSheet({ visible, onClose, items, index, accent }: { visible: boolean; onClose: () => void; items: SessionItem[]; index: number; /** The session's palette, so the sheet matches the screen it opened from. */ accent: Accent }) {
   const insets = useSafeAreaInsets();
   const { height: winH } = useWindowDimensions();
   const [i, setI] = useState(index);
@@ -77,7 +77,7 @@ export function ExerciseSheet({ visible, onClose, items, index }: { visible: boo
 
           <ScrollView key={i} style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 24 }} showsVerticalScrollIndicator={false}>
             <Animated.View key={tab} entering={nativeOnly(FadeIn.duration(MOTION.base))}>
-              {tab === 'animation' && <ExerciseArt key={ex.id} id={ex.id} emoji={ex.emoji} width="100%" height={ART_H} animated radius={R.lg} />}
+              {tab === 'animation' && <ExerciseArt key={ex.id} id={ex.id} emoji={ex.emoji} width="100%" height={ART_H} animated radius={R.lg} tint={accent.art} />}
               {tab === 'muscle' && (
                 <View style={[s.box, { flexDirection: 'row', alignItems: 'center' }]}>
                   <View style={s.body}>
@@ -102,8 +102,8 @@ export function ExerciseSheet({ visible, onClose, items, index }: { visible: boo
                 <View style={[s.box, { padding: 16, gap: 14, justifyContent: 'center' }]}>
                   {ex.instructions.map((step, k) => (
                     <View key={k} style={{ flexDirection: 'row', gap: 12, alignItems: 'flex-start' }}>
-                      <View style={s.stepNum}>
-                        <Text style={s.stepNumText}>{k + 1}</Text>
+                      <View style={[s.stepNum, { backgroundColor: accent.soft }]}>
+                        <Text style={[s.stepNumText, { color: accent.accent }]}>{k + 1}</Text>
                       </View>
                       <Text style={[s.para, { flex: 1 }]}>{step}</Text>
                     </View>
@@ -115,7 +115,7 @@ export function ExerciseSheet({ visible, onClose, items, index }: { visible: boo
             <Segmented options={TABS} value={tab} onChange={setTab} style={{ marginTop: 14 }} />
 
             <View style={s.repeats}>
-              <IconTile icon={it.seconds ? 'timer-outline' : 'repeat'} size={40} />
+              <IconTile icon={it.seconds ? 'timer-outline' : 'repeat'} size={40} color={accent.accent} bg={accent.soft} />
               <Text style={[s.repeatLabel, { flex: 1 }]}>{it.seconds ? 'Duration' : 'Repeats'}</Text>
               <Text style={s.repeatVal}>{it.seconds ? fmtClock(it.seconds) : `x ${it.reps ?? 10}`}</Text>
             </View>
@@ -153,7 +153,7 @@ export function ExerciseSheet({ visible, onClose, items, index }: { visible: boo
             <Text style={[T.label, s.sec]}>Breathing tips</Text>
             {ex.breathing.map((b, k) => (
               <View key={k} style={{ flexDirection: 'row', gap: 10, marginBottom: 8, alignItems: 'flex-start' }}>
-                <Ionicons name="leaf-outline" size={16} color={C.primary} style={{ marginTop: 3 }} />
+                <Ionicons name="leaf-outline" size={16} color={accent.accent} style={{ marginTop: 3 }} />
                 <Text style={[s.para, { flex: 1 }]}>{b}</Text>
               </View>
             ))}
@@ -167,7 +167,7 @@ export function ExerciseSheet({ visible, onClose, items, index }: { visible: boo
               </Text>
               <PagerBtn icon="chevron-forward" disabled={i >= n - 1} onPress={() => go(1)} />
             </View>
-            <Button title="Close" onPress={onClose} style={{ flex: 1 }} />
+            <Button title="Close" onPress={onClose} style={{ flex: 1, backgroundColor: accent.accent }} textStyle={{ color: accent.on }} />
           </View>
         </Animated.View>
       </View>
@@ -195,8 +195,8 @@ const s = StyleSheet.create({
   focusRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   focusText: { fontSize: 14, fontWeight: '600', color: C.textSoft },
   dot: { width: 8, height: 8, borderRadius: 4 },
-  stepNum: { width: 26, height: 26, borderRadius: 9, backgroundColor: C.primarySoft, alignItems: 'center', justifyContent: 'center' },
-  stepNumText: { color: C.primaryDark, fontWeight: '800', fontSize: 13 },
+  stepNum: { width: 26, height: 26, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
+  stepNumText: { fontWeight: '800', fontSize: 13 },
   repeats: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 16, padding: 12, borderRadius: R.md, backgroundColor: C.surfaceAlt },
   repeatLabel: { fontSize: 15, fontWeight: '600', color: C.textSoft },
   repeatVal: { fontSize: 20, fontWeight: '800', color: C.text, fontVariant: ['tabular-nums'], letterSpacing: -0.3 },
