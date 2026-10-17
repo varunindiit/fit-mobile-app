@@ -2,53 +2,43 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect } from 'react';
 import { StyleSheet, View, type DimensionValue, type ViewStyle } from 'react-native';
-import Animated, { cancelAnimation, Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withDelay, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
+import Animated, { cancelAnimation, Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 
 import { Glyph } from '@/components/Glyph';
-import { EXERCISE_ART, EXERCISE_ART_B } from '@/components/glyphs';
+import { EXERCISE_ANIM, EXERCISE_ART } from '@/components/glyphs';
 
 const ART: [string, string] = ['#F5FDF4', '#E2F6DF'];
-/** 2-frame rep loop: hold each pose, then a quick cross-fade — reads like a GIF. */
-const HOLD = 420;
-const SWAP = 160;
 
-/** Illustration tile: the exercise's 3D figure (or its emoji glyph), optionally with a looping "rep" motion
- *  (2-frame pose swap when a second keyframe exists, gentle breathing for static holds). */
+/** Illustration tile: the exercise's looping animation (or its still pose / emoji glyph when there is none).
+ *  Exercises with an animation play it natively; the rest keep a gentle breathing or bobbing loop. */
 export function ExerciseArt({ id, emoji, size = 64, width, height, animated = false, radius, style }: { id?: string; emoji: string; size?: number; width?: DimensionValue; height?: number; animated?: boolean; radius?: number; style?: ViewStyle }) {
   const h = height ?? size;
   const reduce = useReducedMotion();
   const loop = animated && !reduce;
   const t = useSharedValue(0);
+  const anim = id ? EXERCISE_ANIM[id] : undefined;
   const art = id ? EXERCISE_ART[id] : undefined;
-  const artB = art && id ? EXERCISE_ART_B[id] : undefined;
-  const mode = !art ? 'bob' : artB ? 'frames' : 'breathe';
+  const mode = anim ? 'play' : art ? 'breathe' : 'bob';
 
   useEffect(() => {
-    if (!loop) {
+    if (!loop || mode === 'play') {
       t.set(0);
       return;
     }
-    if (mode === 'frames') {
-      const swap = (to: number) => withDelay(HOLD, withTiming(to, { duration: SWAP, easing: Easing.inOut(Easing.quad) }));
-      t.set(withRepeat(withSequence(swap(1), swap(0)), -1));
-    } else {
-      t.set(withRepeat(withTiming(1, { duration: mode === 'breathe' ? 1400 : 850, easing: Easing.inOut(Easing.quad) }), -1, true));
-    }
+    t.set(withRepeat(withTiming(1, { duration: mode === 'breathe' ? 1400 : 850, easing: Easing.inOut(Easing.quad) }), -1, true));
     return () => cancelAnimation(t);
   }, [loop, mode, t]);
 
   const lift = h * 0.06;
   const figure = useAnimatedStyle(() => {
-    const v = loop ? t.get() : 0;
-    if (mode === 'frames') return { opacity: 1 - v, transform: [{ translateY: 0 }, { scale: 1 }, { rotate: '0deg' }] };
-    if (mode === 'breathe') return { opacity: 1, transform: [{ translateY: -lift * 0.15 * v }, { scale: 1 + 0.025 * v }, { rotate: '0deg' }] };
-    return { opacity: 1, transform: [{ translateY: -lift * v }, { scale: 1 + 0.07 * v }, { rotate: `${-3 + 6 * v}deg` }] };
+    const v = loop && mode !== 'play' ? t.get() : 0;
+    if (mode === 'breathe') return { transform: [{ translateY: -lift * 0.15 * v }, { scale: 1 + 0.025 * v }, { rotate: '0deg' }] };
+    if (mode === 'bob') return { transform: [{ translateY: -lift * v }, { scale: 1 + 0.07 * v }, { rotate: `${-3 + 6 * v}deg` }] };
+    return { transform: [{ translateY: 0 }, { scale: 1 }, { rotate: '0deg' }] };
   });
-  const figureB = useAnimatedStyle(() => ({ opacity: loop ? t.get() : 0 }));
 
   const fs = Math.round(h * 0.48);
   const figH = Math.round(h * 0.8);
-  const figBottom = Math.round(h * 0.1);
 
   return (
     <LinearGradient colors={ART} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={[{ width: width ?? size, height: h, borderRadius: radius ?? Math.min(28, Math.round(h * 0.22)), overflow: 'hidden' }, style]}>
@@ -58,15 +48,17 @@ export function ExerciseArt({ id, emoji, size = 64, width, height, animated = fa
           <View style={[s.bubble, { width: h * 0.3, height: h * 0.3, borderRadius: h * 0.15, top: h * 0.2, left: -h * 0.1 }]} />
         </>
       )}
-      <View style={[s.figure, { bottom: figBottom }]}>
+      <View style={[s.figure, { bottom: Math.round(h * 0.1) }]}>
         <Animated.View style={figure}>
-          {art ? <Image source={art} style={{ width: figH, height: figH }} contentFit="contain" /> : <Glyph emoji={emoji} size={Math.round(fs * 1.25)} />}
+          {anim ? (
+            // libwebp decodes animated WebP with the right blending and frame rate; Apple's codec can get both wrong.
+            <Image source={anim} style={{ width: figH, height: figH }} contentFit="contain" autoplay={loop} useAppleWebpCodec={false} />
+          ) : art ? (
+            <Image source={art} style={{ width: figH, height: figH }} contentFit="contain" />
+          ) : (
+            <Glyph emoji={emoji} size={Math.round(fs * 1.25)} />
+          )}
         </Animated.View>
-        {artB && loop && (
-          <Animated.View style={[s.frameB, figureB]}>
-            <Image source={artB} style={{ width: figH, height: figH }} contentFit="contain" />
-          </Animated.View>
-        )}
       </View>
     </LinearGradient>
   );
@@ -75,5 +67,4 @@ export function ExerciseArt({ id, emoji, size = 64, width, height, animated = fa
 const s = StyleSheet.create({
   bubble: { position: 'absolute', backgroundColor: 'rgba(255,255,255,0.7)' },
   figure: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
-  frameB: { position: 'absolute', top: 0, left: 0, right: 0, alignItems: 'center' },
 });

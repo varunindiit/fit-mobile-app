@@ -104,7 +104,7 @@ export const GLYPHS: Record<string, GlyphEntry> = {
   '💧': { icon: 'water', color: C.water },
 };
 
-/** 3D exercise figures keyed by exercise id. */
+/** Still pose for each exercise — the opening frame of its animation (© Gym visual), used on cards and log rows. */
 export const EXERCISE_ART: Record<string, number> = {
   'jumping-jacks': require('@/assets/images/exercises/jumping-jacks.webp'),
   'abdominal-crunches': require('@/assets/images/exercises/abdominal-crunches.webp'),
@@ -120,7 +120,7 @@ export const EXERCISE_ART: Record<string, number> = {
   'cross-arm-crunches': require('@/assets/images/exercises/cross-arm-crunches.webp'),
   'bicycle-crunches': require('@/assets/images/exercises/bicycle-crunches.webp'),
   'side-plank': require('@/assets/images/exercises/side-plank.webp'),
-  'x-man-crunch': require('@/assets/images/exercises/x-man-crunch.webp'),
+  'dead-bug': require('@/assets/images/exercises/dead-bug.webp'),
   'push-ups': require('@/assets/images/exercises/push-ups.webp'),
   'wide-push-ups': require('@/assets/images/exercises/wide-push-ups.webp'),
   'tricep-dips': require('@/assets/images/exercises/tricep-dips.webp'),
@@ -130,34 +130,37 @@ export const EXERCISE_ART: Record<string, number> = {
   'superman': require('@/assets/images/exercises/superman.webp'),
   'burpees': require('@/assets/images/exercises/burpees.webp'),
   'cobra-stretch': require('@/assets/images/exercises/cobra-stretch.webp'),
-  'spine-twist': require('@/assets/images/exercises/spine-twist.webp'),
+  'spine-twist': require('@/assets/images/exercises/bent-leg-twist.webp'), // same lying lumbar twist as bent-leg-twist
 };
 
-/** Second keyframe (opposite phase of the rep) for exercises that loop as a 2-frame animation. Static holds (plank, side plank) have none. */
-export const EXERCISE_ART_B: Record<string, number> = {
-  'jumping-jacks': require('@/assets/images/exercises/jumping-jacks-b.webp'),
-  'abdominal-crunches': require('@/assets/images/exercises/abdominal-crunches-b.webp'),
-  'russian-twist': require('@/assets/images/exercises/russian-twist-b.webp'),
-  'mountain-climber': require('@/assets/images/exercises/mountain-climber-b.webp'),
-  'heel-touch': require('@/assets/images/exercises/heel-touch-b.webp'),
-  'leg-raises': require('@/assets/images/exercises/leg-raises-b.webp'),
-  'bent-leg-twist': require('@/assets/images/exercises/bent-leg-twist-b.webp'),
-  'reverse-crunches': require('@/assets/images/exercises/reverse-crunches-b.webp'),
-  'v-crunch': require('@/assets/images/exercises/v-crunch-b.webp'),
-  'flutter-kicks': require('@/assets/images/exercises/flutter-kicks-b.webp'),
-  'cross-arm-crunches': require('@/assets/images/exercises/cross-arm-crunches-b.webp'),
-  'bicycle-crunches': require('@/assets/images/exercises/bicycle-crunches-b.webp'),
-  'x-man-crunch': require('@/assets/images/exercises/x-man-crunch-b.webp'),
-  'push-ups': require('@/assets/images/exercises/push-ups-b.webp'),
-  'wide-push-ups': require('@/assets/images/exercises/wide-push-ups-b.webp'),
-  'tricep-dips': require('@/assets/images/exercises/tricep-dips-b.webp'),
-  'squats': require('@/assets/images/exercises/squats-b.webp'),
-  'lunges': require('@/assets/images/exercises/lunges-b.webp'),
-  'glute-bridge': require('@/assets/images/exercises/glute-bridge-b.webp'),
-  'superman': require('@/assets/images/exercises/superman-b.webp'),
-  'burpees': require('@/assets/images/exercises/burpees-b.webp'),
-  'cobra-stretch': require('@/assets/images/exercises/cobra-stretch-b.webp'),
-  'spine-twist': require('@/assets/images/exercises/spine-twist-b.webp'),
+/** Looping animation for each exercise (180px animated WebP, © Gym visual). Every exercise has one; ExerciseArt
+ *  still falls back to a breathing loop for any id that does not. */
+export const EXERCISE_ANIM: Record<string, number> = {
+  'jumping-jacks': require('@/assets/images/exercises/anim/jumping-jacks.webp'),
+  'abdominal-crunches': require('@/assets/images/exercises/anim/abdominal-crunches.webp'),
+  'russian-twist': require('@/assets/images/exercises/anim/russian-twist.webp'),
+  'mountain-climber': require('@/assets/images/exercises/anim/mountain-climber.webp'),
+  'heel-touch': require('@/assets/images/exercises/anim/heel-touch.webp'),
+  'leg-raises': require('@/assets/images/exercises/anim/leg-raises.webp'),
+  'plank': require('@/assets/images/exercises/anim/plank.webp'),
+  'bent-leg-twist': require('@/assets/images/exercises/anim/bent-leg-twist.webp'),
+  'reverse-crunches': require('@/assets/images/exercises/anim/reverse-crunches.webp'),
+  'v-crunch': require('@/assets/images/exercises/anim/v-crunch.webp'),
+  'flutter-kicks': require('@/assets/images/exercises/anim/flutter-kicks.webp'),
+  'cross-arm-crunches': require('@/assets/images/exercises/anim/cross-arm-crunches.webp'),
+  'bicycle-crunches': require('@/assets/images/exercises/anim/bicycle-crunches.webp'),
+  'side-plank': require('@/assets/images/exercises/anim/side-plank.webp'),
+  'dead-bug': require('@/assets/images/exercises/anim/dead-bug.webp'),
+  'push-ups': require('@/assets/images/exercises/anim/push-ups.webp'),
+  'wide-push-ups': require('@/assets/images/exercises/anim/wide-push-ups.webp'),
+  'tricep-dips': require('@/assets/images/exercises/anim/tricep-dips.webp'),
+  'squats': require('@/assets/images/exercises/anim/squats.webp'),
+  'lunges': require('@/assets/images/exercises/anim/lunges.webp'),
+  'glute-bridge': require('@/assets/images/exercises/anim/glute-bridge.webp'),
+  'superman': require('@/assets/images/exercises/anim/superman.webp'),
+  'burpees': require('@/assets/images/exercises/anim/burpees.webp'),
+  'cobra-stretch': require('@/assets/images/exercises/anim/cobra-stretch.webp'),
+  'spine-twist': require('@/assets/images/exercises/anim/bent-leg-twist.webp'),
 };
 
 /** Dish-specific artwork keyed by food id — wins over the emoji glyph, which several dishes share (🍛, 🍚, 🫓, ☕…). */
@@ -200,7 +203,7 @@ const FOCUS_EXERCISE: Record<string, string> = {
   'focus:arm-toning': 'tricep-dips',
   'focus:leg-day': 'squats',
   'focus:back-relief': 'superman',
-  'focus:ultimate-core': 'x-man-crunch',
+  'focus:ultimate-core': 'dead-bug',
 };
 
 /** Guided workouts whose emoji glyph is too generic (🔥, 💪) get the mascot doing the move instead. */
