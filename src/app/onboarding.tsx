@@ -262,7 +262,7 @@ export default function Onboarding() {
           } else completeOnboarding(finalize({ ...p, email, name: who }));
           // The account just used becomes the backup account, synced right away.
           setBackup({ name: who, email, provider, lastSync: new Date().toISOString() });
-          // Demo Google / Apple accounts each own a plan (Free, Smart or Pro); email log-ins keep the current one.
+          // Demo accounts each bring a plan along (Google / Apple pick one; an email log-in returns to Pro).
           if (plan !== undefined) setPremium(plan ? { tier: plan, months: 12, since: dateKey(new Date()) } : null);
           router.replace('/(tabs)');
           const tier = PLAN_TIERS.find((t) => t.id === plan);

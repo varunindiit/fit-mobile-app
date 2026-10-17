@@ -104,7 +104,8 @@ export function AuthScreen({ mode, onBack, onSwitch, onDone }: { mode: AuthMode;
 
   const submit = () => {
     if (!canSubmit) return;
-    run('email', () => onDone({ name: name.trim(), email: mail, provider: 'email' }));
+    // Demo: an email log-in signs back into a Pro account, so Pro is active straight away.
+    run('email', () => onDone({ name: name.trim(), email: mail, provider: 'email', plan: signup ? undefined : 'pro' }));
   };
 
   const openSheet = (provider: Provider) => {
