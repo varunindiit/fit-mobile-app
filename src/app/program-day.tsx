@@ -24,21 +24,35 @@ import { scheduleOnRN } from 'react-native-worklets';
 
 import { ExerciseArt } from '@/components/program/ExerciseArt';
 import { ExerciseSheet } from '@/components/program/ExerciseSheet';
-import { GradientButton, PRIMARY } from '@/components/program/GradientButton';
+import { GradientButton } from '@/components/program/GradientButton';
 import { findSession, itemLabel, planItems, sessionMeta } from '@/components/program/session';
 import { WorkoutSettingsSheet } from '@/components/program/WorkoutSettingsSheet';
 import { Button, Card, EmptyState, enter, Header, IconTile, layoutTransition, nativeOnly, ListRow, PressableScale, Screen, SectionTitle, Sheet, T, tap, useToast, type IconName } from '@/components/ui';
 import { exerciseById, sessionStats, type Session, type SessionItem } from '@/data/program';
 import { useStore } from '@/lib/store';
-import { C, MOTION, R, shadowLg, shadowSm } from '@/theme';
+import { C, fade, MOTION, onFill, R, shadowLg, shadowSm } from '@/theme';
 import { Glyph } from '@/components/Glyph';
 import { sessionArt } from '@/components/glyphs';
 
 const goBack = () => (router.canGoBack() ? router.back() : router.replace('/fitness'));
-const REST_TIPS: { icon: IconName; color: string; bg: string; t: string }[] = [
+/** The whole screen is themed off the hero gradient: CTA, pills, timeline and tiles all read as one colour. */
+type Accent = ReturnType<typeof accentTheme>;
+function accentTheme([from, to]: [string, string]) {
+  return {
+    /** The hero gradient itself, reused for the CTA so header and button match. */
+    cta: [from, to] as [string, string],
+    accent: to,
+    soft: fade(from, 0.15),
+    tint: fade(to, 0.26),
+    on: onFill(to),
+    art: ['#FFFFFF', fade(from, 0.18)] as [string, string],
+  };
+}
+
+const restTips = (t: Accent): { icon: IconName; color: string; bg: string; t: string }[] => [
   { icon: 'water', color: C.water, bg: C.waterSoft, t: 'Drink 8+ glasses of water to help your muscles recover.' },
   { icon: 'walk', color: C.steps, bg: C.stepsSoft, t: 'Go for a light 20-minute walk to keep blood flowing.' },
-  { icon: 'body', color: C.primaryDark, bg: C.primarySoft, t: 'Do some gentle stretching or yoga for 10 minutes.' },
+  { icon: 'body', color: t.accent, bg: t.soft, t: 'Do some gentle stretching or yoga for 10 minutes.' },
   { icon: 'nutrition', color: C.accent, bg: C.accentSoft, t: 'Eat enough protein — it rebuilds the muscle you trained.' },
   { icon: 'moon', color: C.weight, bg: C.weightSoft, t: 'Aim for 7–9 hours of sleep tonight.' },
 ];
@@ -76,6 +90,7 @@ function DayPlan({ session }: { session: Session }) {
   const toast = useToast();
   const insets = useSafeAreaInsets();
   const meta = sessionMeta(session);
+  const t = useMemo(() => accentTheme(session.colors), [session.colors]);
   const HERO = insets.top + 236;
 
   const [items, setItems] = useState<SessionItem[]>(() => planItems(session, state.planEdits));
@@ -234,50 +249,50 @@ function DayPlan({ session }: { session: Session }) {
 
         <View style={s.body}>
           {session.restDay ? (
-            <RestDay done={completed} />
+            <RestDay done={completed} t={t} />
           ) : (
             <>
               <Animated.View entering={enter(0)}>
                 <View style={s.stats}>
-                  <Stat icon="body" color={C.primaryDark} bg={C.primarySoft} value={`${stats.exercises}`} label="Moves" />
+                  <Stat icon="body" color={t.accent} bg={t.soft} value={`${stats.exercises}`} label="Moves" />
                   <Stat icon="time" color={C.water} bg={C.waterSoft} value={`${stats.minutes}`} unit=" min" label="Duration" />
-                  <Stat icon="flame" color={C.accent} bg={C.accentSoft} value={`~${stats.kcal}`} unit=" kcal" label="Est. burn" />
+                  <Stat icon="flame" color={C.warning} bg={C.warningSoft} value={`~${stats.kcal}`} unit=" kcal" label="Est. burn" />
                 </View>
               </Animated.View>
 
               <Animated.View entering={enter(1)}>
                 <Card style={s.settingsCard}>
-                  <ListRow icon="options" iconBg={C.accentSoft} iconColor={C.accent} title="Tune your workout" subtitle="Rest time, countdown, coach & music" onPress={() => setSettings(true)} />
+                  <ListRow icon="options" iconBg={t.soft} iconColor={t.accent} title="Tune your workout" subtitle="Rest time, countdown, coach & music" onPress={() => setSettings(true)} />
                 </Card>
               </Animated.View>
 
               <Animated.View entering={enter(2)} style={s.exHead}>
                 <Text style={s.exTitle}>Your routine</Text>
-                <View style={s.countPill}>
-                  <Text style={s.countText}>{items.length}</Text>
+                <View style={[s.countPill, { backgroundColor: t.soft }]}>
+                  <Text style={[s.countText, { color: t.accent }]}>{items.length}</Text>
                 </View>
                 <View style={{ flex: 1 }} />
                 {editing && edited && (
                   <Animated.View entering={nativeOnly(FadeIn.duration(MOTION.base))} exiting={nativeOnly(FadeOut.duration(MOTION.fast))}>
                     <Pressable hitSlop={10} onPress={resetPlan} style={{ marginRight: 14 }}>
-                      <Text style={s.resetText}>Reset</Text>
+                      <Text style={[s.resetText, { color: t.accent }]}>Reset</Text>
                     </Pressable>
                   </Animated.View>
                 )}
-                <PressableScale scaleTo={0.9} hitSlop={8} accessibilityRole="button" accessibilityLabel={editing ? 'Finish editing' : 'Edit plan'} onPress={toggleEdit} style={[s.pencil, editing && s.pencilOn]}>
-                  <Ionicons name={editing ? 'checkmark' : 'pencil'} size={18} color={editing ? C.onPrimary : C.text} />
+                <PressableScale scaleTo={0.9} hitSlop={8} accessibilityRole="button" accessibilityLabel={editing ? 'Finish editing' : 'Edit plan'} onPress={toggleEdit} style={[s.pencil, editing && { backgroundColor: t.accent, borderColor: t.accent }]}>
+                  <Ionicons name={editing ? 'checkmark' : 'pencil'} size={18} color={editing ? t.on : C.text} />
                 </PressableScale>
                 {tip && (
                   <Animated.View exiting={nativeOnly(FadeOut.duration(160))} style={[s.tip, tipStyle]}>
                     <View style={s.tipArrow} />
                     <View style={{ flexDirection: 'row', gap: 12 }}>
-                      <IconTile icon="create-outline" size={42} />
+                      <IconTile icon="create-outline" size={42} color={t.accent} bg={t.soft} />
                       <View style={{ flex: 1 }}>
                         <Text style={s.tipTitle}>Make it yours</Text>
                         <Text style={s.tipText}>Tap the pencil to remove moves or change reps and time.</Text>
                       </View>
                     </View>
-                    <Button title="Got it" small onPress={dismissTip} style={{ marginTop: 14 }} />
+                    <Button title="Got it" small onPress={dismissTip} style={{ marginTop: 14, backgroundColor: t.accent }} textStyle={{ color: t.on }} />
                   </Animated.View>
                 )}
               </Animated.View>
@@ -289,9 +304,9 @@ function DayPlan({ session }: { session: Session }) {
                     <Animated.View key={keys[i]} entering={enter(i + 3)} exiting={rowOut} layout={rowLayout} style={s.step}>
                       {/* Timeline rail: numbered stop, joined to its neighbours */}
                       <View style={s.rail}>
-                        <View style={[s.railLine, i === 0 && { top: '50%' }, i === items.length - 1 && { bottom: '50%' }]} />
-                        <View style={s.railDot}>
-                          <Text style={s.railNum}>{i + 1}</Text>
+                        <View style={[s.railLine, { backgroundColor: t.tint }, i === 0 && { top: '50%' }, i === items.length - 1 && { bottom: '50%' }]} />
+                        <View style={[s.railDot, { backgroundColor: t.accent }]}>
+                          <Text style={[s.railNum, { color: t.on }]}>{i + 1}</Text>
                         </View>
                       </View>
                       <PressableScale
@@ -309,14 +324,14 @@ function DayPlan({ session }: { session: Session }) {
                             </Pressable>
                           </Animated.View>
                         )}
-                        <ExerciseArt id={ex.id} emoji={ex.emoji} size={60} animated radius={R.sm} />
+                        <ExerciseArt id={ex.id} emoji={ex.emoji} size={60} animated radius={R.sm} tint={t.art} />
                         <View style={{ flex: 1 }}>
                           <Text style={s.rowName} numberOfLines={2}>
                             {ex.name}
                           </Text>
-                          <View style={s.amount}>
-                            <Ionicons name={it.seconds ? 'timer-outline' : 'repeat'} size={13} color={C.primaryDark} />
-                            <Text style={s.amountText}>{itemLabel(it)}</Text>
+                          <View style={[s.amount, { backgroundColor: t.soft }]}>
+                            <Ionicons name={it.seconds ? 'timer-outline' : 'repeat'} size={13} color={t.accent} />
+                            <Text style={[s.amountText, { color: t.accent }]}>{itemLabel(it)}</Text>
                           </View>
                         </View>
                         {editing ? (
@@ -324,8 +339,8 @@ function DayPlan({ session }: { session: Session }) {
                             <PressableScale scaleTo={0.88} hitSlop={6} accessibilityLabel="Less" onPress={() => (tap(), adjust(i, -1))} style={s.adjBtn}>
                               <Ionicons name="remove" size={16} color={C.text} />
                             </PressableScale>
-                            <PressableScale scaleTo={0.88} hitSlop={6} accessibilityLabel="More" onPress={() => (tap(), adjust(i, 1))} style={[s.adjBtn, s.adjBtnOn]}>
-                              <Ionicons name="add" size={16} color={C.onPrimary} />
+                            <PressableScale scaleTo={0.88} hitSlop={6} accessibilityLabel="More" onPress={() => (tap(), adjust(i, 1))} style={[s.adjBtn, { backgroundColor: t.accent, borderColor: t.accent }]}>
+                              <Ionicons name="add" size={16} color={t.on} />
                             </PressableScale>
                           </Animated.View>
                         ) : (
@@ -357,7 +372,7 @@ function DayPlan({ session }: { session: Session }) {
           completed ? (
             <Button title="Rest day completed" icon="checkmark-circle" variant="secondary" onPress={goBack} />
           ) : (
-            <GradientButton {...PRIMARY} title="Mark rest day as done" icon="moon" onPress={markRest} />
+            <GradientButton colors={t.cta} fg={t.on} title="Mark rest day as done" icon="moon" onPress={markRest} />
           )
         ) : editing ? (
           <Animated.View entering={nativeOnly(FadeIn.duration(MOTION.base))} style={s.adjustPill}>
@@ -372,9 +387,9 @@ function DayPlan({ session }: { session: Session }) {
                 tap();
                 finishEdit();
               }}
-              style={s.doneBtn}>
-              <Ionicons name="checkmark" size={18} color={C.onPrimary} />
-              <Text style={s.doneText}>Done</Text>
+              style={[s.doneBtn, { backgroundColor: t.accent }]}>
+              <Ionicons name="checkmark" size={18} color={t.on} />
+              <Text style={[s.doneText, { color: t.on }]}>Done</Text>
             </PressableScale>
           </Animated.View>
         ) : canResume ? (
@@ -390,10 +405,10 @@ function DayPlan({ session }: { session: Session }) {
               <Ionicons name="refresh" size={17} color={C.text} />
               <Text style={s.restartText}>Restart</Text>
             </PressableScale>
-            <GradientButton title={`Continue · ${resumePct}% done`} onPress={() => start(true)} style={{ flex: 1 }} />
+            <GradientButton colors={t.cta} fg={t.on} title={`Continue · ${resumePct}% done`} onPress={() => start(true)} style={{ flex: 1 }} />
           </Animated.View>
         ) : (
-          <GradientButton title={completed ? 'Do it again' : `Let's go · ${stats.minutes} min`} icon="play" onPress={() => start(false)} />
+          <GradientButton colors={t.cta} fg={t.on} title={completed ? 'Do it again' : `Let's go · ${stats.minutes} min`} icon="play" onPress={() => start(false)} />
         )}
       </View>
 
@@ -461,12 +476,12 @@ function TopIcon({ icon, label, y, hero, onPress }: { icon: IconName; label: str
   );
 }
 
-function RestDay({ done }: { done: boolean }) {
+function RestDay({ done, t }: { done: boolean; t: Accent }) {
   return (
     <View>
       <Animated.View entering={enter(0)}>
         <Card style={{ alignItems: 'center', paddingVertical: 24, paddingHorizontal: 20 }}>
-          <View style={s.restArt}>
+          <View style={[s.restArt, { backgroundColor: t.soft }]}>
             <Glyph emoji="😴" size={66} />
           </View>
           <Text style={[T.h2, { textAlign: 'center', marginTop: 14 }]}>Recovery is part of training</Text>
@@ -478,10 +493,10 @@ function RestDay({ done }: { done: boolean }) {
       <Animated.View entering={enter(1)}>
         <SectionTitle title="Rest-day tips" />
         <Card style={{ gap: 14 }}>
-          {REST_TIPS.map((t) => (
-            <View key={t.icon} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              <IconTile icon={t.icon} color={t.color} bg={t.bg} size={38} />
-              <Text style={[T.body, { flex: 1, color: C.text }]}>{t.t}</Text>
+          {restTips(t).map((tip) => (
+            <View key={tip.icon} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <IconTile icon={tip.icon} color={tip.color} bg={tip.bg} size={38} />
+              <Text style={[T.body, { flex: 1, color: C.text }]}>{tip.t}</Text>
             </View>
           ))}
         </Card>
@@ -516,28 +531,26 @@ const s = StyleSheet.create({
   settingsCard: { marginTop: 10, paddingVertical: 2, paddingHorizontal: 10 },
   exHead: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 24, marginBottom: 12, zIndex: 20 },
   exTitle: { fontSize: 20, fontWeight: '800', color: C.text, letterSpacing: -0.4 },
-  countPill: { minWidth: 26, height: 22, paddingHorizontal: 7, borderRadius: R.pill, backgroundColor: C.primarySoft, alignItems: 'center', justifyContent: 'center' },
-  countText: { fontSize: 12, fontWeight: '700', color: C.primaryDark, fontVariant: ['tabular-nums'] },
-  resetText: { color: C.primary, fontWeight: '700', fontSize: 14 },
+  countPill: { minWidth: 26, height: 22, paddingHorizontal: 7, borderRadius: R.pill, alignItems: 'center', justifyContent: 'center' },
+  countText: { fontSize: 12, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  resetText: { fontWeight: '700', fontSize: 14 },
   pencil: { width: 38, height: 38, borderRadius: 19, backgroundColor: C.card, borderWidth: StyleSheet.hairlineWidth * 2, borderColor: C.border, alignItems: 'center', justifyContent: 'center', ...shadowSm },
-  pencilOn: { backgroundColor: C.primaryDark, borderColor: C.primaryDark },
   tip: { position: 'absolute', top: 50, right: -4, width: 290, backgroundColor: C.card, borderRadius: R.lg, padding: 16, borderWidth: StyleSheet.hairlineWidth, borderColor: C.borderSoft, ...shadowLg },
   tipArrow: { position: 'absolute', top: -7, right: 16, width: 16, height: 16, backgroundColor: C.card, transform: [{ rotate: '45deg' }], borderRadius: 3 },
   tipTitle: { fontSize: 15, fontWeight: '700', color: C.text },
   tipText: { fontSize: 13, color: C.textSoft, lineHeight: 18, marginTop: 3 },
   step: { flexDirection: 'row', alignItems: 'stretch', gap: 10 },
   rail: { width: 26, alignItems: 'center', justifyContent: 'center' },
-  railLine: { position: 'absolute', top: 0, bottom: 0, width: 2, borderRadius: 1, backgroundColor: C.primaryTint },
-  railDot: { width: 26, height: 26, borderRadius: 13, backgroundColor: C.primaryDark, alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: C.bg },
-  railNum: { fontSize: 11, fontWeight: '900', color: C.onPrimary, fontVariant: ['tabular-nums'] },
+  railLine: { position: 'absolute', top: 0, bottom: 0, width: 2, borderRadius: 1 },
+  railDot: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: C.bg },
+  railNum: { fontSize: 11, fontWeight: '900', fontVariant: ['tabular-nums'] },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 10, paddingRight: 14, marginVertical: 5, backgroundColor: C.card, borderRadius: R.lg, borderWidth: StyleSheet.hairlineWidth, borderColor: C.borderSoft, ...shadowSm },
   rowName: { fontSize: 15, fontWeight: '700', color: C.text, letterSpacing: -0.2 },
-  amount: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', marginTop: 6, backgroundColor: C.primarySoft, paddingHorizontal: 8, paddingVertical: 3, borderRadius: R.pill },
-  amountText: { fontSize: 12, fontWeight: '700', color: C.primaryDark, fontVariant: ['tabular-nums'] },
+  amount: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', marginTop: 6, paddingHorizontal: 8, paddingVertical: 3, borderRadius: R.pill },
+  amountText: { fontSize: 12, fontWeight: '700', fontVariant: ['tabular-nums'] },
   minus: { width: 26, height: 26, borderRadius: 13, backgroundColor: C.danger, alignItems: 'center', justifyContent: 'center' },
   adjust: { flexDirection: 'row', gap: 8 },
   adjBtn: { width: 34, height: 34, borderRadius: 17, backgroundColor: C.surfaceAlt, borderWidth: StyleSheet.hairlineWidth * 2, borderColor: C.border, alignItems: 'center', justifyContent: 'center' },
-  adjBtnOn: { backgroundColor: C.primaryDark, borderColor: C.primaryDark },
   topBar: { position: 'absolute', top: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingBottom: 8 },
   topBarBg: { backgroundColor: C.card, borderBottomWidth: StyleSheet.hairlineWidth * 2, borderBottomColor: C.borderSoft },
   topTitle: { flex: 1, textAlign: 'center', fontSize: 17, fontWeight: '700', color: C.text, letterSpacing: -0.2 },
@@ -550,7 +563,7 @@ const s = StyleSheet.create({
   adjustPill: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.navy, borderRadius: R.lg, paddingLeft: 20, paddingRight: 6, height: 60, ...shadowSm },
   adjustTitle: { color: C.white, fontSize: 16, fontWeight: '700' },
   adjustHint: { color: 'rgba(255,255,255,0.65)', fontSize: 12, marginTop: 1 },
-  doneBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: C.primaryBright, height: 48, paddingHorizontal: 20, borderRadius: R.md },
-  doneText: { color: C.onPrimary, fontSize: 15, fontWeight: '700' },
-  restArt: { width: 96, height: 96, borderRadius: 32, backgroundColor: C.primarySoft, alignItems: 'center', justifyContent: 'center' },
+  doneBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 48, paddingHorizontal: 20, borderRadius: R.md },
+  doneText: { fontSize: 15, fontWeight: '700' },
+  restArt: { width: 96, height: 96, borderRadius: 32, alignItems: 'center', justifyContent: 'center' },
 });

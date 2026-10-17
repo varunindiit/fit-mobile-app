@@ -7,11 +7,12 @@ import Animated, { cancelAnimation, Easing, useAnimatedStyle, useReducedMotion, 
 import { Glyph } from '@/components/Glyph';
 import { EXERCISE_ANIM, EXERCISE_ART } from '@/components/glyphs';
 
+/** Default tile wash. Screens with their own accent pass `tint` so the tile matches that theme. */
 const ART: [string, string] = ['#F5FDF4', '#E2F6DF'];
 
 /** Illustration tile: the exercise's looping animation (or its still pose / emoji glyph when there is none).
  *  Exercises with an animation play it natively; the rest keep a gentle breathing or bobbing loop. */
-export function ExerciseArt({ id, emoji, size = 64, width, height, animated = false, radius, style }: { id?: string; emoji: string; size?: number; width?: DimensionValue; height?: number; animated?: boolean; radius?: number; style?: ViewStyle }) {
+export function ExerciseArt({ id, emoji, size = 64, width, height, animated = false, radius, style, tint = ART }: { id?: string; emoji: string; size?: number; width?: DimensionValue; height?: number; animated?: boolean; radius?: number; style?: ViewStyle; /** Tile wash, top to bottom — defaults to the brand green. */ tint?: [string, string] }) {
   const h = height ?? size;
   const reduce = useReducedMotion();
   const loop = animated && !reduce;
@@ -41,7 +42,7 @@ export function ExerciseArt({ id, emoji, size = 64, width, height, animated = fa
   const figH = Math.round(h * 0.8);
 
   return (
-    <LinearGradient colors={ART} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={[{ width: width ?? size, height: h, borderRadius: radius ?? Math.min(28, Math.round(h * 0.22)), overflow: 'hidden' }, style]}>
+    <LinearGradient colors={tint} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={[{ width: width ?? size, height: h, borderRadius: radius ?? Math.min(28, Math.round(h * 0.22)), overflow: 'hidden' }, style]}>
       {h > 120 && (
         <>
           <View style={[s.bubble, { width: h * 0.5, height: h * 0.5, borderRadius: h * 0.25, top: -h * 0.12, right: -h * 0.08 }]} />
