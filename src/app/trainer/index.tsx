@@ -5,6 +5,8 @@ import { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
+import { Glyph } from '@/components/Glyph';
+import { sessionArt } from '@/components/glyphs';
 import { AvailabilityLine, TrainerAction, TrainerAvatar, TrainerPlanCard, openPlan } from '@/components/trainer/parts';
 import { Card, CountUp, Divider, Header, IconTile, Pill, PressableScale, ProgressBar, Screen, SectionTitle, T, enter, tap, type IconName } from '@/components/ui';
 import { planOnDay, weekPlan, type TrainerPlan } from '@/data/trainerPlans';
@@ -124,7 +126,7 @@ export default function TrainerDashboardScreen() {
                   style={[st.day, d === today && st.dayToday]}>
                   <Text style={[st.dayName, d === today && st.dayNameToday]}>{d}</Text>
                   <View style={[st.dayDisc, { backgroundColor: plan ? fade(plan.colors[1], 0.14) : C.surfaceAlt }]}>
-                    {plan ? <Text style={st.dayEmoji}>{plan.emoji}</Text> : <Ionicons name="moon-outline" size={14} color={C.muted} />}
+                    {plan ? <Glyph emoji={plan.emoji} src={sessionArt(plan.key)} size={18} /> : <Ionicons name="moon-outline" size={14} color={C.muted} />}
                   </View>
                   <Text style={[st.dayFocus, !plan && { color: C.muted }]} numberOfLines={1}>
                     {plan ? plan.focus.split(' ')[0] : 'Rest'}
@@ -323,7 +325,6 @@ const st = StyleSheet.create({
   dayName: { fontSize: 10.5, fontWeight: '800', color: C.muted, letterSpacing: 0.3 },
   dayNameToday: { color: C.primaryDark },
   dayDisc: { width: 32, height: 32, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
-  dayEmoji: { fontSize: 15 },
   dayFocus: { fontSize: 10, fontWeight: '700', color: C.text },
   dayCheck: { position: 'absolute', top: 4, right: 3, width: 15, height: 15, borderRadius: 8, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center' },
 

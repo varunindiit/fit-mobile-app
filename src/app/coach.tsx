@@ -146,7 +146,7 @@ function reply(raw: string, c: Ctx): Reply {
     }
     const s = foodById('makhana');
     return {
-      text: `Treats are totally okay — I follow the 80/20 rule: eat well 80% of the time and enjoy the rest mindfully.\n\nKeep the portion small, have it earlier in the day, and balance with a lighter next meal.${s ? ` Craving something crunchy? ${s.emoji} ${s.name} is just ${s.kcal} kcal a cup.` : ''}`,
+      text: `Treats are totally okay — I follow the 80/20 rule: eat well 80% of the time and enjoy the rest mindfully.\n\nKeep the portion small, have it earlier in the day, and balance with a lighter next meal.${s ? ` Craving something crunchy? ${s.name} is just ${s.kcal} kcal a cup.` : ''}`,
       action: s ? { label: `Log ${s.name}`, icon: 'add-circle', href: foodLink(s.id, snackMeal()) } : undefined,
     };
   }

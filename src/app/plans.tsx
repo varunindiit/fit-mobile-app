@@ -24,16 +24,16 @@ import { COACHES, formatUSD, PLAN_TIERS, TESTIMONIALS, type PlanTier } from '@/d
 import { fmtDate, todayKey } from '@/lib/calc';
 import { FREE_PROGRAM_DAYS, planStatus, TIER_LABEL } from '@/lib/entitlements';
 import { useStore, type Premium } from '@/lib/store';
-import { C, G, glow, MOTION, R } from '@/theme';
+import { C, glow, MOTION, R } from '@/theme';
 import { Glyph } from '@/components/Glyph';
 import { ACCENT, DEFAULT_MONTHS, pctOff, PlanComparison, PlanPicker, planFor } from '@/components/plans/PlanPicker';
 
 const COUPON = { code: 'FIT40', off: 4 };
 const METHODS: { id: string; title: string; sub: string; icon: IconName }[] = [
-  { id: 'upi', title: 'UPI', sub: 'Google Pay, PhonePe, Paytm, BHIM', icon: 'phone-portrait-outline' },
-  { id: 'card', title: 'Credit / Debit card', sub: 'Visa, Mastercard, RuPay, Amex', icon: 'card-outline' },
-  { id: 'netbanking', title: 'Net banking', sub: 'All major Indian banks', icon: 'business-outline' },
-  { id: 'wallet', title: 'Wallets', sub: 'Paytm, Amazon Pay, Mobikwik', icon: 'wallet-outline' },
+  { id: 'card', title: 'Credit / Debit card', sub: 'Visa, Mastercard, Amex, Discover', icon: 'card-outline' },
+  { id: 'applepay', title: 'Apple Pay', sub: 'Pay with Face ID or Touch ID', icon: 'logo-apple' },
+  { id: 'googlepay', title: 'Google Pay', sub: 'Cards saved to your Google account', icon: 'logo-google' },
+  { id: 'paypal', title: 'PayPal', sub: 'PayPal balance, bank or card', icon: 'logo-paypal' },
 ];
 const FAQ = [
   { q: 'Can I cancel anytime?', a: 'Yes. You can cancel from Profile → Manage plan. You keep premium access until the end of your billing period.' },
@@ -60,7 +60,7 @@ export default function PlansScreen() {
   );
   const [months, setMonths] = useState(DEFAULT_MONTHS);
   const [checkout, setCheckout] = useState(false);
-  const [method, setMethod] = useState('upi');
+  const [method, setMethod] = useState('card');
   const [coupon, setCoupon] = useState(true);
   const [paying, setPaying] = useState(false);
   const [askCancel, setAskCancel] = useState(false);
@@ -254,8 +254,7 @@ export default function PlansScreen() {
 
             {/* Coaches + testimonials on deep teal */}
             <Animated.View entering={enter(6)}>
-              <LinearGradient colors={G.deep} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.band}>
-                <Decor />
+              <View style={st.band}>
                 {tier === 'pro' && (
                   <Animated.View entering={nativeOnly(FadeIn.duration(MOTION.base))} style={{ marginBottom: 22 }}>
                     <Text style={st.bandEyebrow}>CERTIFIED COACHES</Text>
@@ -323,7 +322,7 @@ export default function PlansScreen() {
                     <Dot key={t.name} on={i === slide} />
                   ))}
                 </View>
-              </LinearGradient>
+              </View>
             </Animated.View>
 
             {/* Restore */}
@@ -387,7 +386,7 @@ export default function PlansScreen() {
             {coupon && <Line label={`Coupon ${COUPON.code}`} value={`−${formatUSD(COUPON.off)}`} green />}
             <View style={st.sumDivider} />
             <Line label="Total payable" value={formatUSD(total)} bold />
-            <Text style={[T.tiny, { marginTop: 2 }]}>Inclusive of all taxes</Text>
+            <Text style={[T.tiny, { marginTop: 2 }]}>Sales tax included where applicable</Text>
           </View>
 
           <PressableScale
@@ -590,17 +589,17 @@ const st = StyleSheet.create({
   ria: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 16, backgroundColor: C.aiSoft, borderWidth: 1, borderColor: C.aiBorder, shadowOpacity: 0, elevation: 0 },
   tryPill: { backgroundColor: C.card, borderRadius: R.pill, paddingHorizontal: 12, paddingVertical: 7, borderWidth: 1, borderColor: C.aiBorder },
   tryText: { fontSize: 13, fontWeight: '700', color: C.ai },
-  band: { marginTop: 26, borderRadius: R.xl, paddingVertical: 22, overflow: 'hidden' },
-  bandEyebrow: { color: C.gold, fontSize: 11, fontWeight: '700', letterSpacing: 1, paddingHorizontal: 20 },
-  bandTitle: { color: C.white, fontSize: 22, fontWeight: '800', letterSpacing: -0.4, marginTop: 4, marginBottom: 14, paddingHorizontal: 20 },
+  band: { marginTop: 26, borderRadius: R.xl, paddingVertical: 22, overflow: 'hidden', backgroundColor: C.surfaceAlt, borderWidth: StyleSheet.hairlineWidth * 2, borderColor: C.borderSoft },
+  bandEyebrow: { color: C.muted, fontSize: 11, fontWeight: '700', letterSpacing: 1, paddingHorizontal: 20 },
+  bandTitle: { color: C.text, fontSize: 22, fontWeight: '800', letterSpacing: -0.4, marginTop: 4, marginBottom: 14, paddingHorizontal: 20 },
   bandScroll: { paddingHorizontal: 20, gap: 12 },
-  coach: { width: 148, alignItems: 'center', gap: 2, backgroundColor: C.card, borderRadius: R.lg, paddingVertical: 16, paddingHorizontal: 10 },
+  coach: { width: 148, alignItems: 'center', gap: 2, backgroundColor: C.card, borderRadius: R.lg, paddingVertical: 16, paddingHorizontal: 10, borderWidth: StyleSheet.hairlineWidth * 2, borderColor: C.borderSoft },
   coachAvatar: { width: 64, height: 64, borderRadius: 32, backgroundColor: C.primarySoft, alignItems: 'center', justifyContent: 'center', marginBottom: 8, borderWidth: 3, borderColor: C.primaryTint },
   coachNameRow: { flexDirection: 'row', alignItems: 'center', gap: 4, maxWidth: '100%' },
   coachName: { fontSize: 15, fontWeight: '700', color: C.text, flexShrink: 1 },
   coachMeta: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6, backgroundColor: C.surfaceAlt, borderRadius: R.pill, paddingHorizontal: 8, paddingVertical: 3 },
   coachMetaText: { fontSize: 12, fontWeight: '700', color: C.textSoft, fontVariant: ['tabular-nums'] },
-  quote: { backgroundColor: C.card, borderRadius: R.lg, paddingTop: 34, paddingBottom: 16, paddingHorizontal: 18, marginTop: 26, alignItems: 'center' },
+  quote: { backgroundColor: C.card, borderRadius: R.lg, paddingTop: 34, paddingBottom: 16, paddingHorizontal: 18, marginTop: 26, alignItems: 'center', borderWidth: StyleSheet.hairlineWidth * 2, borderColor: C.borderSoft },
   quoteAvatar: { position: 'absolute', top: -26, width: 52, height: 52, borderRadius: 26, backgroundColor: C.primarySoft, borderWidth: 3, borderColor: C.card, alignItems: 'center', justifyContent: 'center' },
   quoteInitial: { fontSize: 20, fontWeight: '800', color: C.primaryDark },
   quoteStars: { flexDirection: 'row', gap: 3 },
@@ -610,7 +609,7 @@ const st = StyleSheet.create({
   kgPill: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: C.primarySoft, borderRadius: R.pill, paddingHorizontal: 10, paddingVertical: 4 },
   kgText: { color: C.primaryDark, fontWeight: '800', fontSize: 13, fontVariant: ['tabular-nums'] },
   dots: { flexDirection: 'row', justifyContent: 'center', gap: 6, marginTop: 16 },
-  dot: { height: 6, borderRadius: 3, backgroundColor: C.white },
+  dot: { height: 6, borderRadius: 3, backgroundColor: C.text },
   trust: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 18 },
   cta: { backgroundColor: C.card, paddingHorizontal: 16, paddingTop: 10, borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: C.border },
   summary: { backgroundColor: C.surfaceAlt, borderRadius: R.md, padding: 14, borderWidth: StyleSheet.hairlineWidth * 2, borderColor: C.borderSoft },

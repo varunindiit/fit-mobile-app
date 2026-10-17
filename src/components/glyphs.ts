@@ -206,6 +206,16 @@ const FOCUS_EXERCISE: Record<string, string> = {
   'focus:ultimate-core': 'dead-bug',
 };
 
+/** Signature exercise shown on each trainer plan card, so the coach's workout reads as a move, not a generic emoji. */
+const TRAINER_EXERCISE: Record<string, string> = {
+  'trainer:chest-triceps': 'push-ups',
+  'trainer:core-builder': 'abdominal-crunches',
+  'trainer:legs-glutes': 'squats',
+  'trainer:full-body-burn': 'burpees',
+  'trainer:mobility-reset': 'cobra-stretch',
+  'trainer:upper-finisher': 'tricep-dips',
+};
+
 /** Guided workouts whose emoji glyph is too generic (🔥, 💪) get the mascot doing the move instead. */
 export const WORKOUT_ART: Record<string, number> = {
   'fat-burn-hiit': EXERCISE_ART['burpees'],
@@ -215,14 +225,14 @@ export const WORKOUT_ART: Record<string, number> = {
 /** The mascot resting, shown on every rest day instead of the generic 😴 glyph. */
 export const REST_ART: number = require('@/assets/images/glyphs/p-yoga.webp');
 
-/** Artwork for a session key (program day or body-focus session); undefined for unknown keys so callers fall back to the emoji. */
+/** Artwork for a session key (program day, body-focus session or trainer plan); undefined for unknown keys so callers fall back to the emoji. */
 export function sessionArt(key?: string): number | undefined {
   if (!key) return undefined;
   if (key.startsWith('program:')) {
     const [, pid, day] = key.split(':');
     return isRestDay(Number(day)) ? REST_ART : PROGRAM_ART[pid];
   }
-  const ex = FOCUS_EXERCISE[key];
+  const ex = FOCUS_EXERCISE[key] ?? TRAINER_EXERCISE[key];
   return ex ? EXERCISE_ART[ex] : undefined;
 }
 

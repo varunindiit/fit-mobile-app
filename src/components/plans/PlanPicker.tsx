@@ -164,7 +164,7 @@ function CompareCell({ tier, feature, partial }: { tier: Tier; feature: Feature;
     // Free can buy its way in, so it reads as a lock; a paid tier simply doesn't carry the feature.
     if (partial)
       return (
-        <Text style={st.cmpPartial} accessibilityLabel={`${col}: ${partial} only`}>
+        <Text style={st.cmpPartial} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} accessibilityLabel={`${col}: ${partial} only`}>
           {partial}
         </Text>
       );
@@ -293,7 +293,7 @@ const st = StyleSheet.create({
   cmpChipGap: { height: 15, marginTop: 4 },
   cmpRow: { flexDirection: 'row', alignItems: 'center', minHeight: 46, borderBottomWidth: StyleSheet.hairlineWidth * 2, borderBottomColor: C.borderSoft },
   cmpLabel: { flex: 1, fontSize: 13, fontWeight: '600', color: C.text, lineHeight: 18, paddingRight: 8, paddingVertical: 8 },
-  cmpPartial: { fontSize: 11, fontWeight: '800', color: C.textSoft },
+  cmpPartial: { alignSelf: 'stretch', textAlign: 'center', paddingHorizontal: 2, fontSize: 11, fontWeight: '800', color: C.textSoft },
   cmpDash: { fontSize: 14, fontWeight: '700', color: C.muted },
   cmpLegend: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, marginTop: 10 },
   priceCard: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 12 },

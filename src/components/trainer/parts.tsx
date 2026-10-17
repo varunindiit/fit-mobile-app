@@ -1,7 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { StyleSheet, Text, View, type ViewStyle } from 'react-native';
 
+import { Glyph } from '@/components/Glyph';
+import { sessionArt } from '@/components/glyphs';
 import { ExerciseArt } from '@/components/program/ExerciseArt';
 import { itemLabel } from '@/components/program/session';
 import { PressableScale, tap, type IconName } from '@/components/ui';
@@ -109,9 +112,9 @@ export function TrainerPlanCard({
   return (
     <View style={[s.card, style]}>
       <View style={[s.cardHead, { backgroundColor: fade(plan.colors[1], 0.1) }]}>
-        <View style={[s.cardIcon, { backgroundColor: plan.colors[1] }]}>
-          <Text style={{ fontSize: 18 }}>{plan.emoji}</Text>
-        </View>
+        <LinearGradient colors={plan.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.cardIcon}>
+          <Glyph emoji={plan.emoji} src={sessionArt(plan.key)} size={28} />
+        </LinearGradient>
         <View style={{ flex: 1 }}>
           <Text style={s.cardTitle} numberOfLines={1}>
             {plan.title}

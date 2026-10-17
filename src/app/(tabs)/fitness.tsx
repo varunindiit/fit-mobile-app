@@ -149,7 +149,7 @@ export default function TrainingScreen() {
         compact={
           <>
             <LinearGradient colors={G.deep} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.dayBadge}>
-              <Text style={st.dayBadgeText}>{finished ? '✓' : day}</Text>
+              {finished ? <Ionicons name="checkmark" size={20} color={C.white} /> : <Text style={st.dayBadgeText}>{day}</Text>}
             </LinearGradient>
             <TabHeaderText title={finished ? 'Program complete' : `Day ${day} of ${PROGRAM_DAYS}`} sub={`${program.title} · ${wp.done}/${goal} this week`} />
           </>
