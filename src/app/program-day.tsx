@@ -25,30 +25,16 @@ import { scheduleOnRN } from 'react-native-worklets';
 import { ExerciseArt } from '@/components/program/ExerciseArt';
 import { ExerciseSheet } from '@/components/program/ExerciseSheet';
 import { GradientButton } from '@/components/program/GradientButton';
-import { findSession, itemLabel, planItems, sessionMeta } from '@/components/program/session';
+import { accentTheme, findSession, itemLabel, planItems, sessionMeta, type Accent } from '@/components/program/session';
 import { WorkoutSettingsSheet } from '@/components/program/WorkoutSettingsSheet';
 import { Button, Card, EmptyState, enter, Header, IconTile, layoutTransition, nativeOnly, ListRow, PressableScale, Screen, SectionTitle, Sheet, T, tap, useToast, type IconName } from '@/components/ui';
 import { exerciseById, sessionStats, type Session, type SessionItem } from '@/data/program';
 import { useStore } from '@/lib/store';
-import { C, fade, MOTION, onFill, R, shadowLg, shadowSm } from '@/theme';
+import { C, MOTION, R, shadowLg, shadowSm } from '@/theme';
 import { Glyph } from '@/components/Glyph';
 import { sessionArt } from '@/components/glyphs';
 
 const goBack = () => (router.canGoBack() ? router.back() : router.replace('/fitness'));
-/** The whole screen is themed off the hero gradient: CTA, pills, timeline and tiles all read as one colour. */
-type Accent = ReturnType<typeof accentTheme>;
-function accentTheme([from, to]: [string, string]) {
-  return {
-    /** The hero gradient itself, reused for the CTA so header and button match. */
-    cta: [from, to] as [string, string],
-    accent: to,
-    soft: fade(from, 0.15),
-    tint: fade(to, 0.26),
-    on: onFill(to),
-    art: ['#FFFFFF', fade(from, 0.18)] as [string, string],
-  };
-}
-
 const restTips = (t: Accent): { icon: IconName; color: string; bg: string; t: string }[] => [
   { icon: 'water', color: C.water, bg: C.waterSoft, t: 'Drink 8+ glasses of water to help your muscles recover.' },
   { icon: 'walk', color: C.steps, bg: C.stepsSoft, t: 'Go for a light 20-minute walk to keep blood flowing.' },

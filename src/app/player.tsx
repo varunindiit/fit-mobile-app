@@ -11,13 +11,15 @@ import Svg, { Circle } from 'react-native-svg';
 import { ExerciseArt } from '@/components/program/ExerciseArt';
 import { ExerciseSheet } from '@/components/program/ExerciseSheet';
 import { GradientButton, PRIMARY } from '@/components/program/GradientButton';
-import { findSession, fmtClock, itemLabel, logTitle, planItems, sessionMeta } from '@/components/program/session';
+import { accentTheme, findSession, fmtClock, itemLabel, logTitle, planItems, sessionMeta } from '@/components/program/session';
 import { Dialog, EASE_OUT, EmptyState, Header, IconButton, PressableScale, Screen, tap, useToast } from '@/components/ui';
 import { exerciseById, sessionStats, type Session } from '@/data/program';
 import { useStore } from '@/lib/store';
 import { C, G, R } from '@/theme';
 
 type Phase = 'ready' | 'work' | 'rest';
+/** Rest is the one light screen in the player: work is dark, rest is a white breather. */
+const REST_BG: [string, string] = ['#FFFFFF', C.bg];
 const GLASS = 'rgba(255,255,255,0.12)';
 const GLASS_BORDER = 'rgba(255,255,255,0.16)';
 
@@ -42,6 +44,7 @@ function Player({ session, resume }: { session: Session; resume: boolean }) {
   const toast = useToast();
   const insets = useSafeAreaInsets();
   const { height: winH } = useWindowDimensions();
+  const pal = useMemo(() => accentTheme(session.colors), [session.colors]);
 
   const [items] = useState(() => planItems(session, state.planEdits));
   const n = items.length;
@@ -217,8 +220,8 @@ function Player({ session, resume }: { session: Session; resume: boolean }) {
         const cur = i === idx && phase === 'work';
         const frac = cur ? (timed ? 1 - left / (item.seconds || 1) : 0.5) : 0;
         return (
-          <View key={i} style={[s.seg, { backgroundColor: rest ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.14)' }]}>
-            {(isDone || cur) && <View style={{ height: '100%', width: isDone ? '100%' : `${Math.max(8, frac * 100)}%`, backgroundColor: rest ? C.white : C.primary, borderRadius: 2 }} />}
+          <View key={i} style={[s.seg, { backgroundColor: rest ? C.border : 'rgba(255,255,255,0.14)' }]}>
+            {(isDone || cur) && <View style={{ height: '100%', width: isDone ? '100%' : `${Math.max(8, frac * 100)}%`, backgroundColor: rest ? pal.accent : C.primary, borderRadius: 2 }} />}
           </View>
         );
       })}
@@ -256,36 +259,36 @@ function Player({ session, resume }: { session: Session; resume: boolean }) {
   /* ---------- REST ---------- */
   if (phase === 'rest')
     return (
-      <LinearGradient colors={G.deep} start={{ x: 0, y: 0 }} end={{ x: 0.4, y: 1 }} style={[s.flex, frame]}>
-        <StatusBar style="light" />
+      <LinearGradient colors={REST_BG} start={{ x: 0, y: 0 }} end={{ x: 0.4, y: 1 }} style={[s.flex, frame]}>
+        <StatusBar style="dark" />
         {segments(true)}
         <View style={s.topRow}>
-          <IconButton icon="close" color={C.white} bg={GLASS} onPress={requestQuit} />
-          <Text style={s.topTitle}>Rest</Text>
+          <IconButton icon="close" color={C.text} bg={C.surfaceAlt} onPress={requestQuit} />
+          <Text style={[s.topTitle, { color: C.textSoft }]}>Rest</Text>
           <View style={{ width: 40 }} />
         </View>
         <Animated.View style={[s.flex, fadeStyle]}>
-          <Text style={s.nextLabel}>
+          <Text style={[s.nextLabel, { color: C.muted }]}>
             NEXT {idx + 1}/{n}
           </Text>
           <View style={s.nextRow}>
-            <Text style={s.nextName} numberOfLines={2}>
+            <Text style={[s.nextName, { color: C.text }]} numberOfLines={2}>
               {ex.name}
             </Text>
-            <View style={s.nextValPill}>
-              <Text style={s.nextVal}>{itemLabel(item)}</Text>
+            <View style={[s.nextValPill, { backgroundColor: pal.soft }]}>
+              <Text style={[s.nextVal, { color: pal.accent }]}>{itemLabel(item)}</Text>
             </View>
           </View>
-          <PressableScale scaleTo={0.98} accessibilityRole="button" accessibilityLabel={`About ${ex.name}`} onPress={() => (tap(), setInfo(idx))} style={s.preview}>
-            <ExerciseArt id={ex.id} emoji={ex.emoji} width="100%" height={Math.round(artH * 0.62)} animated radius={R.lg} />
-            <View style={s.previewInfo}>
-              <Ionicons name="information-circle" size={22} color={C.primaryDark} />
+          <PressableScale scaleTo={0.98} accessibilityRole="button" accessibilityLabel={`About ${ex.name}`} onPress={() => (tap(), setInfo(idx))} style={[s.preview, { backgroundColor: C.surfaceAlt, borderColor: C.border }]}>
+            <ExerciseArt id={ex.id} emoji={ex.emoji} width="100%" height={Math.round(artH * 0.62)} animated radius={R.lg} tint={pal.art} />
+            <View style={[s.previewInfo, { backgroundColor: pal.accent }]}>
+              <Ionicons name="information-circle" size={22} color={pal.on} />
             </View>
           </PressableScale>
           <View style={[s.flex, { alignItems: 'center', justifyContent: 'center' }]}>
-            <CountdownRing key={`rest-${idx}`} size={ringSize} stroke={10} left={left} total={restTotal} ticking={ticking} color={C.white} track="rgba(255,255,255,0.18)">
-              <Text style={s.restLabel}>REST</Text>
-              <Text style={[s.restClock, { fontSize: Math.round(ringSize * 0.27) }]}>{fmtClock(left)}</Text>
+            <CountdownRing key={`rest-${idx}`} size={ringSize} stroke={10} left={left} total={restTotal} ticking={ticking} color={pal.accent} track={C.border}>
+              <Text style={[s.restLabel, { color: C.muted }]}>REST</Text>
+              <Text style={[s.restClock, { color: C.text, fontSize: Math.round(ringSize * 0.27) }]}>{fmtClock(left)}</Text>
             </CountdownRing>
           </View>
           <View style={s.restBtns}>
@@ -299,12 +302,12 @@ function Player({ session, resume }: { session: Session; resume: boolean }) {
                 setRestTotal((t) => t + 20);
               }}
               style={[s.restBtn, s.restBtnGhost]}>
-              <Ionicons name="add" size={18} color={C.white} />
-              <Text style={[s.restBtnText, { color: C.white }]}>20s</Text>
+              <Ionicons name="add" size={18} color={C.text} />
+              <Text style={[s.restBtnText, { color: C.text }]}>20s</Text>
             </PressableScale>
-            <PressableScale scaleTo={0.96} accessibilityRole="button" onPress={() => startWork(idx)} style={[s.restBtn, { backgroundColor: C.white }]}>
-              <Text style={[s.restBtnText, { color: C.primaryDark }]}>Skip</Text>
-              <Ionicons name="play-skip-forward" size={16} color={C.primaryDark} />
+            <PressableScale scaleTo={0.96} accessibilityRole="button" onPress={() => startWork(idx)} style={[s.restBtn, { backgroundColor: pal.accent }]}>
+              <Text style={[s.restBtnText, { color: pal.on }]}>Skip</Text>
+              <Ionicons name="play-skip-forward" size={16} color={pal.on} />
             </PressableScale>
           </View>
         </Animated.View>
@@ -468,17 +471,17 @@ const s = StyleSheet.create({
   side: { width: 76, alignItems: 'center', gap: 6 },
   sideIcon: { width: 48, height: 48, borderRadius: 24, backgroundColor: GLASS, borderWidth: 1, borderColor: GLASS_BORDER, alignItems: 'center', justifyContent: 'center' },
   sideText: { fontSize: 12, fontWeight: '600', color: 'rgba(255,255,255,0.75)' },
-  nextLabel: { color: 'rgba(255,255,255,0.75)', fontSize: 12, fontWeight: '800', letterSpacing: 1.4, marginTop: 4, fontVariant: ['tabular-nums'] },
+  nextLabel: { fontSize: 12, fontWeight: '800', letterSpacing: 1.4, marginTop: 4, fontVariant: ['tabular-nums'] },
   nextRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 4, marginBottom: 14 },
-  nextName: { flex: 1, color: C.white, fontSize: 24, fontWeight: '800', letterSpacing: -0.6 },
-  nextValPill: { backgroundColor: 'rgba(255,255,255,0.16)', borderRadius: R.pill, paddingHorizontal: 12, paddingVertical: 6 },
-  nextVal: { color: C.white, fontSize: 16, fontWeight: '800', fontVariant: ['tabular-nums'] },
-  preview: { backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.14)', borderRadius: R.xl, padding: 6 },
-  previewInfo: { position: 'absolute', top: 14, right: 14, width: 32, height: 32, borderRadius: 16, backgroundColor: C.white, alignItems: 'center', justifyContent: 'center' },
-  restLabel: { color: 'rgba(255,255,255,0.75)', fontSize: 13, fontWeight: '800', letterSpacing: 5 },
-  restClock: { color: C.white, fontWeight: '800', letterSpacing: -1.5, fontVariant: ['tabular-nums'] },
+  nextName: { flex: 1, fontSize: 24, fontWeight: '800', letterSpacing: -0.6 },
+  nextValPill: { borderRadius: R.pill, paddingHorizontal: 12, paddingVertical: 6 },
+  nextVal: { fontSize: 16, fontWeight: '800', fontVariant: ['tabular-nums'] },
+  preview: { borderWidth: 1, borderRadius: R.xl, padding: 6 },
+  previewInfo: { position: 'absolute', top: 14, right: 14, width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  restLabel: { fontSize: 13, fontWeight: '800', letterSpacing: 5 },
+  restClock: { fontWeight: '800', letterSpacing: -1.5, fontVariant: ['tabular-nums'] },
   restBtns: { flexDirection: 'row', gap: 12 },
   restBtn: { flex: 1, flexDirection: 'row', gap: 6, height: 56, borderRadius: R.md, alignItems: 'center', justifyContent: 'center' },
-  restBtnGhost: { backgroundColor: 'rgba(255,255,255,0.14)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.35)' },
+  restBtnGhost: { backgroundColor: C.surfaceAlt, borderWidth: 1.5, borderColor: C.border },
   restBtnText: { fontSize: 17, fontWeight: '800', letterSpacing: 0.3 },
 });

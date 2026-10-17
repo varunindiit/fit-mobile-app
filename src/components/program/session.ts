@@ -1,5 +1,6 @@
 import { FOCUS_SESSIONS, PROGRAM_DAYS, PROGRAMS, programById, sessionByKey, type Session, type SessionItem } from '@/data/program';
 import { pad } from '@/lib/calc';
+import { fade, onFill } from '@/theme';
 
 /** The session's exercise list, with the user's saved edits (store `planEdits`) applied. */
 export const planItems = (s: Session, planEdits: Record<string, SessionItem[]>) => (planEdits[s.key]?.length ? planEdits[s.key] : s.items);
@@ -53,3 +54,18 @@ const FOCUS_COLORS: Record<string, string> = {
   Back: '#0EA5E9',
 };
 export const focusColor = (name: string) => FOCUS_COLORS[name] ?? '#64748B';
+
+/** Every surface a session owns — its day page and its player — is themed off the session's own
+ *  gradient, so header, CTA, pills and timeline all read as one colour. */
+export type Accent = ReturnType<typeof accentTheme>;
+export function accentTheme([from, to]: [string, string]) {
+  return {
+    /** The session gradient itself, reused for the CTA so header and button match. */
+    cta: [from, to] as [string, string],
+    accent: to,
+    soft: fade(from, 0.15),
+    tint: fade(to, 0.26),
+    on: onFill(to),
+    art: ['#FFFFFF', fade(from, 0.18)] as [string, string],
+  };
+}
