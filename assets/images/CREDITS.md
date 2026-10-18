@@ -27,3 +27,45 @@
   The media itself remains Gym visual's property and is governed by their
   [Terms & Conditions of Use](https://gymvisual.com/content/3-terms-and-conditions-of-use) — using it in a shipped
   product needs a licence obtained directly from Gym visual.
+
+### Which dataset clip each exercise uses
+
+Recovered by matching every shipped still against the dataset's thumbnails, so nobody has to guess
+again. The number is the dataset's own exercise id (`videos/<id>.gif`).
+
+| exercise id | dataset clip | exercise id | dataset clip |
+| --- | --- | --- | --- |
+| `abdominal-crunches` | 0274 crunch floor | `leg-raises` | 0620 lying leg raise flat bench |
+| `bent-leg-twist` | 3639 bent knee lying twist | `lunges` | 3470 forward lunge |
+| `bicycle-crunches` | 0003 air bike | `mountain-climber` | 0630 mountain climber |
+| `burpees` | 1160 burpee | `plank` | 2135 weighted front plank |
+| `cobra-stretch` | 1366 upward facing dog | `push-ups` | 0662 push-up |
+| `cross-arm-crunches` | 3679 sit-up with arms on chest | `reverse-crunches` | 0872 reverse crunch |
+| `dead-bug` | 0276 dead bug | `russian-twist` | 0687 russian twist |
+| `flutter-kicks` | 0459 flutter kicks | `side-plank` | 0705 side bridge v. 2 |
+| `glute-bridge` | 3013 low glute bridge on floor | `squats` | 3119 potty squat |
+| `heel-touch` | 0006 alternate heel touchers | `superman` | 1352 lower back curl |
+| `jumping-jacks` | 3220 astride jumps | `tricep-dips` | 0129 bench dip (knees bent) |
+| `v-crunch` | 0507 jackknife sit-up | `wide-push-ups` | 1311 wide hand push up |
+
+`spine-twist` has no clip of its own and deliberately reuses `bent-leg-twist`: the dataset's own
+`2329 spine twist` is a *seated* twist, and its supine knee-across clips have a partner pushing the
+knee down.
+
+Four of these are the closest the dataset offers rather than an exact depiction, and are kept only
+because there is nothing better in it: `flutter-kicks` (0459 is prone on a bench, a glute flutter,
+where ours is supine on the floor), `plank` (2135 has weight plates resting on the lower back),
+`leg-raises` (0620 is performed on a bench, ours on the floor) and `superman` (1352 lifts only the
+chest, with the arms by the sides).
+
+## Pro exercise demonstrations
+
+- `exercises/pro/*.webp` — photographs of a real athlete from
+  [free-exercise-db](https://github.com/yuhonas/free-exercise-db), released into the public domain
+  under the Unlicense: commercial use, modification and redistribution are all permitted and no
+  attribution is required. We show a credit line anyway (`PRO_DEMO_CREDIT`), because the dedication
+  is the aggregator's, made over third-party gym photography they collected.
+  Each file is built from that exercise's two photographs (`exercises/<id>/0.jpg` and `/1.jpg`),
+  cropped to a common square, held and cross-faded — no synthesised motion. `src/data/proDemos.ts`
+  records which source exercise each one comes from, and which of the app's exercises deliberately
+  have no Pro demonstration because the repository has no genuine match.
