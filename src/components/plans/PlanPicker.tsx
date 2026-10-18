@@ -31,7 +31,7 @@ export function PlanPicker({ tier, months, onTier, onMonths, enterAt = 0, titleT
         <SectionTitle title="Choose your plan" style={{ marginTop: titleTop }} />
         <View style={st.tiers}>
           {PLAN_TIERS.map((t) => (
-            <TierCard key={t.id} tier={t} selected={tier === t.id} onPress={() => onTier(t.id)} />
+            <TierCard key={t.id} tier={t} months={months} selected={tier === t.id} onPress={() => onTier(t.id)} />
           ))}
         </View>
 
@@ -178,7 +178,7 @@ function CompareCell({ tier, feature, partial }: { tier: Tier; feature: Feature;
 }
 
 /** Selectable tier card: border, check and scale ease in when selected. */
-function TierCard({ tier, selected, onPress }: { tier: (typeof PLAN_TIERS)[number]; selected: boolean; onPress: () => void }) {
+function TierCard({ tier, months, selected, onPress }: { tier: (typeof PLAN_TIERS)[number]; months: number; selected: boolean; onPress: () => void }) {
   const a = ACCENT[tier.id];
   const sel = useSharedValue(selected ? 1 : 0);
   useEffect(() => {
@@ -189,7 +189,8 @@ function TierCard({ tier, selected, onPress }: { tier: (typeof PLAN_TIERS)[numbe
     transform: [{ scale: interpolate(sel.get(), [0, 1], [0.97, 1]) }],
   }));
   const check = useAnimatedStyle(() => ({ opacity: sel.get(), transform: [{ scale: interpolate(sel.get(), [0, 1], [0.4, 1]) }] }));
-  const from = Math.min(...tier.durations.map((x) => x.price / x.months));
+  // Priced on the duration that is actually selected, so the card, the total and the CTA all quote the same plan.
+  const { dur } = planFor(tier.id, months);
   return (
     <PressableScale
       scaleTo={0.97}
@@ -210,7 +211,10 @@ function TierCard({ tier, selected, onPress }: { tier: (typeof PLAN_TIERS)[numbe
           {tier.tagline}
         </Text>
         <Text style={st.tierFrom}>
-          from <Text style={st.tierFromNum}>{formatUSD(from)}</Text>/mo
+          <Text style={st.tierFromNum}>{formatUSD(dur.price / dur.months)}</Text>/mo
+        </Text>
+        <Text style={st.tierTotal} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
+          {formatUSD(dur.price)} · {dur.months} months
         </Text>
       </Animated.View>
     </PressableScale>
@@ -267,6 +271,7 @@ const st = StyleSheet.create({
   tierName: { fontSize: 18, fontWeight: '800', color: C.text, letterSpacing: -0.3, marginTop: 12 },
   tierTag: { fontSize: 12, color: C.textSoft, lineHeight: 16, marginTop: 3, minHeight: 32 },
   tierFrom: { fontSize: 12, color: C.muted, fontWeight: '600', marginTop: 10 },
+  tierTotal: { fontSize: 11, color: C.muted, fontWeight: '600', marginTop: 2, fontVariant: ['tabular-nums'] },
   tierFromNum: { fontSize: 15, fontWeight: '800', color: C.text, fontVariant: ['tabular-nums'] },
   featHead: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingBottom: 12, marginBottom: 6, borderBottomWidth: StyleSheet.hairlineWidth * 2, borderBottomColor: C.borderSoft },
   planName: { fontSize: 18, fontWeight: '800', color: C.text, letterSpacing: -0.3 },

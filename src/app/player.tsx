@@ -11,7 +11,7 @@ import Svg, { Circle } from 'react-native-svg';
 import { LockedScreen } from '@/components/premium/locked';
 import { ExerciseArt } from '@/components/program/ExerciseArt';
 import { ExerciseSheet } from '@/components/program/ExerciseSheet';
-import { GradientButton } from '@/components/program/GradientButton';
+import { GradientButton, PRIMARY } from '@/components/program/GradientButton';
 import { accentTheme, findSession, fmtClock, itemLabel, logTitle, planItems, sessionMeta } from '@/components/program/session';
 import { Dialog, EASE_OUT, EmptyState, Header, IconButton, PressableScale, Screen, tap, useToast } from '@/components/ui';
 import { exerciseById, sessionStats, type Session } from '@/data/program';
@@ -313,9 +313,9 @@ function Player({ session, resume }: { session: Session; resume: boolean }) {
               <Ionicons name="add" size={18} color={C.text} />
               <Text style={[s.restBtnText, { color: C.text }]}>20s</Text>
             </PressableScale>
-            <PressableScale scaleTo={0.96} accessibilityRole="button" onPress={() => startWork(idx)} style={[s.restBtn, { backgroundColor: pal.accent }]}>
-              <Text style={[s.restBtnText, { color: pal.on }]}>Skip</Text>
-              <Ionicons name="play-skip-forward" size={16} color={pal.on} />
+            <PressableScale scaleTo={0.96} accessibilityRole="button" onPress={() => startWork(idx)} style={[s.restBtn, { backgroundColor: C.primary }]}>
+              <Text style={[s.restBtnText, { color: C.onPrimary }]}>Skip</Text>
+              <Ionicons name="play-skip-forward" size={16} color={C.onPrimary} />
             </PressableScale>
           </View>
         </Animated.View>
@@ -376,9 +376,9 @@ function Player({ session, resume }: { session: Session; resume: boolean }) {
               )}
               <View style={{ marginTop: 10 }}>{nameRow}</View>
               {timed && (
-                <PressableScale scaleTo={0.94} accessibilityRole="button" onPress={() => (tap(), setPaused((p) => !p))} style={[s.pause, paused && { backgroundColor: pal.accent, borderColor: pal.accent }]}>
-                  <Ionicons name={paused ? 'play' : 'pause'} size={15} color={paused ? pal.on : C.text} />
-                  <Text style={[s.pauseText, { color: paused ? pal.on : C.text }]}>{paused ? 'RESUME' : 'PAUSE'}</Text>
+                <PressableScale scaleTo={0.94} accessibilityRole="button" onPress={() => (tap(), setPaused((p) => !p))} style={[s.pause, paused && { backgroundColor: C.primary, borderColor: C.primary }]}>
+                  <Ionicons name={paused ? 'play' : 'pause'} size={15} color={paused ? C.onPrimary : C.text} />
+                  <Text style={[s.pauseText, { color: paused ? C.onPrimary : C.text }]}>{paused ? 'RESUME' : 'PAUSE'}</Text>
                 </PressableScale>
               )}
             </View>
@@ -390,7 +390,7 @@ function Player({ session, resume }: { session: Session; resume: boolean }) {
                 </View>
                 <Text style={s.sideText}>Previous</Text>
               </PressableScale>
-              <GradientButton colors={pal.cta} fg={pal.on} icon="checkmark" iconSize={36} height={70} onPress={complete} style={{ width: 150 }} />
+              <GradientButton {...PRIMARY} icon="checkmark" iconSize={36} height={70} onPress={complete} style={{ width: 150 }} />
               <PressableScale hitSlop={8} scaleTo={0.9} accessibilityRole="button" accessibilityLabel={idx >= n - 1 ? 'Finish workout' : 'Skip exercise'} onPress={() => (tap(), goNext())} style={s.side}>
                 <View style={s.sideIcon}>
                   <Ionicons name="play-skip-forward" size={22} color={C.text} />

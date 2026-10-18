@@ -176,7 +176,7 @@ export function ExerciseSheet({ visible, onClose, items, index, accent }: { visi
               </Text>
               <PagerBtn icon="chevron-forward" disabled={i >= n - 1} onPress={() => go(1)} />
             </View>
-            <Button title="Close" onPress={onClose} style={{ flex: 1, backgroundColor: accent.accent }} textStyle={{ color: accent.on }} />
+            <Button title="Close" onPress={onClose} style={{ flex: 1 }} />
           </View>
         </Animated.View>
       </View>

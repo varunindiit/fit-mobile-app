@@ -592,6 +592,12 @@ export function Paywall({ male, gaining, onSkip, onPaid, onDone }: { male: boole
         </View>
       </ScrollView>
       <Cta>
+        <View style={st.payCtaSum}>
+          <Text style={st.payCtaPlan}>
+            {plan.name} · {dur.months} months
+          </Text>
+          <Text style={st.payCtaPer}>{formatUSD(dur.price / dur.months)}/mo</Text>
+        </View>
         <Button
           title={`Start my plan · ${formatUSD(dur.price)}`}
           icon="arrow-forward"
@@ -755,6 +761,9 @@ const st = StyleSheet.create({
   payBadge: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: C.accent, borderRadius: R.pill, paddingHorizontal: 12, paddingVertical: 6, marginBottom: 12 },
   payBadgeText: { color: C.white, fontWeight: '800', fontSize: 12 },
   payTitle: { fontSize: 30, lineHeight: 35, fontWeight: '900', color: C.text, letterSpacing: -0.8 },
+  payCtaSum: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8 },
+  payCtaPlan: { flex: 1, fontSize: 13, fontWeight: '700', color: C.textSoft },
+  payCtaPer: { fontSize: 13, fontWeight: '800', color: C.text, fontVariant: ['tabular-nums'] },
   payFoot: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, marginTop: 10 },
   payFootText: { fontSize: 11.5, color: C.textSoft, fontWeight: '600' },
 });

@@ -25,7 +25,7 @@ import { scheduleOnRN } from 'react-native-worklets';
 import { LockBadge, LockedScreen, openUpgrade } from '@/components/premium/locked';
 import { ExerciseArt } from '@/components/program/ExerciseArt';
 import { ExerciseSheet } from '@/components/program/ExerciseSheet';
-import { GradientButton } from '@/components/program/GradientButton';
+import { GradientButton, PRIMARY } from '@/components/program/GradientButton';
 import { accentTheme, findSession, itemLabel, planItems, sessionMeta, type Accent } from '@/components/program/session';
 import { WorkoutSettingsSheet } from '@/components/program/WorkoutSettingsSheet';
 import { Button, Card, EmptyState, enter, Header, IconTile, layoutTransition, nativeOnly, ListRow, PressableScale, Screen, SectionTitle, Sheet, T, tap, useToast, type IconName } from '@/components/ui';
@@ -276,7 +276,7 @@ function DayPlan({ session }: { session: Session }) {
                     </Pressable>
                   </Animated.View>
                 )}
-                <PressableScale scaleTo={0.9} hitSlop={8} accessibilityRole="button" accessibilityLabel={editing ? 'Finish editing' : 'Edit plan'} onPress={toggleEdit} style={[s.pencil, editing && { backgroundColor: t.accent, borderColor: t.accent }]}>
+                <PressableScale scaleTo={0.9} hitSlop={8} accessibilityRole="button" accessibilityLabel={editing ? 'Finish editing' : 'Edit plan'} onPress={toggleEdit} style={[s.pencil, editing && { backgroundColor: C.primary, borderColor: C.primary }]}>
                   <Ionicons name={editing ? 'checkmark' : 'pencil'} size={18} color={editing ? t.on : C.text} />
                   {!canEdit && <LockBadge need="smart" compact style={{ position: 'absolute', top: -5, right: -5 }} />}
                 </PressableScale>
@@ -290,7 +290,7 @@ function DayPlan({ session }: { session: Session }) {
                         <Text style={s.tipText}>Tap the pencil to remove moves or change reps and time.</Text>
                       </View>
                     </View>
-                    <Button title="Got it" small onPress={dismissTip} style={{ marginTop: 14, backgroundColor: t.accent }} textStyle={{ color: t.on }} />
+                    <Button title="Got it" small onPress={dismissTip} style={{ marginTop: 14 }} />
                   </Animated.View>
                 )}
               </Animated.View>
@@ -337,8 +337,8 @@ function DayPlan({ session }: { session: Session }) {
                             <PressableScale scaleTo={0.88} hitSlop={6} accessibilityLabel="Less" onPress={() => (tap(), adjust(i, -1))} style={s.adjBtn}>
                               <Ionicons name="remove" size={16} color={C.text} />
                             </PressableScale>
-                            <PressableScale scaleTo={0.88} hitSlop={6} accessibilityLabel="More" onPress={() => (tap(), adjust(i, 1))} style={[s.adjBtn, { backgroundColor: t.accent, borderColor: t.accent }]}>
-                              <Ionicons name="add" size={16} color={t.on} />
+                            <PressableScale scaleTo={0.88} hitSlop={6} accessibilityLabel="More" onPress={() => (tap(), adjust(i, 1))} style={[s.adjBtn, { backgroundColor: C.primary, borderColor: C.primary }]}>
+                              <Ionicons name="add" size={16} color={C.onPrimary} />
                             </PressableScale>
                           </Animated.View>
                         ) : (
@@ -370,7 +370,7 @@ function DayPlan({ session }: { session: Session }) {
           completed ? (
             <Button title="Rest day completed" icon="checkmark-circle" variant="secondary" onPress={goBack} />
           ) : (
-            <GradientButton colors={t.cta} fg={t.on} title="Mark rest day as done" icon="moon" onPress={markRest} />
+            <GradientButton {...PRIMARY} title="Mark rest day as done" icon="moon" onPress={markRest} />
           )
         ) : editing ? (
           <Animated.View entering={nativeOnly(FadeIn.duration(MOTION.base))} style={s.adjustPill}>
@@ -385,9 +385,9 @@ function DayPlan({ session }: { session: Session }) {
                 tap();
                 finishEdit();
               }}
-              style={[s.doneBtn, { backgroundColor: t.accent }]}>
-              <Ionicons name="checkmark" size={18} color={t.on} />
-              <Text style={[s.doneText, { color: t.on }]}>Done</Text>
+              style={[s.doneBtn, { backgroundColor: C.primary }]}>
+              <Ionicons name="checkmark" size={18} color={C.onPrimary} />
+              <Text style={[s.doneText, { color: C.onPrimary }]}>Done</Text>
             </PressableScale>
           </Animated.View>
         ) : canResume ? (
@@ -403,10 +403,10 @@ function DayPlan({ session }: { session: Session }) {
               <Ionicons name="refresh" size={17} color={C.text} />
               <Text style={s.restartText}>Restart</Text>
             </PressableScale>
-            <GradientButton colors={t.cta} fg={t.on} title={`Continue · ${resumePct}% done`} onPress={() => start(true)} style={{ flex: 1 }} />
+            <GradientButton {...PRIMARY} title={`Continue · ${resumePct}% done`} onPress={() => start(true)} style={{ flex: 1 }} />
           </Animated.View>
         ) : (
-          <GradientButton colors={t.cta} fg={t.on} title={completed ? 'Do it again' : `Let's go · ${stats.minutes} min`} icon="play" onPress={() => start(false)} />
+          <GradientButton {...PRIMARY} title={completed ? 'Do it again' : `Let's go · ${stats.minutes} min`} icon="play" onPress={() => start(false)} />
         )}
       </View>
 

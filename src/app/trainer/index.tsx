@@ -94,7 +94,7 @@ export default function TrainerDashboardScreen() {
             <View style={st.heroFoot}>
               <AvailabilityLine trainer={trainer} style={st.availPill} />
               <View style={{ flex: 1 }} />
-              <TrainerAction icon="chatbubble-ellipses" label="Message your trainer" color={trainer.color} onPress={openChat} />
+              <TrainerAction icon="chatbubble-ellipses" label="Message your trainer" color={C.primary} onPress={openChat} />
               <TrainerAction icon="call" label="Audio session" color="rgba(255,255,255,0.16)" onPress={() => openCall('audio')} />
               <TrainerAction icon="videocam" label="Video session" color="rgba(255,255,255,0.16)" onPress={() => openCall('video')} />
             </View>

@@ -361,6 +361,12 @@ export default function PlansScreen() {
 
         {/* Sticky CTA */}
         <View style={[st.cta, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+          <View style={st.ctaSum}>
+            <Text style={st.ctaSumPlan}>
+              {plan.name} · {dur.months} months
+            </Text>
+            <Text style={st.ctaSumPer}>{formatUSD(dur.price / dur.months)}/mo</Text>
+          </View>
           <Button
             title={`${cta} · ${formatUSD(dur.price)}`}
             variant={tier === 'pro' ? 'dark' : 'primary'}
@@ -634,6 +640,9 @@ const st = StyleSheet.create({
   dot: { height: 6, borderRadius: 3, backgroundColor: C.text },
   trust: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 18 },
   cta: { backgroundColor: C.card, paddingHorizontal: 16, paddingTop: 10, borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: C.border },
+  ctaSum: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8 },
+  ctaSumPlan: { flex: 1, fontSize: 13, fontWeight: '700', color: C.textSoft },
+  ctaSumPer: { fontSize: 13, fontWeight: '800', color: C.text, fontVariant: ['tabular-nums'] },
   summary: { backgroundColor: C.surfaceAlt, borderRadius: R.md, padding: 14, borderWidth: StyleSheet.hairlineWidth * 2, borderColor: C.borderSoft },
   sumHead: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 },
   sumTitle: { fontSize: 16, fontWeight: '800', color: C.text },

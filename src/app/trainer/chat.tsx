@@ -66,7 +66,8 @@ export default function TrainerChatScreen() {
   const trainer = trainerById(state.trainerId);
   const coach = coachFirstName(trainer);
   const me = firstName(state.profile.name);
-  const accent = trainer.color;
+  // Actions follow the brand green like every other screen; the trainer's own colour only tints their bubble.
+  const accent = C.primaryDark;
   const online = availability(trainer).online;
   // The only source of truth for photo demonstrations — never hard-coded true.
   const proDemos = access.can('trainer.demos');
@@ -151,7 +152,7 @@ export default function TrainerChatScreen() {
 
   const msgs = state.trainerChat;
   const lastMine = useMemo(() => msgs.filter((m) => m.from === 'user').at(-1)?.id, [msgs]);
-  const coachBubble = { backgroundColor: fade(accent, 0.08), borderColor: fade(accent, 0.22) };
+  const coachBubble = { backgroundColor: fade(trainer.color, 0.08), borderColor: fade(trainer.color, 0.22) };
   const canSend = !!input.trim() && !typing;
 
   return (

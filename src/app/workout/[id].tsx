@@ -14,7 +14,7 @@ import { workoutById, type Workout } from '@/data/fitness';
 import { pad } from '@/lib/calc';
 import { useStore } from '@/lib/store';
 import { useAccess } from '@/lib/useAccess';
-import { C, glow, MOTION, R, shadow, shadowSm } from '@/theme';
+import { C, MOTION, R, shadow, shadowSm } from '@/theme';
 import { Glyph } from '@/components/Glyph';
 import { WORKOUT_ART } from '@/components/glyphs';
 
@@ -468,10 +468,10 @@ function WorkoutFlow({ w }: { w: Workout }) {
         {saved ? (
           <View style={{ flexDirection: 'row', gap: 10 }}>
             <Button title="Restart" icon="refresh" variant="outline" onPress={() => start()} style={{ flex: 1 }} />
-            <Button title={`Continue · ${Math.round(Math.min(1, saved.elapsed / total) * 100)}%`} icon="play" onPress={resumeRun} style={{ flex: 2, backgroundColor: w.color, borderColor: w.color, ...glow(w.color) }} />
+            <Button title={`Continue · ${Math.round(Math.min(1, saved.elapsed / total) * 100)}%`} icon="play" onPress={resumeRun} style={{ flex: 2 }} />
           </View>
         ) : (
-          <Button title="Start workout" icon="play" onPress={() => start()} style={{ backgroundColor: w.color, borderColor: w.color, ...glow(w.color) }} />
+          <Button title="Start workout" icon="play" onPress={() => start()} />
         )}
       </View>
     </View>

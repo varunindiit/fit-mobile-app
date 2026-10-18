@@ -13,7 +13,7 @@ import { exerciseById } from '@/data/program';
 import { PRO_DEMO_CREDIT, hasProDemo } from '@/data/proDemos';
 import { planSummary, type TrainerPlan } from '@/data/trainerPlans';
 import { availability, firstName, type Trainer } from '@/data/trainers';
-import { C, R, fade, shadowSm } from '@/theme';
+import { C, R, fade, onFill, shadowSm } from '@/theme';
 
 /**
  * A trainer's portrait, or their initials tinted with their accent when there is no
@@ -160,8 +160,8 @@ export function TrainerPlanCard({
           <Ionicons name="list-outline" size={16} color={C.text} />
           <Text style={s.ghostText}>Details</Text>
         </PressableScale>
-        <PressableScale scaleTo={0.97} accessibilityRole="button" onPress={() => startPlan(plan.key)} style={[s.startBtn, { backgroundColor: plan.colors[1] }]}>
-          <Ionicons name="play" size={15} color={C.white} />
+        <PressableScale scaleTo={0.97} accessibilityRole="button" onPress={() => startPlan(plan.key)} style={s.startBtn}>
+          <Ionicons name="play" size={15} color={C.onPrimary} />
           <Text style={s.startText}>Start workout</Text>
         </PressableScale>
       </View>
@@ -201,7 +201,7 @@ export function TrainerAction({ icon, label, color, onPress, style }: { icon: Ic
         onPress();
       }}
       style={[s.action, { backgroundColor: color }, style]}>
-      <Ionicons name={icon} size={19} color={C.white} />
+      <Ionicons name={icon} size={19} color={onFill(color)} />
     </PressableScale>
   );
 }
@@ -229,7 +229,7 @@ const s = StyleSheet.create({
   cardFoot: { flexDirection: 'row', gap: 8, padding: 12, paddingTop: 10 },
   ghostBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, height: 42, paddingHorizontal: 16, borderRadius: R.md, backgroundColor: C.surfaceAlt, borderWidth: 1, borderColor: C.border },
   ghostText: { fontSize: 14, fontWeight: '700', color: C.text },
-  startBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, height: 42, borderRadius: R.md },
-  startText: { fontSize: 14, fontWeight: '800', color: C.white, letterSpacing: 0.2 },
+  startBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, height: 42, borderRadius: R.md, backgroundColor: C.primary },
+  startText: { fontSize: 14, fontWeight: '800', color: C.onPrimary, letterSpacing: 0.2 },
   action: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
 });
