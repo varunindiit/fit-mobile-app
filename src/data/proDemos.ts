@@ -29,6 +29,8 @@
  * (`proDemo()` returns undefined), which is why this map is smaller than `EXERCISES`.
  */
 
+import { EXERCISES, type SessionItem } from './program';
+
 /** Each entry's source exercise in free-exercise-db: its photographs are `exercises/<id>/0.jpg` and `/1.jpg`. */
 export const PRO_DEMOS: Record<string, number> = {
   'abdominal-crunches': require('@/assets/images/exercises/pro/abdominal-crunches.webp'), // Crunches
@@ -84,3 +86,42 @@ export const proDemo = (id: string | undefined, pro: boolean): number | undefine
 
 /** True when this exercise would show a Pro demonstration for a Pro account. */
 export const hasProDemo = (id: string | undefined) => !!(id && PRO_DEMOS[id]);
+
+/* ---------- Pro exercise library ---------- */
+
+/**
+ * Pro shows only exercises that have a real-athlete demonstration; the drawn
+ * animations stay with Free and Smart.
+ *
+ * Nothing is removed to make that true — `EXERCISES`, `EXERCISE_ANIM` and every
+ * authored session keep every movement they always had. Pro filters them out at
+ * read time, and only through the two helpers below, so the day screen, the
+ * player, the carousels, the home card and the coach plans can never disagree
+ * about what a Pro member sees. Drop a new entry into `PRO_DEMOS` above and that
+ * exercise comes back for Pro everywhere at once.
+ */
+export const proVisible = (id: string | undefined, pro: boolean) => !pro || hasProDemo(id);
+
+/** Exercise ids a Pro account does not see — derived, so this list can never drift from `PRO_DEMOS`. */
+export const hiddenFromPro = () => EXERCISES.filter((e) => !hasProDemo(e.id)).map((e) => e.id);
+
+/**
+ * A session's exercise list as this plan sees it.
+ *
+ * Returns the original array (same reference) when nothing is filtered, so callers
+ * can cheaply tell an untouched session from a filtered one. If filtering would
+ * leave a session with nothing to play — no session in the app does today, and
+ * `proExercises.test.ts` keeps it that way — the full list is kept instead, because
+ * an empty workout breaks the player and the "Let's go" button.
+ */
+export function proItems<T extends { exerciseId: string }>(items: T[], pro: boolean): T[] {
+  if (!pro) return items;
+  const kept = items.filter((it) => hasProDemo(it.exerciseId));
+  return kept.length ? kept : items;
+}
+
+/** The same session with `proItems` applied — use this wherever a card shows a session's stats. */
+export function proSession<S extends { items: SessionItem[] }>(s: S, pro: boolean): S {
+  const items = proItems(s.items, pro);
+  return items === s.items ? s : { ...s, items };
+}

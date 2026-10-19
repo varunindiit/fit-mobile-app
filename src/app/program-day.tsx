@@ -26,7 +26,7 @@ import { LockBadge, LockedScreen, openUpgrade } from '@/components/premium/locke
 import { ExerciseArt } from '@/components/program/ExerciseArt';
 import { ExerciseSheet } from '@/components/program/ExerciseSheet';
 import { GradientButton, PRIMARY } from '@/components/program/GradientButton';
-import { accentTheme, findSession, itemLabel, planItems, sessionMeta, type Accent } from '@/components/program/session';
+import { accentTheme, findSession, itemLabel, planItems, planSession, sessionMeta, type Accent } from '@/components/program/session';
 import { WorkoutSettingsSheet } from '@/components/program/WorkoutSettingsSheet';
 import { Button, Card, EmptyState, enter, Header, IconTile, layoutTransition, nativeOnly, ListRow, PressableScale, Screen, SectionTitle, Sheet, T, tap, useToast, type IconName } from '@/components/ui';
 import { exerciseById, sessionStats, type Session, type SessionItem } from '@/data/program';
@@ -88,7 +88,10 @@ function DayPlan({ session }: { session: Session }) {
   const t = useMemo(() => accentTheme(session.colors), [session.colors]);
   const HERO = insets.top + 236;
 
-  const [items, setItems] = useState<SessionItem[]>(() => planItems(session, state.planEdits));
+  // Pro sees only the exercises with a real-athlete demonstration, so the list the user
+  // edits — and the list their edits are compared against — is the filtered one.
+  const base = useMemo(() => planSession(session, proDemos), [session, proDemos]);
+  const [items, setItems] = useState<SessionItem[]>(() => planItems(session, state.planEdits, proDemos));
   const [editing, setEditing] = useState(false);
   const [tip, setTip] = useState(() => canEdit && !state.seenTips.includes('plan-edit') && !session.restDay);
   const [sheetIdx, setSheetIdx] = useState<number | null>(null);
@@ -114,8 +117,8 @@ function DayPlan({ session }: { session: Session }) {
       firstItems.current = false;
       return;
     }
-    setPlanEdit(session.key, JSON.stringify(items) === JSON.stringify(session.items) ? null : items);
-  }, [items, session, setPlanEdit]);
+    setPlanEdit(session.key, JSON.stringify(items) === JSON.stringify(base.items) ? null : items);
+  }, [items, base, session.key, setPlanEdit]);
 
   const resume = state.sessionResume[session.key];
   const resumeAt = resume ? Math.max(0, Math.min(resume.idx, items.length - 1)) : 0;
@@ -125,7 +128,7 @@ function DayPlan({ session }: { session: Session }) {
   const stats = sessionStats({ ...session, items }, state.settings.restSeconds);
   const done = meta.program ? state.programProgress[meta.program.id] ?? 0 : 0;
   const completed = meta.day !== undefined && done >= meta.day;
-  const edited = JSON.stringify(items) !== JSON.stringify(session.items);
+  const edited = JSON.stringify(items) !== JSON.stringify(base.items);
   const keys = rowKeys(items);
 
   // Scroll-linked header (UI thread); only the status-bar flip crosses to JS.
@@ -172,7 +175,7 @@ function DayPlan({ session }: { session: Session }) {
       }),
     );
   const resetPlan = () => {
-    setItems(session.items);
+    setItems(base.items);
     clearResume(session.key);
   };
   const start = (cont = false) => {

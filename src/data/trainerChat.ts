@@ -8,6 +8,7 @@
  * it to a real messaging service later means replacing this one function.
  */
 import type { TrainerMsg } from '@/lib/store';
+import { proSession } from './proDemos';
 import { TRAINER_PLANS, planSummary, trainerPlanByKey } from './trainerPlans';
 import { firstName, trainerById } from './trainers';
 
@@ -28,7 +29,8 @@ const has = (q: string, ...keys: string[]) => keys.some((k) => q.includes(k));
 const planLine = (key: string) => {
   const p = trainerPlanByKey(key);
   if (!p) return '';
-  const s = planSummary(p);
+  // Coach chat is Pro-only, so the count must match the filtered list the plan card shows.
+  const s = planSummary(proSession(p, true));
   return `${p.title} — ${s.exercises} moves · about ${s.minutes} min · ~${s.kcal} kcal`;
 };
 

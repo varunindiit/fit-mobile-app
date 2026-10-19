@@ -1,11 +1,18 @@
 import { FOCUS_SESSIONS, PROGRAM_DAYS, PROGRAMS, programById, sessionByKey, type Session, type SessionItem } from '@/data/program';
+import { proItems, proSession } from '@/data/proDemos';
 import { trainerPlanByKey } from '@/data/trainerPlans';
 import { trainerById } from '@/data/trainers';
 import { pad } from '@/lib/calc';
 import { fade, onFill } from '@/theme';
 
-/** The session's exercise list, with the user's saved edits (store `planEdits`) applied. */
-export const planItems = (s: Session, planEdits: Record<string, SessionItem[]>) => (planEdits[s.key]?.length ? planEdits[s.key] : s.items);
+/** The session's exercise list, with the user's saved edits (store `planEdits`) applied and,
+ *  on Pro, the exercises without a real-athlete demonstration filtered out. */
+export const planItems = (s: Session, planEdits: Record<string, SessionItem[]>, pro = false) =>
+  proItems(planEdits[s.key]?.length ? planEdits[s.key] : s.items, pro);
+
+/** The session as this plan sees it — the baseline a day screen compares its edits against,
+ *  and what every card should measure for its "x moves · y min" line. */
+export const planSession = (s: Session, pro = false) => proSession(s, pro);
 
 /** Like sessionByKey, but rejects malformed program keys (unknown plan / out-of-range day). */
 export function findSession(key: string): Session | undefined {

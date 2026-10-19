@@ -18,6 +18,7 @@ import { Button, Card, Chip, CountUp, Dialog, EmptyState, enter, IconButton, Ico
 import { NOTIFICATIONS } from '@/data/notifications';
 import { ACTIVITIES, WORKOUT_CATEGORIES, WORKOUTS } from '@/data/fitness';
 import { BODY_PARTS, FOCUS_SESSIONS, programById, programDay, PROGRAM_DAYS, sessionStats, type Session } from '@/data/program';
+import { proSession } from '@/data/proDemos';
 import { kcalFromSteps, kmFromSteps } from '@/lib/calc';
 import { burnedOn, useStore, weekProgress, workoutStreak, type WorkoutLog } from '@/lib/store';
 import { useAccess } from '@/lib/useAccess';
@@ -30,8 +31,9 @@ const SOURCE = Platform.OS === 'ios' ? 'Apple Health' : 'Google Fit';
 type Focus = (typeof FOCUS_SESSIONS)[number];
 type Cat = (typeof WORKOUT_CATEGORIES)[number];
 
-/** Minutes shown on cards: the authored subtitle when it has one, else the estimate. */
-const focusMinutes = (s: Session) => Number(/(\d+)\s*min/i.exec(s.subtitle)?.[1] ?? sessionStats(s).minutes);
+/** Minutes shown on cards. Pro drops the exercises it has no real-athlete demonstration for,
+ *  so its cards are measured from the filtered session rather than the authored subtitle. */
+const focusMinutes = (s: Session, pro: boolean) => (pro ? sessionStats(proSession(s, true)).minutes : Number(/(\d+)\s*min/i.exec(s.subtitle)?.[1] ?? sessionStats(s).minutes));
 const openSession = (key: string) => router.push({ pathname: '/program-day', params: { key } });
 const PUSH = FOCUS_SESSIONS.filter((s) => !s.equipment && (s.level === 'Advanced' || s.level === 'Intermediate'));
 const EQUIP = FOCUS_SESSIONS.filter((s) => s.equipment);
@@ -52,7 +54,8 @@ export default function TrainingScreen() {
   const finished = done >= PROGRAM_DAYS;
   const day = Math.min(PROGRAM_DAYS, done + 1);
   const session = programDay(program.id, day);
-  const stats = sessionStats(session);
+  const proDemos = access.can('trainer.demos');
+  const stats = sessionStats(proSession(session, proDemos));
   const [askRestart, setAskRestart] = useState(false);
   const openChallenge = () => {
     if (finished) setAskRestart(true);
@@ -292,13 +295,13 @@ export default function TrainingScreen() {
         {/* Push your limits */}
         <Animated.View entering={enter(4)}>
           <SectionTitle title="Level up" />
-          <Carousel items={PUSH} lockOf={access.lockFor} />
+          <Carousel items={PUSH} lockOf={access.lockFor} pro={proDemos} />
         </Animated.View>
 
         {/* With equipment */}
         <Animated.View entering={enter(5)}>
           <SectionTitle title="Got gear? Try these" />
-          <Carousel items={EQUIP} lockOf={access.lockFor} />
+          <Carousel items={EQUIP} lockOf={access.lockFor} pro={proDemos} />
         </Animated.View>
 
         {/* Body focus */}
@@ -329,7 +332,7 @@ export default function TrainingScreen() {
                     </Text>
                     <View style={st.metaRow}>
                       <Text style={st.metaText}>
-                        {s.level} · {focusMinutes(s)} min
+                        {s.level} · {focusMinutes(s, proDemos)} min
                       </Text>
                       {s.equipment && (
                         <>
@@ -544,8 +547,9 @@ function Deco({ size, style }: { size: number; style: ViewStyle }) {
 /** Pro only: today's coach-written session, or a way into the coaching dashboard. */
 function CoachCard({ trainerId, restSeconds }: { trainerId: string | null; restSeconds: number }) {
   const coach = trainerById(trainerId);
+  const pro = useAccess().can('trainer.demos');
   const today = planOnDay(coach.id, weekdayOf());
-  const stats = today ? planSummary(today, restSeconds) : null;
+  const stats = today ? planSummary(proSession(today, pro), restSeconds) : null;
   return (
     <Card onPress={() => router.push('/trainer')} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
       <TrainerAvatar trainer={coach} size={48} online />
@@ -563,7 +567,7 @@ function CoachCard({ trainerId, restSeconds }: { trainerId: string | null; restS
   );
 }
 
-function Carousel({ items, lockOf }: { items: Focus[]; lockOf: (key: string) => { need: 'smart' | 'pro' } | null }) {
+function Carousel({ items, lockOf, pro }: { items: Focus[]; lockOf: (key: string) => { need: 'smart' | 'pro' } | null; pro: boolean }) {
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -16 }} contentContainerStyle={st.carousel} decelerationRate="fast" snapToInterval={252}>
       {items.map((s) => {
@@ -585,7 +589,7 @@ function Carousel({ items, lockOf }: { items: Focus[]; lockOf: (key: string) => 
               {s.title}
             </Text>
             <Text style={st.cSub}>
-              {s.level} · {focusMinutes(s)} min
+              {s.level} · {focusMinutes(s, pro)} min
             </Text>
             <View style={st.cStart}>
               <Ionicons name={lock ? 'lock-closed' : 'play'} size={11} color={s.colors[1]} />

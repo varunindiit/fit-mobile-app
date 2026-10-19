@@ -33,7 +33,7 @@ export default function PlayerScreen() {
   const access = useAccess();
   const session = useMemo(() => findSession(String(key ?? '')), [key]);
   const back = () => (router.canGoBack() ? router.back() : router.replace('/fitness'));
-  if (!session || session.restDay || planItems(session, state.planEdits).length === 0)
+  if (!session || session.restDay || planItems(session, state.planEdits, access.can('trainer.demos')).length === 0)
     return (
       <Screen>
         <Header title="Workout" />
@@ -54,7 +54,7 @@ function Player({ session, resume }: { session: Session; resume: boolean }) {
   const { height: winH } = useWindowDimensions();
   const pal = useMemo(() => accentTheme(session.colors), [session.colors]);
 
-  const [items] = useState(() => planItems(session, state.planEdits));
+  const [items] = useState(() => planItems(session, state.planEdits, proDemos));
   const n = items.length;
   const [saved] = useState(() => (resume ? state.sessionResume[session.key] : undefined));
   const [startIdx] = useState(() => (saved ? Math.max(0, Math.min(n - 1, saved.idx)) : 0));

@@ -10,7 +10,7 @@ import { ExerciseArt } from '@/components/program/ExerciseArt';
 import { itemLabel } from '@/components/program/session';
 import { PressableScale, tap, type IconName } from '@/components/ui';
 import { exerciseById } from '@/data/program';
-import { PRO_DEMO_CREDIT, hasProDemo } from '@/data/proDemos';
+import { PRO_DEMO_CREDIT, hasProDemo, proItems } from '@/data/proDemos';
 import { planSummary, type TrainerPlan } from '@/data/trainerPlans';
 import { availability, firstName, type Trainer } from '@/data/trainers';
 import { C, R, fade, onFill, shadowSm } from '@/theme';
@@ -114,10 +114,12 @@ export function TrainerPlanCard({
   maxRows?: number;
   style?: ViewStyle;
 }) {
-  const stats = planSummary(plan, restSeconds);
-  const rows = plan.items.slice(0, maxRows);
-  const extra = plan.items.length - rows.length;
-  const showsDemo = pro && plan.items.some((it) => hasProDemo(it.exerciseId));
+  // Pro lists only the moves it can show a real athlete performing; Free and Smart see the plan as written.
+  const items = proItems(plan.items, pro);
+  const stats = planSummary({ ...plan, items }, restSeconds);
+  const rows = items.slice(0, maxRows);
+  const extra = items.length - rows.length;
+  const showsDemo = pro && items.some((it) => hasProDemo(it.exerciseId));
 
   return (
     <View style={[s.card, style]}>

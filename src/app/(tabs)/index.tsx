@@ -41,6 +41,7 @@ import { foodById, MEALS } from '@/data/foods';
 import { NOTIFICATIONS } from '@/data/notifications';
 import { PLAN_TIERS } from '@/data/plans';
 import { programById, programDay, sessionStats } from '@/data/program';
+import { proSession } from '@/data/proDemos';
 import { dayShort, fmtDate, kmFromSteps } from '@/lib/calc';
 import { burnedOn, dayTotals, isPremiumActive, useStore, weekProgress, workoutStreak } from '@/lib/store';
 import { useAccess } from '@/lib/useAccess';
@@ -123,7 +124,8 @@ export default function Home() {
   const program = programById(p.program);
   const doneDays = state.programProgress[program.id] ?? 0;
   const nextDay = Math.min(30, doneDays + 1);
-  const nextSession = programDay(program.id, nextDay);
+  // Pro only trains the exercises it can demonstrate with a real athlete, so the hero card counts those.
+  const nextSession = proSession(programDay(program.id, nextDay), access.can('trainer.demos'));
   const nextStats = sessionStats(nextSession, state.settings.restSeconds);
   const doneToday = state.workouts.some((w) => w.date === today && w.sessionKey?.startsWith(`program:${program.id}:`));
   const wk = weekProgress(state);

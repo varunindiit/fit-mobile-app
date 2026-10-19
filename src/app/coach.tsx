@@ -23,7 +23,9 @@ import { Dialog, EASE_OUT, IconButton, layoutTransition, nativeOnly, PressableSc
 import { foodById, type Food } from '@/data/foods';
 import { workoutById } from '@/data/fitness';
 import { exerciseById, PROGRAM_DAYS, programById, programDay, sessionStats } from '@/data/program';
+import { proSession } from '@/data/proDemos';
 import { round1, todayKey } from '@/lib/calc';
+import { activeTier, can } from '@/lib/entitlements';
 import { burnedOn, dayTotals, isPremiumActive, useStore, type AppState } from '@/lib/store';
 import { C, MOTION, R } from '@/theme';
 
@@ -71,6 +73,8 @@ function ctxOf(state: AppState, t: Store['targets']) {
     program: programById(state.profile.program),
     programDone: Math.min(PROGRAM_DAYS, state.programProgress[state.profile.program] ?? 0),
     rest: state.settings.restSeconds,
+    /** Pro is only ever offered the exercises it has a real-athlete demonstration for. */
+    pro: can(activeTier(state.premium), 'trainer.demos'),
   };
 }
 type Ctx = ReturnType<typeof ctxOf>;
@@ -188,7 +192,7 @@ function reply(raw: string, c: Ctx): Reply {
         action: { label: 'Browse programs', icon: 'barbell', href: '/fitness' },
       };
     const day = c.programDone + 1;
-    const s = programDay(pr.id, day);
+    const s = proSession(programDay(pr.id, day), c.pro);
     if (s.restDay)
       return {
         text: `Day ${day} of ${pr.title} is a rest day\n\nRecovery is when your core actually gets stronger. Go for a gentle walk, stretch, and aim for 7–8 hours of sleep tonight.`,
