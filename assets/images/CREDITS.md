@@ -102,3 +102,8 @@ chest, with the arms by the sides).
   cropped to a common square, held and cross-faded — no synthesised motion. `src/data/proDemos.ts`
   records which source exercise each one comes from, and which of the app's exercises deliberately
   have no Pro demonstration because the repository has no genuine match.
+- `../videos/exercises/pro/*.mp4` and `exercises/pro/posters/*.jpg` — the Pro demonstration videos
+  and their first-frame posters. They are cut from the 25 clips supplied for the Pro plan
+  (`Fittelo-video-pro-plan/`): re-timed into seamless loops, downscaled and re-encoded by
+  `scripts/pro-videos/`. Wherever a video exists it takes the place of the photo demonstration above.
+  Source and licence are as supplied by the Fittelo team; record them here once confirmed.

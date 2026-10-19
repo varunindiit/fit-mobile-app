@@ -8,7 +8,7 @@
 import { describe, expect, it } from '@jest/globals';
 
 import { EXERCISES, FOCUS_SESSIONS, PROGRAMS, PROGRAM_DAYS, programDay, type Session } from '@/data/program';
-import { PRO_DEMOS, hasProDemo, hiddenFromPro, proItems, proSession, proVisible } from '@/data/proDemos';
+import { PRO_DEMOS, PRO_DEMO_CREDIT, PRO_VIDEOS, PRO_VIDEO_CREDIT, hasProDemo, hiddenFromPro, proDemo, proDemoCredit, proItems, proSession, proVideo, proVisible } from '@/data/proDemos';
 import { TRAINER_PLANS } from '@/data/trainerPlans';
 
 /** Every session a user can open: each program day, each body-focus session, each coach plan. */
@@ -21,7 +21,7 @@ const trainable = () => allSessions().filter((s) => !s.restDay && s.items.length
 
 describe('pro exercise filter', () => {
   it('hides exactly the exercises with no real-athlete demonstration', () => {
-    expect(hiddenFromPro().sort()).toEqual(EXERCISES.filter((e) => !PRO_DEMOS[e.id]).map((e) => e.id).sort());
+    expect(hiddenFromPro().sort()).toEqual(EXERCISES.filter((e) => !PRO_DEMOS[e.id] && !PRO_VIDEOS[e.id]).map((e) => e.id).sort());
     expect(hiddenFromPro().every((id) => !hasProDemo(id))).toBe(true);
   });
 
@@ -30,9 +30,10 @@ describe('pro exercise filter', () => {
       expect(proItems(s.items, false)).toBe(s.items);
       expect(proSession(s, false)).toBe(s);
     }
-    expect(proVisible('jumping-jacks', false)).toBe(true);
-    expect(proVisible('jumping-jacks', true)).toBe(false);
-    expect(proVisible('plank', true)).toBe(true);
+    for (const e of EXERCISES) {
+      expect(proVisible(e.id, false)).toBe(true);
+      expect(proVisible(e.id, true)).toBe(hasProDemo(e.id));
+    }
   });
 
   it('gives Pro only exercises it can demonstrate', () => {
@@ -40,6 +41,13 @@ describe('pro exercise filter', () => {
       const kept = proItems(s.items, true);
       const leaked = kept.filter((it) => !hasProDemo(it.exerciseId)).map((it) => it.exerciseId);
       expect({ key: s.key, leaked }).toEqual({ key: s.key, leaked: [] });
+    }
+  });
+
+  it('hands Pro media only to Pro accounts', () => {
+    for (const e of EXERCISES) {
+      expect(proVideo(e.id, false)).toBeUndefined();
+      expect(proDemo(e.id, false)).toBeUndefined();
     }
   });
 
@@ -55,5 +63,26 @@ describe('pro exercise filter', () => {
       // The authored list is never mutated — Free and Smart read the same object afterwards.
       expect(s.items.length).toBeGreaterThanOrEqual(filtered.items.length);
     }
+  });
+});
+
+describe('pro demonstration videos', () => {
+  it('cover every exercise, each with its poster', () => {
+    const ids = new Set(EXERCISES.map((e) => e.id));
+    expect(Object.keys(PRO_VIDEOS).sort()).toEqual([...ids].sort());
+    for (const [id, v] of Object.entries(PRO_VIDEOS)) expect({ id, video: !!v.video, poster: !!v.poster }).toEqual({ id, video: true, poster: true });
+  });
+
+  it('win over the photo demonstration, which stays as the fallback', () => {
+    for (const id of Object.keys(PRO_DEMOS)) {
+      expect(proVideo(id, true)).toBe(PRO_VIDEOS[id]);
+      expect(proDemo(id, true)).toBe(PRO_DEMOS[id]);
+    }
+  });
+
+  it('are captioned as video, and photos keep their credit', () => {
+    expect(proDemoCredit(['plank', 'burpees'])).toBe(PRO_VIDEO_CREDIT);
+    expect(proDemoCredit([])).toBe(PRO_VIDEO_CREDIT);
+    expect(PRO_DEMO_CREDIT).toContain('Photo');
   });
 });

@@ -84,7 +84,7 @@ export function ExerciseSheet({ visible, onClose, items, index, accent }: { visi
               {tab === 'animation' && (
                 <>
                   <ExerciseArt key={ex.id} id={ex.id} emoji={ex.emoji} width="100%" height={ART_H} animated radius={R.lg} tint={accent.art} pro={pro} />
-                  {pro && hasProDemo(ex.id) && <ProDemoNote />}
+                  {pro && hasProDemo(ex.id) && <ProDemoNote ids={[ex.id]} />}
                 </>
               )}
               {tab === 'muscle' && (

@@ -10,7 +10,7 @@ import { ExerciseArt } from '@/components/program/ExerciseArt';
 import { itemLabel } from '@/components/program/session';
 import { PressableScale, tap, type IconName } from '@/components/ui';
 import { exerciseById } from '@/data/program';
-import { PRO_DEMO_CREDIT, hasProDemo, proItems } from '@/data/proDemos';
+import { hasProDemo, proDemoCredit, proItems } from '@/data/proDemos';
 import { planSummary, type TrainerPlan } from '@/data/trainerPlans';
 import { availability, firstName, type Trainer } from '@/data/trainers';
 import { C, R, fade, onFill, shadowSm } from '@/theme';
@@ -70,13 +70,13 @@ export function AvailabilityLine({ trainer, style }: { trainer: Trainer; style?:
   );
 }
 
-/** Caption that must sit under any Pro demonstration, so it is never read as video of the user's coach. */
-export function ProDemoNote({ style }: { style?: ViewStyle }) {
+/** Caption that must sit under any Pro demonstration, so it is never read as footage of the user's coach. */
+export function ProDemoNote({ ids, style }: { /** The exercises whose demonstrations this caption covers. */ ids: string[]; style?: ViewStyle }) {
   return (
     <View style={[s.note, style]}>
       <Ionicons name="information-circle-outline" size={13} color={C.muted} />
       <Text style={s.noteText} numberOfLines={2}>
-        {PRO_DEMO_CREDIT}
+        {proDemoCredit(ids)}
       </Text>
     </View>
   );
@@ -155,7 +155,7 @@ export function TrainerPlanCard({
         {extra > 0 && <Text style={s.more}>+{extra} more</Text>}
       </View>
 
-      {showsDemo && <ProDemoNote style={{ marginHorizontal: 12, marginTop: 4 }} />}
+      {showsDemo && <ProDemoNote ids={rows.map((it) => it.exerciseId)} style={{ marginHorizontal: 12, marginTop: 4 }} />}
 
       <View style={s.cardFoot}>
         <PressableScale scaleTo={0.97} accessibilityRole="button" onPress={() => openPlan(plan.key)} style={s.ghostBtn}>

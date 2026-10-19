@@ -68,7 +68,7 @@ covers three product pillars:
 | --- | --- |
 | **Nutrition** | Calorie budget from BMR/TDEE, 50-item Indian food database, five-meal diary, "Snap" meal-photo simulation, water and step tracking, Saathi AI nutrition chat |
 | **Training** | Three 30-day programs, 10 body-focus sessions, 8 guided classes, 25-exercise library with looping animations, a full workout player with rest timers and resume |
-| **Coaching (Pro)** | A dedicated personal trainer with profile, certifications, availability, weekly schedule, trainer-written workout plans, one-to-one chat, audio/video call UI, and real-athlete photo demonstrations |
+| **Coaching (Pro)** | A dedicated personal trainer with profile, certifications, availability, weekly schedule, trainer-written workout plans, one-to-one chat, audio/video call UI, and exercise demonstration videos |
 
 The product is monetised through three tiers — **Free**, **Smart** and **Pro** — enforced by
 a single entitlement layer (`src/lib/entitlements.ts`).
@@ -157,7 +157,7 @@ fit-mobile-app/
 │   │   ├── CREDITS.md        # ⚠️ Mandatory media attributions — read before shipping
 │   │   ├── exercises/        # 25 still poses
 │   │   ├── exercises/anim/   # 25 looping animated WebPs (© Gym visual)
-│   │   ├── exercises/pro/    # 20 Pro photo demonstrations (public domain)
+│   │   ├── exercises/pro/    # Pro photo demonstrations (public domain) + posters/ for the Pro videos
 │   │   ├── glyphs/           # Food + icon artwork keyed by emoji
 │   │   ├── onboarding/       # Generated onboarding imagery
 │   │   ├── trainers/         # Coach portraits (generated, fictional people)
@@ -587,14 +587,21 @@ both modes.
 
 `src/data/proDemos.ts` is one of the most carefully documented files in the repo.
 
-**What they are, precisely:** two photographs of a real athlete per exercise (start and end
+**Demonstration videos (primary).** All 25 exercises have a muted, seamlessly looping
+demonstration video (`PRO_VIDEOS`, `assets/videos/exercises/pro/`, built by
+`scripts/pro-videos/`). `ProVideo` (expo-video) plays it in large tiles — the player, rest
+screen and exercise sheet — only while the screen is focused and the app is in the foreground;
+small tiles and reduced motion show its first-frame poster. Where a video exists it wins over the
+photo demonstration below, which stays as the fallback.
+
+**Photo demonstrations (fallback) — what they are, precisely:** two photographs of a real athlete per exercise (start and end
 of the movement), registered onto each other and encoded as a 12-frame animated WebP that
 holds each pose and cross-fades between them. They are **photo demonstrations, not video**,
 and the in-between frames are a cross-fade, **not synthesised motion**. The file states that
 screens must not describe them as video or as footage of the member's own coach.
 
-- **18 of the 25 exercises** have a Pro demonstration.
-- **Seven are deliberately excluded**, each with a recorded reason: `burpees` and
+- **18 of the 25 exercises** have a photo demonstration.
+- **Seven have no photo** (they are covered by video), each with a recorded reason: `burpees` and
   `cobra-stretch` (source has neither), `jumping-jacks` (nearest clip starts in a
   half-squat with feet apart), `bent-leg-twist`, `cross-arm-crunches`, `dead-bug` (both
   source photos are the start position), `mountain-climber` (hips above the shoulder-heel
@@ -602,20 +609,23 @@ screens must not describe them as video or as footage of the member's own coach.
 - Known imperfections are documented inline rather than hidden: `leg-raises` is performed
   on a bench, `russian-twist` holds a weight plate, `plank` is a single still.
 
-**The entitlement chokepoint** is a single function:
+**The entitlement chokepoint** is a pair of functions:
 
 ```ts
 export const proDemo = (id: string | undefined, pro: boolean) =>
   (pro && id ? PRO_DEMOS[id] : undefined);
+export const proVideo = (id: string | undefined, pro: boolean) =>
+  (pro && id ? PRO_VIDEOS[id] : undefined);
 ```
 
-`ExerciseArt` is the only component that calls it, and it receives `pro` exclusively from
+`ExerciseArt` is the only component that calls them, and it receives `pro` exclusively from
 `access.can('trainer.demos')`. A Free or Smart account therefore **cannot** be handed a Pro
 asset, which is asserted directly by tests in `entitlements.test.ts`
 ("Pro demonstrations stay Pro-only").
 
-A caption component, `<ProDemoNote />`, renders `PRO_DEMO_CREDIT`
-(*"Photo demonstration · free-exercise-db (public domain)"*) and is required under every
+A caption component, `<ProDemoNote ids={…} />`, renders `proDemoCredit(ids)` —
+*"Video demonstration · for form reference"*, or the photo credit
+(*"Photo demonstration · free-exercise-db (public domain)"*) when any of them is a photo — and is required under every
 surface that shows one — the trainer plan card, the exercise detail sheet.
 
 Free and Smart continue to see the illustrated looping animations in
@@ -779,7 +789,7 @@ the purchase celebration. The screen also redirects a non-Pro account away immed
                                 ▼
 ┌─ /player — running a coach workout ───────────────────────────────────────┐
 │ Same player as program days: countdown → work → rest → next              │
-│ Pro accounts see photo demonstrations instead of illustrations            │
+│ Pro accounts see demonstration videos instead of illustrations            │
 │ Quit mid-way → resume saved per session key                               │
 │ Finish → completeSession({ sessionKey: 'trainer:…' }) → /streak           │
 └───────────────────────────────┬───────────────────────────────────────────┘
@@ -837,7 +847,7 @@ panel. Roles exist only as data shapes.
 - Audio and video call lifecycle with duration tracking, controls, Android back handling
   and persistent "no audio or video is transmitted" disclosure
 - Call records written to `state.calls` (newest first, capped at 50)
-- Pro-only photo demonstrations with a single entitlement chokepoint and a mandatory
+- Pro-only demonstration videos (photo fallback) with a single entitlement chokepoint and a mandatory
   credit caption
 - Pro welcome screen that fires exactly once per activation and is replayable on demand
 - Coaching progress stats derived from real workout logs
@@ -858,7 +868,7 @@ panel. Roles exist only as data shapes.
 | **Workout recommendations** | Advertised in the Pro welcome; the week is pre-scheduled | Nothing reads logs, skips or RPE to adapt the next session |
 | **Progress guidance** | Coach-workout counters and a weekly completion bar | No coach-authored feedback, trend reading or load/recovery adjustment |
 | **Form check** | The coach suggests a video call and points at "Common mistakes" | No video upload, no annotation, no async review |
-| **Pro demonstrations** | 18 of 25 exercises | 7 exercises have no match in the source library and fall back to illustrations |
+| **Pro demonstrations** | Video for all 25 exercises | Clips are short loops (2.5–9 s); thumbnails show a still poster |
 
 #### ❌ Not implemented
 

@@ -2,7 +2,10 @@
  * Pro-only exercise demonstrations — kept deliberately separate from `EXERCISE_ANIM`
  * in `@/components/glyphs`, which stays exactly as it is for Free and Smart.
  *
- * What these are, precisely: two photographs of a real athlete per exercise (the
+ * Pro prefers a demonstration video (`PRO_VIDEOS`, below) wherever one exists; the photo
+ * demonstrations in `PRO_DEMOS` are the fallback for an exercise without a video.
+ *
+ * What the photo demonstrations are, precisely: two photographs of a real athlete per exercise (the
  * start and the end of the movement), registered onto each other and played as a
  * loop that holds each pose and eases between them. They are **photo
  * demonstrations, not video footage**, and the in-between frames are a cross-fade,
@@ -67,25 +70,68 @@ export const PRO_DEMOS: Record<string, number> = {
  *   the contralateral arm and leg extending, which is the whole movement.
  * - `mountain-climber` — in `Mountain_Climbers` the hips ride well above the shoulder-heel line
  *   (our own listed common mistake) and the same leg is forward in both photographs.
+ * All seven have a demonstration video in `PRO_VIDEOS` instead.
  */
 
-/** Shown wherever a Pro demonstration is displayed. */
-export const PRO_DEMO_CREDIT = 'Photo demonstration · free-exercise-db (public domain)';
+/**
+ * Pro demonstration videos: a short muted clip that loops seamlessly, and its first frame as a
+ * poster (shown in small tiles, under reduced motion, and until the clip's first frame renders).
+ * Built from the supplied clips by `scripts/pro-videos/` — see its README for the pipeline and
+ * why each clip loops the way it does. Add an exercise only when its clip shows that exact movement.
+ */
+export const PRO_VIDEOS: Record<string, { video: number; poster: number }> = {
+  'abdominal-crunches': { video: require('@/assets/videos/exercises/pro/abdominal-crunches.mp4'), poster: require('@/assets/images/exercises/pro/posters/abdominal-crunches.jpg') },
+  'bent-leg-twist': { video: require('@/assets/videos/exercises/pro/bent-leg-twist.mp4'), poster: require('@/assets/images/exercises/pro/posters/bent-leg-twist.jpg') },
+  'bicycle-crunches': { video: require('@/assets/videos/exercises/pro/bicycle-crunches.mp4'), poster: require('@/assets/images/exercises/pro/posters/bicycle-crunches.jpg') },
+  'burpees': { video: require('@/assets/videos/exercises/pro/burpees.mp4'), poster: require('@/assets/images/exercises/pro/posters/burpees.jpg') },
+  'cobra-stretch': { video: require('@/assets/videos/exercises/pro/cobra-stretch.mp4'), poster: require('@/assets/images/exercises/pro/posters/cobra-stretch.jpg') },
+  'cross-arm-crunches': { video: require('@/assets/videos/exercises/pro/cross-arm-crunches.mp4'), poster: require('@/assets/images/exercises/pro/posters/cross-arm-crunches.jpg') },
+  'dead-bug': { video: require('@/assets/videos/exercises/pro/dead-bug.mp4'), poster: require('@/assets/images/exercises/pro/posters/dead-bug.jpg') },
+  'flutter-kicks': { video: require('@/assets/videos/exercises/pro/flutter-kicks.mp4'), poster: require('@/assets/images/exercises/pro/posters/flutter-kicks.jpg') },
+  'glute-bridge': { video: require('@/assets/videos/exercises/pro/glute-bridge.mp4'), poster: require('@/assets/images/exercises/pro/posters/glute-bridge.jpg') },
+  'heel-touch': { video: require('@/assets/videos/exercises/pro/heel-touch.mp4'), poster: require('@/assets/images/exercises/pro/posters/heel-touch.jpg') },
+  'jumping-jacks': { video: require('@/assets/videos/exercises/pro/jumping-jacks.mp4'), poster: require('@/assets/images/exercises/pro/posters/jumping-jacks.jpg') },
+  'leg-raises': { video: require('@/assets/videos/exercises/pro/leg-raises.mp4'), poster: require('@/assets/images/exercises/pro/posters/leg-raises.jpg') },
+  'lunges': { video: require('@/assets/videos/exercises/pro/lunges.mp4'), poster: require('@/assets/images/exercises/pro/posters/lunges.jpg') },
+  'mountain-climber': { video: require('@/assets/videos/exercises/pro/mountain-climber.mp4'), poster: require('@/assets/images/exercises/pro/posters/mountain-climber.jpg') },
+  'plank': { video: require('@/assets/videos/exercises/pro/plank.mp4'), poster: require('@/assets/images/exercises/pro/posters/plank.jpg') },
+  'push-ups': { video: require('@/assets/videos/exercises/pro/push-ups.mp4'), poster: require('@/assets/images/exercises/pro/posters/push-ups.jpg') },
+  'reverse-crunches': { video: require('@/assets/videos/exercises/pro/reverse-crunches.mp4'), poster: require('@/assets/images/exercises/pro/posters/reverse-crunches.jpg') },
+  'russian-twist': { video: require('@/assets/videos/exercises/pro/russian-twist.mp4'), poster: require('@/assets/images/exercises/pro/posters/russian-twist.jpg') },
+  'side-plank': { video: require('@/assets/videos/exercises/pro/side-plank.mp4'), poster: require('@/assets/images/exercises/pro/posters/side-plank.jpg') },
+  'spine-twist': { video: require('@/assets/videos/exercises/pro/spine-twist.mp4'), poster: require('@/assets/images/exercises/pro/posters/spine-twist.jpg') },
+  'squats': { video: require('@/assets/videos/exercises/pro/squats.mp4'), poster: require('@/assets/images/exercises/pro/posters/squats.jpg') },
+  'superman': { video: require('@/assets/videos/exercises/pro/superman.mp4'), poster: require('@/assets/images/exercises/pro/posters/superman.jpg') },
+  'tricep-dips': { video: require('@/assets/videos/exercises/pro/tricep-dips.mp4'), poster: require('@/assets/images/exercises/pro/posters/tricep-dips.jpg') },
+  'v-crunch': { video: require('@/assets/videos/exercises/pro/v-crunch.mp4'), poster: require('@/assets/images/exercises/pro/posters/v-crunch.jpg') },
+  'wide-push-ups': { video: require('@/assets/videos/exercises/pro/wide-push-ups.mp4'), poster: require('@/assets/images/exercises/pro/posters/wide-push-ups.jpg') },
+};
 
-/** How many of the app's exercises have a Pro demonstration. */
-export const PRO_DEMO_COUNT = Object.keys(PRO_DEMOS).length;
+/** Shown wherever a Pro photo demonstration is displayed. */
+export const PRO_DEMO_CREDIT = 'Photo demonstration · free-exercise-db (public domain)';
+/** Shown wherever only Pro demonstration videos are displayed. */
+export const PRO_VIDEO_CREDIT = 'Video demonstration · for form reference';
+
+/** How many of the app's exercises have a Pro demonstration (video or photo). */
+export const PRO_DEMO_COUNT = new Set([...Object.keys(PRO_VIDEOS), ...Object.keys(PRO_DEMOS)]).size;
 
 /**
- * The Pro demonstration for an exercise, or `undefined` when there isn't one.
+ * The Pro photo demonstration for an exercise, or `undefined` when there isn't one.
  *
- * Callers must pass `pro` from the entitlement layer — this function is the only
- * place a Pro asset can enter the UI, so a Free or Smart account can never be
+ * Callers must pass `pro` from the entitlement layer — this function and `proVideo` are the
+ * only places a Pro asset can enter the UI, so a Free or Smart account can never be
  * handed one by accident.
  */
 export const proDemo = (id: string | undefined, pro: boolean): number | undefined => (pro && id ? PRO_DEMOS[id] : undefined);
 
-/** True when this exercise would show a Pro demonstration for a Pro account. */
-export const hasProDemo = (id: string | undefined) => !!(id && PRO_DEMOS[id]);
+/** The Pro demonstration video for an exercise, or `undefined` — same entitlement rule as `proDemo`. */
+export const proVideo = (id: string | undefined, pro: boolean) => (pro && id ? PRO_VIDEOS[id] : undefined);
+
+/** True when this exercise would show a Pro demonstration (video or photo) for a Pro account. */
+export const hasProDemo = (id: string | undefined) => !!(id && (PRO_VIDEOS[id] || PRO_DEMOS[id]));
+
+/** The caption for a surface showing these exercises' Pro demonstrations: the photo credit as soon as one of them is a photo. */
+export const proDemoCredit = (ids: string[]) => (ids.some((id) => !PRO_VIDEOS[id] && PRO_DEMOS[id]) ? PRO_DEMO_CREDIT : PRO_VIDEO_CREDIT);
 
 /* ---------- Pro exercise library ---------- */
 
@@ -97,12 +143,12 @@ export const hasProDemo = (id: string | undefined) => !!(id && PRO_DEMOS[id]);
  * authored session keep every movement they always had. Pro filters them out at
  * read time, and only through the two helpers below, so the day screen, the
  * player, the carousels, the home card and the coach plans can never disagree
- * about what a Pro member sees. Drop a new entry into `PRO_DEMOS` above and that
- * exercise comes back for Pro everywhere at once.
+ * about what a Pro member sees. Drop a new entry into `PRO_VIDEOS` or `PRO_DEMOS` above
+ * and that exercise comes back for Pro everywhere at once.
  */
 export const proVisible = (id: string | undefined, pro: boolean) => !pro || hasProDemo(id);
 
-/** Exercise ids a Pro account does not see — derived, so this list can never drift from `PRO_DEMOS`. */
+/** Exercise ids a Pro account does not see — derived, so this list can never drift from `PRO_VIDEOS` / `PRO_DEMOS`. */
 export const hiddenFromPro = () => EXERCISES.filter((e) => !hasProDemo(e.id)).map((e) => e.id);
 
 /**
