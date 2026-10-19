@@ -142,7 +142,6 @@ export function DiaryView({ tab = false }: { tab?: boolean }) {
             </PressableScale>
           </Animated.View>
         )}
-        <IconButton icon="calendar-outline" bordered onPress={() => setDate(today)} />
         <Animated.View pointerEvents="none" style={[st.topLine, topLine]} />
       </View>
 

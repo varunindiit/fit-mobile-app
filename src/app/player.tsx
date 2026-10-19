@@ -48,7 +48,7 @@ export default function PlayerScreen() {
 }
 
 function Player({ session, resume }: { session: Session; resume: boolean }) {
-  const { state, completeSession, updateSettings, saveResume, clearResume } = useStore();
+  const { state, completeSession, saveResume, clearResume } = useStore();
   const proDemos = useAccess().can('trainer.demos');
   const toast = useToast();
   const insets = useSafeAreaInsets();
@@ -216,12 +216,6 @@ function Player({ session, resume }: { session: Session; resume: boolean }) {
     return () => sub.remove();
   }, []);
 
-  const toggleSound = () => {
-    const on = !state.settings.coachVoice;
-    updateSettings({ coachVoice: on });
-    toast(on ? 'Coach voice on' : 'Coach voice muted', on ? 'volume-high' : 'volume-mute');
-  };
-
   const segments = () => (
     <View style={s.segments}>
       {items.map((_, i) => {
@@ -332,7 +326,6 @@ function Player({ session, resume }: { session: Session; resume: boolean }) {
       <View style={s.topRow}>
         <IconButton icon="close" color={C.text} bg={CHIP} onPress={requestQuit} />
         <Text style={s.topTitle}>{phase === 'ready' ? 'Get ready' : `${idx + 1} of ${n}`}</Text>
-        <IconButton icon={state.settings.coachVoice ? 'volume-high' : 'volume-mute'} color={C.text} bg={CHIP} onPress={toggleSound} style={{ marginRight: 8 }} />
         <IconButton icon="information-circle-outline" color={C.text} bg={CHIP} onPress={() => setInfo(idx)} />
       </View>
 
