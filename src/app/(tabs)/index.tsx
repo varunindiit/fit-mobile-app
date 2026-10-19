@@ -8,10 +8,10 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { Extrapolation, interpolate, useAnimatedScrollHandler, useAnimatedStyle, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
-import Svg, { Circle } from 'react-native-svg';
 
 import { AssignedCoachCard } from '@/components/home/AssignedCoachCard';
 import { CalorieCard } from '@/components/home/CalorieCard';
+import { ProCoachPromo } from '@/components/home/ProCoachPromo';
 import { SnapPlateArt } from '@/components/home/SnapPlateArt';
 import { WaterBottle } from '@/components/home/WaterBottle';
 import { WeekStrip } from '@/components/home/WeekStrip';
@@ -45,7 +45,6 @@ import { proSession } from '@/data/proDemos';
 import { dayShort, fmtDate, kmFromSteps } from '@/lib/calc';
 import { burnedOn, dayTotals, isPremiumActive, useStore, weekProgress, workoutStreak } from '@/lib/store';
 import { useAccess } from '@/lib/useAccess';
-import { trainerById, firstName as trainerFirstName } from '@/data/trainers';
 import { useToday } from '@/lib/useToday';
 import { C, G, ink, MOTION, R, shadow, shadowSm } from '@/theme';
 
@@ -112,13 +111,6 @@ export default function Home() {
   const proteinGap = Math.max(0, targets.protein - total.protein);
   const premiumTier = isPremiumActive(state.premium) ? PLAN_TIERS.find((x) => x.id === state.premium!.tier) : null;
   const access = useAccess();
-  // Pro members land on their coaching dashboard; Smart on the AI coach; Free on the paywall.
-  const coach = trainerById(state.trainerId);
-  const premiumCard = access.can('trainer')
-    ? { href: '/trainer' as const, label: 'YOUR COACH', title: `${trainerFirstName(coach)} is your coach`, sub: 'Plans, chat and calls — all in one place', cta: 'Open coaching' }
-    : premiumTier
-      ? { href: '/coach' as const, label: 'ACTIVE PLAN', title: `You're on ${premiumTier.name}`, sub: 'Ask your coach anything, anytime', cta: 'Talk to coach' }
-      : { href: '/plans' as const, label: 'FITTELO PRO', title: 'Get a personal nutritionist & trainer', sub: 'Custom plans · weekly check-ins · up to 40% off', cta: 'Explore plans' };
   const todaysWorkout = state.workouts.find((w) => w.date === today);
   const streak = workoutStreak(state);
   const program = programById(p.program);
@@ -335,13 +327,6 @@ export default function Home() {
             </View>
           </PressableScale>
         </Animated.View>
-
-        {/* Pro: the coach assigned on purchase. The entitlement layer decides — Free and Smart never see it. */}
-        {access.can('trainer') && (
-          <Animated.View entering={enter(2)}>
-            <AssignedCoachCard trainerId={state.trainerId} />
-          </Animated.View>
-        )}
 
         {/* Saathi insight (AI), as a coach message */}
         <Animated.View entering={enter(2)}>
@@ -613,38 +598,9 @@ export default function Home() {
           </Card>
         </Animated.View>
 
-        {/* Premium */}
+        {/* Personal coach: Pro sees the assigned coach (or the pending state); Free and Smart see the Pro upgrade. The entitlement layer decides. */}
         <Animated.View entering={enter(9)}>
-          <PressableScale
-            scaleTo={0.98}
-            onPress={() => {
-              tap();
-              router.push(premiumCard.href);
-            }}
-            style={st.premiumWrap}
-            accessibilityRole="button">
-            <LinearGradient colors={G.premium} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.premium}>
-              <Svg pointerEvents="none" width="100%" height="100%" style={StyleSheet.absoluteFill}>
-                <Circle cx="92%" cy="10%" r={86} fill={C.gold} opacity={0.07} />
-                <Circle cx="78%" cy="110%" r={70} fill={C.white} opacity={0.04} />
-              </Svg>
-              <View style={{ flex: 1 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Ionicons name="diamond" size={12} color={C.gold} />
-                  <Text style={st.premiumLabel}>{premiumCard.label}</Text>
-                </View>
-                <Text style={st.premiumTitle}>{premiumCard.title}</Text>
-                <Text style={st.premiumSub}>{premiumCard.sub}</Text>
-                <View style={st.premiumBtn}>
-                  <Text style={st.premiumBtnText}>{premiumCard.cta}</Text>
-                  <Ionicons name="arrow-forward" size={14} color={C.navy} />
-                </View>
-              </View>
-              <View style={st.premiumArt}>
-                <Ionicons name="diamond" size={30} color={C.gold} />
-              </View>
-            </LinearGradient>
-          </PressableScale>
+          {access.can('trainer') ? <AssignedCoachCard trainerId={state.trainerId} /> : <ProCoachPromo tier={access.isSmart ? 'smart' : 'free'} />}
         </Animated.View>
 
         {/* Tips */}
@@ -854,14 +810,6 @@ const st = StyleSheet.create({
   workoutPill: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: C.surfaceAlt, borderRadius: R.sm, padding: 8, marginTop: 12 },
   workoutArt: { width: 30, height: 30, borderRadius: 10, backgroundColor: C.workoutSoft, alignItems: 'center', justifyContent: 'center' },
   workoutName: { flex: 1, fontSize: 12, fontWeight: '600', color: C.text, lineHeight: 16 },
-  premiumWrap: { marginTop: 26, borderRadius: R.lg, ...shadow },
-  premium: { flexDirection: 'row', alignItems: 'center', borderRadius: R.lg, padding: 16, overflow: 'hidden', gap: 12 },
-  premiumLabel: { color: C.gold, fontWeight: '700', fontSize: 11, letterSpacing: 1 },
-  premiumTitle: { color: C.white, fontWeight: '700', fontSize: 18, marginTop: 6, letterSpacing: -0.3 },
-  premiumSub: { color: 'rgba(255,255,255,0.72)', marginTop: 4, fontSize: 13, lineHeight: 18 },
-  premiumBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: C.gold, alignSelf: 'flex-start', paddingHorizontal: 14, height: 36, borderRadius: R.sm, marginTop: 14 },
-  premiumBtnText: { fontWeight: '700', color: C.navy, fontSize: 14 },
-  premiumArt: { width: 64, height: 64, borderRadius: 22, backgroundColor: 'rgba(245,196,81,0.12)', borderWidth: 1, borderColor: 'rgba(245,196,81,0.28)', alignItems: 'center', justifyContent: 'center' },
   tip: { width: TIP_W, borderRadius: R.lg, ...shadowSm },
   tipBg: { flex: 1, borderRadius: R.lg, padding: 16, overflow: 'hidden', borderWidth: StyleSheet.hairlineWidth * 2, borderColor: C.borderSoft },
   tipDecor: { position: 'absolute', right: -18, bottom: -22, opacity: 0.08, transform: [{ rotate: '-12deg' }] },
