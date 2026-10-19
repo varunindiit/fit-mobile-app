@@ -1,20 +1,22 @@
 # "Train with a coach" card photography
 
 The eight cards in the **Train with a coach** grid (`src/app/(tabs)/fitness.tsx`) show a photo
-header. Photos live in `assets/images/workouts/<workout id>.webp` and are wired up in
-`WORKOUT_PHOTO` (`src/components/glyphs.ts`). A workout with no photo falls back to its tinted
-colour tile with the mascot artwork, so the grid never breaks while the set is incomplete.
+header, and the workout detail screen (`src/app/workout/[id].tsx`) shows the same photo as its hero.
+Card photos are `assets/images/workouts/<workout id>.webp` (`WORKOUT_PHOTO`), hero photos are
+`<workout id>-hero.webp` (`WORKOUT_HERO`), both in `src/components/glyphs.ts`. A workout with no
+photo falls back to its tinted colour tile with the mascot artwork.
 
 ## Pipeline
 
-1. Generate one image per workout id with an image model (the rest of the app's imagery was made
-   with OpenAI image generation via Codex — `assets/images/CREDITS.md`). Use the prompts below
-   verbatim: the **persona block** is what keeps a coach's face and kit identical across the two
-   cards they appear on. Ask for landscape 4:3, at least 1024px wide.
+1. Generate one image per workout id with Codex's image generation (`codex exec`; the binary ships
+   with the OpenAI VS Code extension under `bin/macos-*/codex`). Run **one session per coach** and
+   generate both of their images in it, telling it to use image 1 as the identity reference for
+   image 2 — that, plus the verbatim **persona block** below, keeps a coach's face and kit identical
+   across their two cards. Ask for landscape 1536x1024 with the subject centred.
 2. Save each result as `<workout id>.(png|jpg)` in a scratch folder.
-3. `python3 scripts/workout-photos/optimize.py <scratch folder>` — centre-crops to the card's
-   1.14:1 header, resizes to 640px wide and writes optimised WebP into `assets/images/workouts/`.
-   It prints the exact `WORKOUT_PHOTO` lines to paste into `src/components/glyphs.ts`.
+3. `python3 scripts/workout-photos/optimize.py <scratch folder>` — writes the 1.14:1 640px card
+   crop and the 3:2 1170px hero as WebP into `assets/images/workouts/`, skipping files that are not
+   workout ids. Poses wider than the card (plank, Warrior II) get a nudged crop via `FOCUS_X`.
 4. Add the generation to `assets/images/CREDITS.md`.
 
 Reject and regenerate anything with distorted hands or faces, wrong limb counts, visible text or
@@ -25,8 +27,7 @@ logos, or a pose that does not match the workout.
 > Photorealistic editorial fitness photography, shot on an 85mm lens at f/2.0, shallow depth of
 > field, soft natural daylight with a warm colour grade, warm stone-grey and light-oak surroundings
 > that match a warm neutral app palette, sharp focus on the subject, anatomically correct natural
-> body proportions, full body in frame with headroom, subject slightly left of centre with clean
-> negative space on the right, landscape 4:3. No text, no logos, no watermarks, no brand marks, no
+> body proportions, full body in frame with headroom, subject centred, landscape 1536x1024. No text, no logos, no watermarks, no brand marks, no
 > extra limbs, no distorted hands or faces.
 
 ## Personas

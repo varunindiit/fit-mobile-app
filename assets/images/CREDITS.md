@@ -23,6 +23,14 @@
   people, third-party likeness or branding; the athletes are fictional. Cropped, resized and
   compressed to WebP with `scripts/level-up-photos/optimize.py`.
 
+## Workout card photography
+
+- `workouts/*.webp` — original images generated with OpenAI image generation via Codex (`codex exec`,
+  `image_generation` feature) for the "Train with a coach" cards and workout detail heroes, from the prompts in
+  `scripts/workout-photos/README.md`. Each coach's two images were made in one session, the second using the
+  first as its identity reference. No real people, third-party likeness or branding; the coaches are
+  fictional. Cropped and compressed to WebP by `scripts/workout-photos/optimize.py`.
+
 ## Exercise animations
 
 - `exercises/*.webp` and `exercises/anim/*.webp` — exercise animations and their opening still frames.

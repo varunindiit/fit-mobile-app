@@ -24,7 +24,7 @@ import { kcalFromSteps, kmFromSteps } from '@/lib/calc';
 import { burnedOn, useStore, weekProgress, workoutStreak, type WorkoutLog } from '@/lib/store';
 import { useAccess } from '@/lib/useAccess';
 import { useToday } from '@/lib/useToday';
-import { C, fade, G, MOTION, R, shadowSm } from '@/theme';
+import { C, G, ink, INK, MOTION, R, shadowSm } from '@/theme';
 import { Glyph } from '@/components/Glyph';
 import { FOCUS_PHOTO, logArt, sessionArt, WORKOUT_ART, WORKOUT_PHOTO } from '@/components/glyphs';
 
@@ -580,13 +580,13 @@ function Carousel({ items, lockOf, pro }: { items: Focus[]; lockOf: (key: string
             tap();
             openSession(s.key);
           }}
-          style={[st.cShell, { backgroundColor: s.colors[1] }]}>
-          <LinearGradient colors={s.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.cCard}>
+          style={[st.cShell, { backgroundColor: photo ? INK : s.colors[1] }]}>
+          <LinearGradient colors={photo ? G.photo : s.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.cCard}>
             {photo ? (
               <>
                 <Image source={photo} style={StyleSheet.absoluteFill} contentFit="cover" transition={180} />
-                {/* Brand colour on the left for the title, clearing to the athlete on the right */}
-                <LinearGradient colors={[s.colors[0], fade(s.colors[0], 0.92), fade(s.colors[1], 0.5), fade(s.colors[1], 0)]} locations={[0, 0.34, 0.66, 1]} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={StyleSheet.absoluteFill} pointerEvents="none" />
+                {/* Neutral black scrim behind the title, clearing to the athlete on the right */}
+                <LinearGradient colors={[ink(0.78), ink(0.5), ink(0)]} locations={[0, 0.42, 0.78]} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={StyleSheet.absoluteFill} pointerEvents="none" />
               </>
             ) : (
               <>
