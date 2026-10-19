@@ -35,8 +35,7 @@ type Cat = (typeof WORKOUT_CATEGORIES)[number];
  *  so its cards are measured from the filtered session rather than the authored subtitle. */
 const focusMinutes = (s: Session, pro: boolean) => (pro ? sessionStats(proSession(s, true)).minutes : Number(/(\d+)\s*min/i.exec(s.subtitle)?.[1] ?? sessionStats(s).minutes));
 const openSession = (key: string) => router.push({ pathname: '/program-day', params: { key } });
-const PUSH = FOCUS_SESSIONS.filter((s) => !s.equipment && (s.level === 'Advanced' || s.level === 'Intermediate'));
-const EQUIP = FOCUS_SESSIONS.filter((s) => s.equipment);
+const PUSH = FOCUS_SESSIONS.filter((s) => s.equipment || s.level === 'Advanced' || s.level === 'Intermediate');
 
 const listLayout = layoutTransition;
 const rowIn = nativeOnly(FadeIn.duration(MOTION.base));
@@ -298,14 +297,8 @@ export default function TrainingScreen() {
           <Carousel items={PUSH} lockOf={access.lockFor} pro={proDemos} />
         </Animated.View>
 
-        {/* With equipment */}
-        <Animated.View entering={enter(5)}>
-          <SectionTitle title="Got gear? Try these" />
-          <Carousel items={EQUIP} lockOf={access.lockFor} pro={proDemos} />
-        </Animated.View>
-
         {/* Body focus */}
-        <Animated.View entering={enter(6)}>
+        <Animated.View entering={enter(5)}>
           <SectionTitle title="Target an area" />
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -16 }} contentContainerStyle={st.chips}>
             {BODY_PARTS.map((p) => (
@@ -351,7 +344,7 @@ export default function TrainingScreen() {
         </Animated.View>
 
         {/* Guided classes */}
-        <Animated.View entering={enter(7)}>
+        <Animated.View entering={enter(6)}>
           <SectionTitle title="Train with a coach" />
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={st.chips} style={{ marginHorizontal: -16 }}>
             {WORKOUT_CATEGORIES.map((c) => (
