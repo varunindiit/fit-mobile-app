@@ -275,6 +275,29 @@ export const FOCUS_HERO: Record<string, number> = {
   'focus:chest-dumbbell': require('@/assets/images/focus/chest-dumbbell-hero.webp'),
   'focus:leg-day': require('@/assets/images/focus/leg-day-hero.webp'),
   'focus:ultimate-core': require('@/assets/images/focus/ultimate-core-hero.webp'),
+  'focus:abs-beginner': require('@/assets/images/focus/abs-beginner-hero.webp'),
+  'focus:chest-beginner': require('@/assets/images/focus/chest-beginner-hero.webp'),
+  'focus:arm-toning': require('@/assets/images/focus/arm-toning-hero.webp'),
+  'focus:back-relief': require('@/assets/images/focus/back-relief-hero.webp'),
+};
+
+/**
+ * Square athlete photo for each session's tile in the "Target an area" list, framed on the muscle
+ * group it works — a different shot from the "Level up" card, which sits on the same screen.
+ * Files live in `assets/images/areas/<key without the focus: prefix>.webp` (see
+ * `scripts/area-photos/README.md`). A session without one keeps its gradient + artwork tile.
+ */
+export const AREA_PHOTO: Record<string, number> = {
+  'focus:abs-beginner': require('@/assets/images/areas/abs-beginner.webp'),
+  'focus:rock-hard': require('@/assets/images/areas/rock-hard.webp'),
+  'focus:stronger-abs': require('@/assets/images/areas/stronger-abs.webp'),
+  'focus:chest-beginner': require('@/assets/images/areas/chest-beginner.webp'),
+  'focus:chest-dumbbell': require('@/assets/images/areas/chest-dumbbell.webp'),
+  'focus:arm-toning': require('@/assets/images/areas/arm-toning.webp'),
+  'focus:leg-day': require('@/assets/images/areas/leg-day.webp'),
+  'focus:back-relief': require('@/assets/images/areas/back-relief.webp'),
+  'focus:intense-shred': require('@/assets/images/areas/intense-shred.webp'),
+  'focus:ultimate-core': require('@/assets/images/areas/ultimate-core.webp'),
 };
 
 /** The mascot resting, shown on every rest day instead of the generic 😴 glyph. */

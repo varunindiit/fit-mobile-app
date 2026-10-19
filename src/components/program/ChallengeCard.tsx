@@ -11,6 +11,9 @@ import { PressableScale, tap, type IconName } from '@/components/ui';
 import { C, INK, R, glow, ink } from '@/theme';
 
 const DAYS = 30;
+/** Ease-out black → transparent ramp over the photo's left part (a 2-stop linear ramp shows a hard edge). */
+const EDGE_FADE = [INK, ink(0.96), ink(0.86), ink(0.68), ink(0.46), ink(0.26), ink(0.11), ink(0.03), ink(0)] as const;
+const EDGE_STOPS = [0, 0.08, 0.17, 0.26, 0.36, 0.46, 0.55, 0.63, 0.7] as const;
 
 export type ChallengeCardProps = {
   title: string;
@@ -64,8 +67,8 @@ export function ChallengeCard({ title, bolts, day, done, stats, note, emoji, art
               <Glyph emoji={emoji} src={art} size={art ? 132 : 70} />
             </Animated.View>
           )}
-          {/* Blends the photo's left edge into the card */}
-          <LinearGradient colors={[INK, ink(0)]} locations={[0, 0.4]} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={StyleSheet.absoluteFill} />
+          {/* Blends the photo's left edge into the card — eased stops so there's no visible seam */}
+          <LinearGradient colors={EDGE_FADE} locations={EDGE_STOPS} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={StyleSheet.absoluteFill} />
         </View>
         {/* Black transparent shadow behind the text, clearing to the athlete on the right */}
         <LinearGradient colors={[ink(0.92), ink(0.6), ink(0)]} locations={[0, 0.5, 0.82]} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={StyleSheet.absoluteFill} pointerEvents="none" />

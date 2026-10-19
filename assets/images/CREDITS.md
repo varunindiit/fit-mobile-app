@@ -40,6 +40,15 @@
   third-party likeness or branding; the athletes are fictional. Cropped and compressed to WebP by
   `scripts/today-workout-photos/optimize.py`.
 
+## Target an area tile photography
+
+- `areas/*.webp`, plus `focus/{abs-beginner,chest-beginner,arm-toning,back-relief}-hero.webp` — original
+  images generated with OpenAI image generation via Codex (`codex exec`, `image_generation` feature) for
+  the "Target an area" session tiles and the detail heroes of the sessions that had no photo, from the
+  prompts in `scripts/area-photos/README.md`. Each athlete was generated with their existing "Level up" /
+  "Train with a coach" photo attached as the identity reference. No real people, third-party likeness or
+  branding; the athletes are fictional. Cropped and compressed to WebP by `scripts/area-photos/optimize.py`.
+
 ## Exercise animations
 
 - `exercises/*.webp` and `exercises/anim/*.webp` — exercise animations and their opening still frames.

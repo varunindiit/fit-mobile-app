@@ -20,7 +20,8 @@ import { useAccess } from '@/lib/useAccess';
 import { C, R } from '@/theme';
 
 type Phase = 'ready' | 'work' | 'rest';
-/** The player is a white surface throughout; accents come from the session's own gradient. */
+/** The player is a white surface throughout; every accent is the brand green, not the session's gradient. */
+const BRAND: [string, string] = [C.primary, C.primary];
 const PLAYER_BG: [string, string] = ['#FFFFFF', C.bg];
 const CHIP = C.surfaceAlt;
 const CHIP_BORDER = C.border;
@@ -52,7 +53,7 @@ function Player({ session, resume }: { session: Session; resume: boolean }) {
   const toast = useToast();
   const insets = useSafeAreaInsets();
   const { height: winH } = useWindowDimensions();
-  const pal = useMemo(() => accentTheme(session.colors), [session.colors]);
+  const pal = useMemo(() => accentTheme(BRAND), []);
 
   const [items] = useState(() => planItems(session, state.planEdits, proDemos));
   const n = items.length;
@@ -288,7 +289,7 @@ function Player({ session, resume }: { session: Session; resume: boolean }) {
             </View>
           </View>
           <PressableScale scaleTo={0.98} accessibilityRole="button" accessibilityLabel={`About ${ex.name}`} onPress={() => (tap(), setInfo(idx))} style={[s.preview, { backgroundColor: C.surfaceAlt, borderColor: C.border }]}>
-            <ExerciseArt id={ex.id} emoji={ex.emoji} width="100%" height={Math.round(artH * 0.62)} animated radius={R.lg} tint={pal.art} pro={proDemos} />
+            <ExerciseArt id={ex.id} emoji={ex.emoji} width="100%" height={artH} animated radius={R.xl} tint={pal.art} pro={proDemos} />
             <View style={[s.previewInfo, { backgroundColor: pal.accent }]}>
               <Ionicons name="information-circle" size={22} color={pal.on} />
             </View>
@@ -484,7 +485,7 @@ const s = StyleSheet.create({
   nextName: { flex: 1, fontSize: 24, fontWeight: '800', letterSpacing: -0.6 },
   nextValPill: { borderRadius: R.pill, paddingHorizontal: 12, paddingVertical: 6 },
   nextVal: { fontSize: 16, fontWeight: '800', fontVariant: ['tabular-nums'] },
-  preview: { borderWidth: 1, borderRadius: R.xl, padding: 6 },
+  preview: { borderWidth: 1, borderRadius: R.xl + 4, padding: 4 },
   previewInfo: { position: 'absolute', top: 14, right: 14, width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   restLabel: { fontSize: 13, fontWeight: '800', letterSpacing: 5 },
   restClock: { fontWeight: '800', letterSpacing: -1.5, fontVariant: ['tabular-nums'] },

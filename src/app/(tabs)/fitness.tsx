@@ -26,7 +26,7 @@ import { useAccess } from '@/lib/useAccess';
 import { useToday } from '@/lib/useToday';
 import { C, G, ink, INK, MOTION, R, shadowSm } from '@/theme';
 import { Glyph } from '@/components/Glyph';
-import { FOCUS_PHOTO, logArt, programPhoto, sessionArt, WORKOUT_ART, WORKOUT_PHOTO } from '@/components/glyphs';
+import { AREA_PHOTO, FOCUS_PHOTO, logArt, programPhoto, sessionArt, WORKOUT_ART, WORKOUT_PHOTO } from '@/components/glyphs';
 
 const SOURCE = Platform.OS === 'ios' ? 'Apple Health' : 'Google Fit';
 type Focus = (typeof FOCUS_SESSIONS)[number];
@@ -310,6 +310,7 @@ export default function TrainingScreen() {
           <Card style={{ paddingVertical: 6 }}>
             {partList.map((s, i) => {
               const lock = access.lockFor(s.key);
+              const photo = AREA_PHOTO[s.key];
               return (
               <Animated.View key={s.key} entering={rowIn}>
                 <Pressable
@@ -318,9 +319,13 @@ export default function TrainingScreen() {
                     openSession(s.key);
                   }}
                   style={({ pressed }) => [st.focusRow, i > 0 && st.actBorder, pressed && st.rowPressed]}>
-                  <LinearGradient colors={s.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.focusTile}>
-                    <Glyph emoji={s.emoji} src={sessionArt(s.key)} size={34} />
-                  </LinearGradient>
+                  {photo ? (
+                    <Image source={photo} style={[st.focusTile, { backgroundColor: s.colors[1] }]} contentFit="cover" transition={180} />
+                  ) : (
+                    <LinearGradient colors={s.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.focusTile}>
+                      <Glyph emoji={s.emoji} src={sessionArt(s.key)} size={34} />
+                    </LinearGradient>
+                  )}
                   <View style={{ flex: 1 }}>
                     <Text style={st.actTitle} numberOfLines={1}>
                       {s.title}
