@@ -4,7 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import Animated, { Easing, FadeIn, FadeInDown, FadeInUp, ZoomIn, useAnimatedStyle, useReducedMotion, useSharedValue, withDelay, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
+import Animated, { Easing, FadeIn, FadeInDown, FadeInLeft, FadeInRight, FadeInUp, ZoomIn, useAnimatedStyle, useReducedMotion, useSharedValue, withDelay, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 
@@ -148,22 +148,28 @@ export function LoginSheet({ visible, onClose, onLogin, onSignup }: { visible: b
 
 /* ---------------- 1 · Welcome ---------------- */
 
-const WELCOME_MS = 2800;
+const WELCOME_MS = 3800;
 const ARCH_W = 196;
 const ARCH_H = 248;
 const ORBIT = 292;
+const CHIP_IN_MS = 900;
 
-/** Small glass chip that floats around the coach portrait, bobbing gently once it has popped in. */
-function CoachChip({ icon, label, tint, bg, delay, bob, style }: { icon: IconName; label: string; tint: string; bg: string; delay: number; bob: number; style: object }) {
+/** Small glass chip that glides in from its own side, then bobs gently once it has settled. */
+function CoachChip({ icon, label, tint, bg, delay, bob, from, style }: { icon: IconName; label: string; tint: string; bg: string; delay: number; bob: number; from: 'left' | 'right'; style: object }) {
   const reduce = useReducedMotion();
   const y = useSharedValue(0);
   useEffect(() => {
     if (reduce) return;
-    y.set(withRepeat(withSequence(withTiming(-bob, { duration: 1600, easing: Easing.inOut(Easing.sin) }), withTiming(0, { duration: 1600, easing: Easing.inOut(Easing.sin) })), -1, false));
-  }, [y, bob, reduce]);
+    y.set(withDelay(delay + CHIP_IN_MS, withRepeat(withSequence(withTiming(-bob, { duration: 1600, easing: Easing.inOut(Easing.sin) }), withTiming(0, { duration: 1600, easing: Easing.inOut(Easing.sin) })), -1, false)));
+  }, [y, bob, delay, reduce]);
   const float = useAnimatedStyle(() => ({ transform: [{ translateY: y.get() }] }));
+  const enter = (from === 'left' ? FadeInLeft : FadeInRight)
+    .duration(CHIP_IN_MS)
+    .easing(EASE_OUT)
+    .delay(delay)
+    .withInitialValues({ transform: [{ translateX: from === 'left' ? -36 : 36 }], opacity: 0 });
   return (
-    <Animated.View entering={nativeOnly(ZoomIn.springify().damping(14).delay(delay))} style={[st.wChip, shadow, style]}>
+    <Animated.View entering={nativeOnly(enter)} style={[st.wChip, shadow, style]}>
       <Animated.View style={[{ flexDirection: 'row', alignItems: 'center', gap: 8 }, float]}>
         <View style={[st.wChipIcon, { backgroundColor: bg }]}>
           <Ionicons name={icon} size={14} color={tint} />
@@ -212,9 +218,9 @@ export function Welcome({ onNext }: { onNext: () => void }) {
               <LinearGradient colors={[ink(0), ink(0.28)]} locations={[0.6, 1]} style={StyleSheet.absoluteFill} />
             </Animated.View>
 
-            <CoachChip icon="barbell" label="Custom workouts" tint={C.primaryDark} bg={C.primarySoft} delay={520} bob={5} style={{ top: 96, left: -30 }} />
-            <CoachChip icon="restaurant" label="Smart nutrition" tint={C.accent} bg={C.accentSoft} delay={680} bob={6} style={{ top: 178, right: -26 }} />
-            <Animated.View entering={nativeOnly(ZoomIn.springify().damping(14).delay(840))} style={[st.wStatus, glow(C.primaryDark)]}>
+            <CoachChip icon="barbell" label="Custom workouts" tint={C.primaryDark} bg={C.primarySoft} delay={700} bob={5} from="left" style={{ top: 96, left: -30 }} />
+            <CoachChip icon="restaurant" label="Smart nutrition" tint={C.accent} bg={C.accentSoft} delay={1050} bob={6} from="right" style={{ top: 178, right: -26 }} />
+            <Animated.View entering={nativeOnly(FadeInUp.duration(800).easing(EASE_OUT).delay(1400).withInitialValues({ transform: [{ translateY: 14 }], opacity: 0 }))} style={[st.wStatus, glow(C.primaryDark)]}>
               <View style={st.wLive} />
               <Text style={st.wStatusText}>Your plan starts here</Text>
             </Animated.View>
