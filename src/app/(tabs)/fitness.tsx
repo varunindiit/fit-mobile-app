@@ -601,8 +601,8 @@ function Carousel({ items, lockOf, pro }: { items: Focus[]; lockOf: (key: string
               {s.level} · {focusMinutes(s, pro)} min
             </Text>
             <View style={st.cStart}>
-              <Ionicons name={lock ? 'lock-closed' : 'play'} size={11} color={s.colors[1]} />
-              <Text style={[st.cStartText, { color: s.colors[1] }]}>{lock ? 'Unlock' : 'Start'}</Text>
+              <Ionicons name={lock ? 'lock-closed' : 'play'} size={11} color={C.onPrimary} />
+              <Text style={st.cStartText}>{lock ? 'Unlock' : 'Start'}</Text>
             </View>
             {lock && <LockBadge need={lock.need} style={st.cLock} />}
           </LinearGradient>
@@ -660,7 +660,7 @@ const st = StyleSheet.create({
   cTitle: { color: C.white, fontSize: 18, fontWeight: '700', maxWidth: 160, lineHeight: 22, letterSpacing: -0.3 },
   cSub: { color: 'rgba(255,255,255,0.9)', fontSize: 12, fontWeight: '600', marginTop: 4 },
   cStart: { position: 'absolute', left: 16, bottom: 14, flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: C.white, borderRadius: R.pill, paddingHorizontal: 12, height: 28 },
-  cStartText: { fontSize: 12, fontWeight: '800' },
+  cStartText: { fontSize: 12, fontWeight: '800', color: C.onPrimary },
   chips: { gap: 8, paddingHorizontal: 16, paddingBottom: 12 },
   focusRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, paddingHorizontal: 8, marginHorizontal: -8, borderRadius: R.sm },
   focusTile: { width: 52, height: 52, borderRadius: 16, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },

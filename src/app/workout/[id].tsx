@@ -5,9 +5,10 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
 import { AppState, BackHandler, ScrollView, StyleSheet, Text, View } from 'react-native';
-import Animated, { FadeIn, ZoomIn } from 'react-native-reanimated';
+import Animated, { Extrapolation, FadeIn, interpolate, useAnimatedScrollHandler, useAnimatedStyle, useSharedValue, ZoomIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
+import { scheduleOnRN } from 'react-native-worklets';
 
 import { LockedScreen } from '@/components/premium/locked';
 import { Button, Card, Dialog, EmptyState, enter, Header, nativeOnly, IconButton, IconTile, PressableScale, Ring, Screen, SectionTitle, T, tap, useToast, type IconName } from '@/components/ui';
@@ -15,7 +16,7 @@ import { workoutById, type Workout } from '@/data/fitness';
 import { pad } from '@/lib/calc';
 import { useStore } from '@/lib/store';
 import { useAccess } from '@/lib/useAccess';
-import { C, MOTION, R, shadow, shadowSm } from '@/theme';
+import { C, INK, MOTION, R, shadow, shadowSm } from '@/theme';
 import { Glyph } from '@/components/Glyph';
 import { WORKOUT_ART, WORKOUT_HERO } from '@/components/glyphs';
 
@@ -77,6 +78,34 @@ function WorkoutFlow({ w }: { w: Workout }) {
   const wasPaused = useRef(false);
   const loggedId = useRef<string | null>(null);
   const finishing = useRef(false);
+
+  // Overview header: pinned top bar that turns solid once the hero scrolls under it (UI thread; only the status-bar flip crosses to JS).
+  const y = useSharedValue(0);
+  const heroH = useSharedValue(360);
+  const solidSV = useSharedValue(false);
+  const [solid, setSolid] = useState(false);
+  const barH = insets.top + 54;
+  const onScroll = useAnimatedScrollHandler((e) => {
+    const off = e.contentOffset.y;
+    y.set(off);
+    const v = off > heroH.get() - barH - 40;
+    if (v !== solidSV.get()) {
+      solidSV.set(v);
+      scheduleOnRN(setSolid, v);
+    }
+  });
+  const barP = useAnimatedStyle(() => ({ opacity: interpolate(y.get(), [heroH.get() - barH - 80, heroH.get() - barH - 20], [0, 1], Extrapolation.CLAMP) }));
+  const barTitle = useAnimatedStyle(() => ({
+    opacity: interpolate(y.get(), [heroH.get() - barH - 50, heroH.get() - barH], [0, 1], Extrapolation.CLAMP),
+    transform: [{ translateY: interpolate(y.get(), [heroH.get() - barH - 50, heroH.get() - barH], [8, 0], Extrapolation.CLAMP) }],
+  }));
+  // Only as tall as the iOS pull-down bounce, so it never shows through the gaps between cards once scrolled.
+  const overscroll = useAnimatedStyle(() => ({ height: Math.max(0, 8 - y.get()) }));
+  const heroArt = useAnimatedStyle(() => ({ transform: [{ translateY: interpolate(y.get(), [0, heroH.get()], [0, heroH.get() * 0.35], Extrapolation.CLAMP) }] }));
+  const heroText = useAnimatedStyle(() => ({
+    opacity: interpolate(y.get(), [0, heroH.get() * 0.5], [1, 0], Extrapolation.CLAMP),
+    transform: [{ translateY: interpolate(y.get(), [0, heroH.get()], [0, heroH.get() * 0.2], Extrapolation.CLAMP) }],
+  }));
 
   const saved = state.classRun?.workoutId === w.id && state.classRun.idx >= 0 && state.classRun.idx < n ? state.classRun : null;
   const timesDone = state.workouts.filter((x) => x.workoutId === w.id).length;
@@ -150,6 +179,10 @@ function WorkoutFlow({ w }: { w: Workout }) {
 
   const start = (from?: Run) => {
     finishing.current = false;
+    // The overview remounts at the top when the player closes.
+    y.set(0);
+    solidSV.set(false);
+    setSolid(false);
     loggedId.current = null;
     setRun(from ?? freshRun(w));
     setPaused(false);
@@ -249,7 +282,7 @@ function WorkoutFlow({ w }: { w: Workout }) {
     const prepping = run.prep > 0;
     const next = prepping ? w.exercises[0] : w.exercises[run.idx + 1];
     return (
-      <LinearGradient colors={[w.color, C.navy]} start={{ x: 0, y: 0 }} end={{ x: 0.3, y: 1 }} style={[st.player, { paddingTop: insets.top + 6, paddingBottom: Math.max(insets.bottom, 16) }]}>
+      <LinearGradient colors={[C.graphite, C.navy]} start={{ x: 0, y: 0 }} end={{ x: 0.3, y: 1 }} style={[st.player, { paddingTop: insets.top + 6, paddingBottom: Math.max(insets.bottom, 16) }]}>
         <Stack.Screen options={{ gestureEnabled: false }} />
         <StatusBar style="light" />
         <View style={st.pTop}>
@@ -338,7 +371,7 @@ function WorkoutFlow({ w }: { w: Workout }) {
               setPaused((p) => !p);
             }}
             style={st.playBtn}>
-            <Ionicons name={paused ? 'play' : 'pause'} size={34} color={w.color} style={paused ? { marginLeft: 4 } : undefined} />
+            <Ionicons name={paused ? 'play' : 'pause'} size={34} color={C.onPrimary} style={paused ? { marginLeft: 4 } : undefined} />
           </PressableScale>
           <Ctrl icon="play-skip-forward" label={next || prepping ? 'Skip' : 'Finish'} onPress={skip} />
         </View>
@@ -379,20 +412,27 @@ function WorkoutFlow({ w }: { w: Workout }) {
     ['time', `${w.minutes} min`, 'Duration', C.water, C.waterSoft],
     ['flame', `${w.kcal} kcal`, 'Burn', C.accent, C.accentSoft],
     ['speedometer', w.level, 'Level', C.steps, C.stepsSoft],
-    ['barbell', w.equipment, 'Equipment', C.workout, C.workoutSoft],
+    ['barbell', w.equipment, 'Equipment', C.weight, C.weightSoft],
   ];
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
       <Stack.Screen options={{ gestureEnabled: true }} />
-      <StatusBar style="light" />
-      <ScrollView contentContainerStyle={{ paddingBottom: 110 + insets.bottom }} showsVerticalScrollIndicator={false}>
-        <LinearGradient colors={[w.color, w.color + 'C7']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[st.hero, { paddingTop: insets.top + 8 }]}>
+      <StatusBar style={solid ? 'dark' : 'light'} />
+      {/* Fills the iOS pull-down bounce above the hero with its colour instead of the canvas. */}
+      <Animated.View style={[st.overscroll, { backgroundColor: photo ? INK : C.graphite }, overscroll]} />
+      <Animated.ScrollView onScroll={onScroll} scrollEventThrottle={16} contentContainerStyle={{ paddingBottom: 110 + insets.bottom }} showsVerticalScrollIndicator={false}>
+        <LinearGradient
+          onLayout={(e) => heroH.set(e.nativeEvent.layout.height)}
+          colors={[C.graphite, C.navy]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={[st.hero, { paddingTop: insets.top + 8 }]}>
           {photo ? (
-            <>
+            <Animated.View pointerEvents="none" style={[st.heroPhoto, heroArt]}>
               <Image source={photo} style={st.heroPhoto} contentFit="cover" transition={220} />
               {/* Scrim: keeps the back button and the white title legible over any photo. */}
               <LinearGradient pointerEvents="none" colors={['rgba(12,10,9,0.38)', 'rgba(12,10,9,0.08)', 'rgba(12,10,9,0.74)']} locations={[0, 0.4, 1]} style={st.heroPhoto} />
-            </>
+            </Animated.View>
           ) : (
             <View pointerEvents="none" style={st.heroDeco}>
               <Svg width={320} height={320}>
@@ -402,12 +442,8 @@ function WorkoutFlow({ w }: { w: Workout }) {
               </Svg>
             </View>
           )}
-          <View style={st.heroTop}>
-            <IconButton icon="arrow-back" color={C.white} bg="rgba(255,255,255,0.2)" onPress={goBack} />
-            <View style={st.catPill}>
-              <Text style={st.catText}>{w.category}</Text>
-            </View>
-          </View>
+          {/* Room for the pinned top bar that floats over the hero. */}
+          <View style={st.heroTop} />
           {photo ? (
             <View style={st.heroPhotoGap} />
           ) : (
@@ -415,8 +451,10 @@ function WorkoutFlow({ w }: { w: Workout }) {
               <Glyph emoji={w.emoji} src={WORKOUT_ART[w.id]} size={WORKOUT_ART[w.id] ? 100 : 74} />
             </Animated.View>
           )}
-          <Text style={st.heroTitle}>{w.title}</Text>
-          <Text style={st.heroCoach}>{coachText}</Text>
+          <Animated.View style={[{ alignItems: 'center' }, heroText]}>
+            <Text style={st.heroTitle}>{w.title}</Text>
+            <Text style={st.heroCoach}>{coachText}</Text>
+          </Animated.View>
         </LinearGradient>
 
         <View style={{ paddingHorizontal: 16, marginTop: -30 }}>
@@ -456,8 +494,8 @@ function WorkoutFlow({ w }: { w: Workout }) {
                 <View key={i}>
                   {i > 0 && <View style={st.exBorder} />}
                   <View style={st.exRow}>
-                    <View style={[st.exNum, { backgroundColor: w.color + '1A' }]}>
-                      <Text style={[st.exNumText, { color: w.color }]}>{i + 1}</Text>
+                    <View style={[st.exNum, { backgroundColor: C.primarySoft }]}>
+                      <Text style={[st.exNumText, { color: C.onPrimary }]}>{i + 1}</Text>
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={st.exName}>{e.name}</Text>
@@ -477,7 +515,24 @@ function WorkoutFlow({ w }: { w: Workout }) {
             <Text style={[T.small, { flex: 1 }]}>Keep water nearby and stop if you feel dizzy or any sharp pain. Demo runs at {speed}× speed — tap the speed badge to change it.</Text>
           </Animated.View>
         </View>
-      </ScrollView>
+      </Animated.ScrollView>
+
+      {/* Pinned top bar: transparent over the hero, fades to solid white with the title on scroll. */}
+      <View style={[st.topBar, { paddingTop: insets.top + 6 }]} pointerEvents="box-none">
+        <Animated.View style={[StyleSheet.absoluteFill, st.topBarBg, barP]} pointerEvents="none" />
+        <TopIcon icon="arrow-back" label="Back" p={barP} onPress={goBack} />
+        <Animated.Text style={[st.topTitle, barTitle]} numberOfLines={1}>
+          {w.title}
+        </Animated.Text>
+        <View pointerEvents="none">
+          <View style={st.catPill}>
+            <Text style={st.catText}>{w.category}</Text>
+          </View>
+          <Animated.View style={[StyleSheet.absoluteFill, st.catPill, st.catPillDark, barP]}>
+            <Text style={[st.catText, { color: C.text }]}>{w.category}</Text>
+          </Animated.View>
+        </View>
+      </View>
       <View style={[st.sticky, { paddingBottom: Math.max(insets.bottom, 12) }]}>
         {saved ? (
           <View style={{ flexDirection: 'row', gap: 10 }}>
@@ -489,6 +544,29 @@ function WorkoutFlow({ w }: { w: Workout }) {
         )}
       </View>
     </View>
+  );
+}
+
+/** Back button that crossfades from white-on-photo to dark-on-white as the bar turns solid (`p` = bar opacity style). */
+function TopIcon({ icon, label, p, onPress }: { icon: IconName; label: string; p: ReturnType<typeof useAnimatedStyle>; onPress: () => void }) {
+  return (
+    <PressableScale
+      hitSlop={8}
+      scaleTo={0.9}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      onPress={() => {
+        tap();
+        onPress();
+      }}
+      style={st.topIcon}>
+      <View style={[StyleSheet.absoluteFill, st.topIconLight]}>
+        <Ionicons name={icon} size={21} color={C.white} />
+      </View>
+      <Animated.View style={[StyleSheet.absoluteFill, st.topIconDark, p]}>
+        <Ionicons name={icon} size={21} color={C.text} />
+      </Animated.View>
+    </PressableScale>
   );
 }
 
@@ -540,8 +618,16 @@ const st = StyleSheet.create({
   heroPhoto: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
   // Same footprint as the glyph disc (104 + 4 margin), so the hero keeps its height when a photo replaces it.
   heroPhotoGap: { height: 108 },
-  heroTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', alignSelf: 'stretch' },
+  heroTop: { height: 40 },
+  overscroll: { position: 'absolute', top: 0, left: 0, right: 0 },
+  topBar: { position: 'absolute', top: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 20, paddingBottom: 8 },
+  topBarBg: { backgroundColor: C.card, borderBottomWidth: StyleSheet.hairlineWidth * 2, borderBottomColor: C.borderSoft },
+  topTitle: { flex: 1, textAlign: 'center', fontSize: 17, fontWeight: '700', color: C.text, letterSpacing: -0.2 },
+  topIcon: { width: 40, height: 40 },
+  topIconLight: { alignItems: 'center', justifyContent: 'center', borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.2)' },
+  topIconDark: { alignItems: 'center', justifyContent: 'center', borderRadius: 20, backgroundColor: C.surfaceAlt },
   catPill: { backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: R.pill },
+  catPillDark: { backgroundColor: C.surfaceAlt },
   catText: { color: C.white, fontSize: 12, fontWeight: '700', letterSpacing: 0.2 },
   heroDisc: { width: 104, height: 104, borderRadius: 52, backgroundColor: 'rgba(255,255,255,0.18)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.26)', alignItems: 'center', justifyContent: 'center', marginTop: 4 },
   heroTitle: { color: C.white, fontSize: 28, fontWeight: '800', textAlign: 'center', marginTop: 12, letterSpacing: -0.7 },
@@ -589,7 +675,7 @@ const st = StyleSheet.create({
   controls: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around', marginTop: 20 },
   ctrl: { width: 52, height: 52, borderRadius: 26, backgroundColor: 'rgba(255,255,255,0.14)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.16)', alignItems: 'center', justifyContent: 'center' },
   ctrlLabel: { color: 'rgba(255,255,255,0.8)', fontSize: 12, fontWeight: '600' },
-  playBtn: { width: 80, height: 80, borderRadius: 40, backgroundColor: C.white, alignItems: 'center', justifyContent: 'center', ...shadow },
+  playBtn: { width: 80, height: 80, borderRadius: 40, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center', ...shadow },
 
   doneWrap: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
   doneDisc: { width: 128, height: 128, borderRadius: 64, backgroundColor: C.primarySoft, borderWidth: 6, borderColor: C.card, alignItems: 'center', justifyContent: 'center', marginBottom: 18, ...shadowSm },

@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -32,9 +33,9 @@ import { Button, Card, EmptyState, enter, Header, IconTile, layoutTransition, na
 import { exerciseById, sessionStats, type Session, type SessionItem } from '@/data/program';
 import { useStore } from '@/lib/store';
 import { useAccess } from '@/lib/useAccess';
-import { C, MOTION, R, shadowLg, shadowSm } from '@/theme';
+import { C, G, ink, INK, MOTION, R, shadowLg, shadowSm } from '@/theme';
 import { Glyph } from '@/components/Glyph';
-import { sessionArt } from '@/components/glyphs';
+import { FOCUS_HERO, sessionArt } from '@/components/glyphs';
 
 const goBack = () => (router.canGoBack() ? router.back() : router.replace('/fitness'));
 const restTips = (t: Accent): { icon: IconName; color: string; bg: string; t: string }[] => [
@@ -77,6 +78,8 @@ const rowKeys = (items: SessionItem[]) => {
   });
 };
 
+const BRAND: [string, string] = [C.primary, C.primary];
+
 function DayPlan({ session }: { session: Session }) {
   const { state, completeSession, setPlanEdit, clearResume, markTipSeen } = useStore();
   const access = useAccess();
@@ -85,7 +88,10 @@ function DayPlan({ session }: { session: Session }) {
   const toast = useToast();
   const insets = useSafeAreaInsets();
   const meta = sessionMeta(session);
-  const t = useMemo(() => accentTheme(session.colors), [session.colors]);
+  // A photo hero is neutral, so the screen takes the brand green (same as the Let's go CTA)
+  // instead of the session's card colour.
+  const photo = FOCUS_HERO[session.key];
+  const t = useMemo(() => accentTheme(photo ? BRAND : session.colors), [photo, session.colors]);
   const HERO = insets.top + 236;
 
   // Pro sees only the exercises with a real-athlete demonstration, so the list the user
@@ -198,16 +204,25 @@ function DayPlan({ session }: { session: Session }) {
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
       <StatusBar style={solid ? 'dark' : 'light'} />
-      <View style={[s.overscroll, { height: HERO, backgroundColor: session.colors[0] }]} />
+      <View style={[s.overscroll, { height: HERO, backgroundColor: photo ? INK : session.colors[0] }]} />
       <Animated.ScrollView onScroll={onScroll} scrollEventThrottle={16} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 150 + insets.bottom }}>
-        <LinearGradient colors={session.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[s.hero, { height: HERO, paddingTop: insets.top + 60 }]}>
-          <View pointerEvents="none" style={s.heroDeco}>
-            <Svg width={300} height={300}>
-              <Circle cx={150} cy={150} r={150} fill={C.white} opacity={0.08} />
-              <Circle cx={150} cy={150} r={98} fill="none" stroke={C.white} strokeOpacity={0.16} strokeWidth={1.5} />
-              <Circle cx={150} cy={150} r={46} fill={C.white} opacity={0.07} />
-            </Svg>
-          </View>
+        <LinearGradient colors={photo ? G.photo : session.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[s.hero, { height: HERO, paddingTop: insets.top + 60 }]}>
+          {photo ? (
+            <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, heroArt]}>
+              <Image source={photo} style={StyleSheet.absoluteFill} contentFit="cover" transition={220} />
+              {/* Neutral scrims: status bar + buttons on top, title on the left, clearing to the athlete */}
+              <LinearGradient colors={[ink(0.72), ink(0.4), ink(0)]} locations={[0, 0.42, 0.78]} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={StyleSheet.absoluteFill} />
+              <LinearGradient colors={[ink(0.5), ink(0), ink(0), ink(0.35)]} locations={[0, 0.32, 0.72, 1]} style={StyleSheet.absoluteFill} />
+            </Animated.View>
+          ) : (
+            <View pointerEvents="none" style={s.heroDeco}>
+              <Svg width={300} height={300}>
+                <Circle cx={150} cy={150} r={150} fill={C.white} opacity={0.08} />
+                <Circle cx={150} cy={150} r={98} fill="none" stroke={C.white} strokeOpacity={0.16} strokeWidth={1.5} />
+                <Circle cx={150} cy={150} r={46} fill={C.white} opacity={0.07} />
+              </Svg>
+            </View>
+          )}
           <Animated.View style={[{ flex: 1 }, heroContent]}>
             <View style={{ paddingRight: 116 }}>
               <View style={s.eyebrowPill}>
@@ -241,9 +256,11 @@ function DayPlan({ session }: { session: Session }) {
                 </View>
               )}
             </View>
-            <Animated.View style={[s.heroDisc, heroArt]}>
-              <Glyph emoji={session.emoji} src={sessionArt(session.key)} size={sessionArt(session.key) ? 120 : 74} />
-            </Animated.View>
+            {!photo && (
+              <Animated.View style={[s.heroDisc, heroArt]}>
+                <Glyph emoji={session.emoji} src={sessionArt(session.key)} size={sessionArt(session.key) ? 120 : 74} />
+              </Animated.View>
+            )}
           </Animated.View>
         </LinearGradient>
 

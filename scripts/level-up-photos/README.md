@@ -3,7 +3,9 @@
 The six cards in the **Level up** carousel (`src/app/(tabs)/fitness.tsx`) show an athlete photo
 behind the card's brand gradient: solid brand colour on the left under the title, clearing to the
 photo on the right. Photos live in `assets/images/focus/<name>.webp` and are wired up in
-`FOCUS_PHOTO` (`src/components/glyphs.ts`), keyed by the focus session key. A session with no photo
+`FOCUS_PHOTO` (`src/components/glyphs.ts`), keyed by the focus session key. The same photo, at
+full-screen 3:2 (`<name>-hero.webp`, `FOCUS_HERO`), is the hero of the session detail screen
+(`src/app/program-day.tsx`), which then switches its accents from the card colour to the brand green. A session with no photo
 keeps the gradient + mascot artwork card, so the carousel never breaks while the set is incomplete.
 
 ## Pipeline
@@ -17,10 +19,10 @@ keeps the gradient + mascot artwork card, so the carousel never breaks while the
    the prompt on stdin (`-` as the prompt argument): `-i` is variadic and would otherwise swallow
    the prompt as another image path.
 2. Save each result as `<name>.(png|jpg)` in a scratch folder (`rock-hard.png`, ...).
-3. `python3 scripts/level-up-photos/optimize.py <scratch folder>` — crops to the card's 1.6:1
-   ratio (keeping the right side, where the athlete is), resizes to 720px wide and writes optimised
-   WebP into `assets/images/focus/`. It prints the exact `FOCUS_PHOTO` lines to paste into
-   `src/components/glyphs.ts`.
+3. `python3 scripts/level-up-photos/optimize.py <scratch folder>` — writes the card (1.6:1 crop
+   keeping the right side, where the athlete is, 720px wide) and the detail hero (3:2, 1170px wide)
+   as optimised WebP into `assets/images/focus/`. It prints the `FOCUS_PHOTO` / `FOCUS_HERO` lines
+   to paste into `src/components/glyphs.ts`.
 4. Add the generation to `assets/images/CREDITS.md`.
 
 Reject and regenerate anything with distorted hands or faces, wrong limb counts, visible text or

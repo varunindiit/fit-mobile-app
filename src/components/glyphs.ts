@@ -267,6 +267,16 @@ export const FOCUS_PHOTO: Record<string, number> = {
   'focus:ultimate-core': require('@/assets/images/focus/ultimate-core.webp'),
 };
 
+/** The same photography at full-screen width and 3:2, for the session detail hero. Falls back like `FOCUS_PHOTO`. */
+export const FOCUS_HERO: Record<string, number> = {
+  'focus:rock-hard': require('@/assets/images/focus/rock-hard-hero.webp'),
+  'focus:intense-shred': require('@/assets/images/focus/intense-shred-hero.webp'),
+  'focus:stronger-abs': require('@/assets/images/focus/stronger-abs-hero.webp'),
+  'focus:chest-dumbbell': require('@/assets/images/focus/chest-dumbbell-hero.webp'),
+  'focus:leg-day': require('@/assets/images/focus/leg-day-hero.webp'),
+  'focus:ultimate-core': require('@/assets/images/focus/ultimate-core-hero.webp'),
+};
+
 /** The mascot resting, shown on every rest day instead of the generic 😴 glyph. */
 export const REST_ART: number = require('@/assets/images/glyphs/p-yoga.webp');
 
