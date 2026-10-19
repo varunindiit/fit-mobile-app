@@ -4,6 +4,7 @@ import { act, renderHook, waitFor } from '@testing-library/react-native';
 import React from 'react';
 import { AppState } from 'react-native';
 
+import { DEFAULT_TRAINER_ID } from '@/data/trainers';
 import { addDays, todayKey } from '../calc';
 import { STORAGE_KEY } from '../persist';
 import { DEMO_DAYS } from '../demo';
@@ -309,6 +310,32 @@ describe('actions handle edge cases', () => {
 });
 
 describe('Pro trainer slice', () => {
+  it('a Pro purchase assigns a coach, Smart does not, and an assigned coach is kept', async () => {
+    const h = await launch();
+    await act(async () => h.result.current.subscribe('smart', 3, 1));
+    expect(h.result.current.state.trainerId).toBeNull();
+
+    await act(async () => h.result.current.subscribe('pro', 3, 1));
+    expect(h.result.current.state.trainerId).toBe(DEFAULT_TRAINER_ID);
+
+    // A coach the member already has is never swapped out by a renewal or a restore.
+    await act(async () => h.result.current.assignTrainer('kavya-iyer'));
+    await act(async () => h.result.current.setPremium(null));
+    await act(async () => h.result.current.setPremium({ tier: 'pro', months: 3, since: todayKey() }));
+    expect(h.result.current.state.trainerId).toBe('kavya-iyer');
+  });
+
+  it('a saved Pro account without a coach is assigned one on the next launch', async () => {
+    let h = await launch();
+    await act(async () => h.result.current.subscribe('pro', 3, 1));
+    await act(async () => h.result.current.flush());
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ ...(await saved()), trainerId: null }));
+    await h.unmount();
+
+    h = await launch();
+    expect(h.result.current.state.trainerId).toBe(DEFAULT_TRAINER_ID);
+  });
+
   it('messages append, advance delivery state and survive a restart', async () => {
     let h = await launch();
     let id = '';

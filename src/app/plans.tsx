@@ -560,7 +560,7 @@ function Success({ tier, months }: { tier: PlanTier; months: number }) {
               <TrainerAvatar trainer={coach} size={44} />
             </View>
             <Text style={st.coachNoteText}>
-              {coach.name} is your personal trainer. Your first week is already written — say hello whenever you are ready.
+              {coach.name} is your coach. Your first week is already written — say hello whenever you are ready.
             </Text>
           </Animated.View>
         )}

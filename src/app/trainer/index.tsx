@@ -72,7 +72,7 @@ export default function TrainerDashboardScreen() {
             <View style={st.heroTop}>
               <TrainerAvatar trainer={trainer} size={68} online={avail.online} />
               <View style={{ flex: 1 }}>
-                <Text style={st.heroEyebrow}>MY PERSONAL TRAINER</Text>
+                <Text style={st.heroEyebrow}>MY COACH</Text>
                 <Text style={st.heroName} numberOfLines={1}>
                   {trainer.name}
                 </Text>
@@ -104,6 +104,12 @@ export default function TrainerDashboardScreen() {
             <View style={st.heroFoot}>
               <AvailabilityLine trainer={trainer} style={st.availPill} />
               <View style={{ flex: 1 }} />
+              <PressableScale scaleTo={0.94} accessibilityRole="button" accessibilityLabel="Request a session with your trainer" onPress={requestSession} style={st.requestBtn}>
+                <Ionicons name="calendar-outline" size={15} color={C.white} />
+                <Text style={st.requestText} numberOfLines={1}>
+                  Request session
+                </Text>
+              </PressableScale>
               <TrainerAction icon="chatbubble-ellipses" label="Message your trainer" color={C.primary} onPress={openChat} />
             </View>
           </LinearGradient>
@@ -337,7 +343,9 @@ const st = StyleSheet.create({
   specs: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 12 },
   spec: { color: 'rgba(255,255,255,0.82)', fontSize: 11.5, fontWeight: '700', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: R.pill, paddingHorizontal: 10, paddingVertical: 5, overflow: 'hidden' },
   heroFoot: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 18 },
-  availPill: { backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: R.pill, paddingHorizontal: 11, height: 30, maxWidth: 150 },
+  availPill: { backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: R.pill, paddingHorizontal: 11, height: 30, maxWidth: 150, flexShrink: 1 },
+  requestBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 40, paddingHorizontal: 14, borderRadius: R.pill, backgroundColor: 'rgba(255,255,255,0.14)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)' },
+  requestText: { color: C.white, fontSize: 13, fontWeight: '800', letterSpacing: -0.1 },
 
   restCard: { flexDirection: 'row', alignItems: 'center', gap: 14 },
 

@@ -610,7 +610,7 @@ export function ProfileBody({ mode }: { mode: "tab" | "stack" }) {
                   icon="person"
                   color={coach.color}
                   bg={tint(coach.color)}
-                  title="Your personal trainer"
+                  title="Your coach"
                   subtitle={`${coach.name} · ${trainerFirstName(coach)}'s plans, chat & calls`}
                   onPress={() => router.push("/trainer")}
                 />

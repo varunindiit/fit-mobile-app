@@ -341,7 +341,7 @@ const HELP = [
   { q: 'How do I log food faster?', a: 'Tap the + button and choose Snap to photograph your plate, or search from 50+ Indian dishes. Portions use familiar units like katori, roti and plate.' },
   { q: 'Can I change my goal later?', a: 'Yes. Go to Profile → Edit goals. Your calorie budget, macros and goal date are recalculated instantly.' },
   { q: `How do I sync steps from ${HEALTH_APP}?`, a: `Turn on ${HEALTH_APP} under Connected apps. Steps and workouts then sync automatically in the background.` },
-  { q: 'What do I get with Premium?', a: 'Smart unlocks unlimited Saathi chats, Snap scans and personalised plans. Pro adds a dedicated nutritionist and personal trainer with weekly video check-ins.' },
+  { q: 'What do I get with Premium?', a: 'Smart unlocks unlimited Saathi chats, Snap scans and personalised plans. Pro adds a dedicated nutritionist and coach with weekly video check-ins.' },
 ];
 
 export function HelpSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {

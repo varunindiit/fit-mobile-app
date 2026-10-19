@@ -104,7 +104,7 @@ const ROWS: { feature: Feature; label: string; partial?: string }[] = [
   { feature: 'library.full', label: 'Full workout library', partial: 'Beginner' },
   { feature: 'progress.full', label: 'Progress & analytics', partial: 'Recent' },
   { feature: 'plan.customise', label: 'Customise any workout' },
-  { feature: 'trainer', label: 'Personal trainer' },
+  { feature: 'trainer', label: 'Your coach' },
   { feature: 'trainer.chat', label: 'Trainer chat' },
   { feature: 'trainer.call', label: 'Trainer audio call' },
   { feature: 'trainer.call', label: 'Trainer video call' },

@@ -10,6 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
 import Svg, { Circle } from 'react-native-svg';
 
+import { AssignedCoachCard } from '@/components/home/AssignedCoachCard';
 import { CalorieCard } from '@/components/home/CalorieCard';
 import { SnapPlateArt } from '@/components/home/SnapPlateArt';
 import { WaterBottle } from '@/components/home/WaterBottle';
@@ -112,8 +113,9 @@ export default function Home() {
   const access = useAccess();
   // Pro members land on their coaching dashboard; Smart on the AI coach; Free on the paywall.
   const coach = trainerById(state.trainerId);
+  const coachUnread = state.trainerChat.filter((m) => m.from === 'trainer' && m.status !== 'read').length;
   const premiumCard = access.can('trainer')
-    ? { href: '/trainer' as const, label: 'YOUR COACH', title: `${trainerFirstName(coach)} is your personal trainer`, sub: 'Plans, chat and calls — all in one place', cta: 'Open coaching' }
+    ? { href: '/trainer' as const, label: 'YOUR COACH', title: `${trainerFirstName(coach)} is your coach`, sub: 'Plans, chat and calls — all in one place', cta: 'Open coaching' }
     : premiumTier
       ? { href: '/coach' as const, label: 'ACTIVE PLAN', title: `You're on ${premiumTier.name}`, sub: 'Ask your coach anything, anytime', cta: 'Talk to coach' }
       : { href: '/plans' as const, label: 'FITTELO PRO', title: 'Get a personal nutritionist & trainer', sub: 'Custom plans · weekly check-ins · up to 40% off', cta: 'Explore plans' };
@@ -332,6 +334,13 @@ export default function Home() {
             </View>
           </PressableScale>
         </Animated.View>
+
+        {/* Pro: the coach assigned on purchase. The entitlement layer decides — Free and Smart never see it. */}
+        {access.can('trainer') && (
+          <Animated.View entering={enter(2)}>
+            <AssignedCoachCard trainerId={state.trainerId} unread={coachUnread} />
+          </Animated.View>
+        )}
 
         {/* Saathi insight (AI), as a coach message */}
         <Animated.View entering={enter(2)}>

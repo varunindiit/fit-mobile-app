@@ -4,6 +4,7 @@ import { AppState as RNAppState, Platform } from 'react-native';
 import { foodById, type MealKey } from '@/data/foods';
 import type { PlanTier } from '@/data/plans';
 import { EXERCISES, type ProgramId, type SessionItem } from '@/data/program';
+import { DEFAULT_TRAINER_ID } from '@/data/trainers';
 import { addDays, parseKey, round1, targets, todayKey } from './calc';
 import { demoSeed } from './demo';
 import { loadState, mergeTyped, saveState } from './persist';
@@ -282,6 +283,14 @@ const EXERCISE_IDS = new Set(EXERCISES.map((e) => e.id));
 const SAVE_DELAY = 300;
 
 /**
+ * A Pro plan comes with a personal coach, so one is assigned the moment Pro is active:
+ * on purchase, on a restore, and on a saved account loading back in. An existing coach
+ * is never replaced — swapping one is `assignTrainer`'s job.
+ */
+const withCoach = (s: AppState): AppState =>
+  !s.trainerId && s.premium?.tier === 'pro' && isPremiumActive(s.premium) ? { ...s, trainerId: DEFAULT_TRAINER_ID } : s;
+
+/**
  * Fill a brand-new account with the 30-day demo history, leaving today half-logged.
  * Runs once per install: anyone who already has logs only gets the flag set.
  */
@@ -330,7 +339,7 @@ function useAppStore() {
     loadState(INITIAL)
       // An onboarded account with no logs yet (e.g. saved before the demo history existed) gets it now.
       .then((saved) => setState(() => {
-        const s = sanitize(saved);
+        const s = withCoach(sanitize(saved));
         return s.onboarded ? withDemo(s) : s;
       }))
       .catch((e) => {
@@ -505,10 +514,10 @@ function useAppStore() {
           const today = todayKey();
           const extend = s.premium && s.premium.tier === tier && isPremiumActive(s.premium, today);
           const premium: Premium = extend ? { tier, since: s.premium!.since, months: s.premium!.months + months } : { tier, months, since: today };
-          return { ...s, premium, purchases: [...s.purchases, { tier, months, date: today, amount }] };
+          return withCoach({ ...s, premium, purchases: [...s.purchases, { tier, months, date: today, amount }] });
         }),
       /** Replaces the plan outright, e.g. with the one an account brings along at log-in (null = Free). */
-      setPremium: (premium: Premium | null) => update((s) => ({ ...s, premium })),
+      setPremium: (premium: Premium | null) => update((s) => withCoach({ ...s, premium })),
       cancelPremium: () => update((s) => (s.premium ? { ...s, premium: { ...s.premium, cancelledAt: todayKey() } } : s)),
       /** The Pro welcome has been shown for the current activation; don't show it again. */
       markProIntroSeen: () => update((s) => (s.premium ? { ...s, proIntroFor: s.premium.since } : s)),

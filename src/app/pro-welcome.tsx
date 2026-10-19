@@ -181,9 +181,9 @@ export default function ProWelcomeScreen() {
             Your fitness journey just got personal. You now have your own dedicated fitness coach to guide you every step of the way.
           </Animated.Text>
 
-          {/* 2 — Meet your personal trainer. Always the coach already assigned in the store. */}
+          {/* 2 — Meet your coach. Always the coach already assigned in the store. */}
           <Animated.View entering={enter(5)} style={st.sectionLabelWrap}>
-            <Text style={st.sectionLabel}>MEET YOUR PERSONAL TRAINER</Text>
+            <Text style={st.sectionLabel}>MEET YOUR COACH</Text>
           </Animated.View>
           <Animated.View entering={enter(6)} style={st.coachCard}>
             <View style={st.coachTop}>

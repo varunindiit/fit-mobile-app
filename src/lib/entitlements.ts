@@ -135,7 +135,7 @@ export function sessionLock(tier: Tier, key: string): Lock | null {
   if (key.startsWith('trainer:'))
     return can(tier, 'trainer.plans')
       ? null
-      : upgradeLock('pro', 'Trainer plans are a Pro feature', 'Fittelo Pro assigns you a personal trainer who builds your plan, checks your form and answers you in chat.', 'PRO');
+      : upgradeLock('pro', 'Trainer plans are a Pro feature', 'Fittelo Pro assigns you a coach who builds your plan, checks your form and answers you in chat.', 'PRO');
 
   if (key.startsWith('program:')) {
     const day = Number(key.split(':')[2]);
@@ -172,7 +172,7 @@ export function featureLock(tier: Tier, f: Feature): Lock | null {
     'progress.full': ['Full analytics with Smart', 'Smart keeps your complete history — weight, calories, workouts and trends over time.'],
     'library.full': ['Full workout library with Smart', 'Unlock every body-focus workout and guided class at all levels.'],
     'program.allDays': ['Unlock all 30 days', `The Free plan includes Day ${FREE_PROGRAM_DAYS}. Smart unlocks the whole program.`],
-    trainer: ['Your personal trainer', 'Pro assigns you a certified trainer with a coaching dashboard, chat and calls.'],
+    trainer: ['Your coach', 'Pro assigns you a certified trainer with a coaching dashboard, chat and calls.'],
     'trainer.chat': ['Chat with your trainer', 'Pro members message their trainer and get workouts built for them.'],
     'trainer.call': ['Call your trainer', 'Pro members can start an audio or video session with their trainer.'],
     'trainer.demos': ['Real-athlete demonstrations', 'Pro swaps the illustrated animations for photo demonstrations of each move.'],
