@@ -20,7 +20,6 @@ import {
 import {
   Button,
   Card,
-  Chip,
   CountUp,
   Dialog,
   Divider,
@@ -53,7 +52,6 @@ import { BackupCard } from "./backup";
 import {
   AboutSheet,
   Avatar,
-  CONDITIONS,
   Decor,
   DIETS,
   fmtFull,
@@ -69,23 +67,20 @@ import {
   PlanBadge,
   planEnd,
   PREMIUM_BG,
-  realConditions,
   realRestrictions,
   shared,
   tint,
 } from "./shared";
-import { LanguageSheet, RateSheet, WorkoutSettingsSheet } from "./sheets";
+import { RateSheet, WorkoutSettingsSheet } from "./sheets";
 
 const LOGO = require("@/assets/images/logo-mark.png");
 
 type SheetKind =
   | null
   | "diet"
-  | "medical"
   | "help"
   | "about"
   | "workout"
-  | "language"
   | "rate";
 type DialogKind = null | "restart" | "reset" | "logout";
 
@@ -168,7 +163,6 @@ export function ProfileBody({ mode }: { mode: "tab" | "stack" }) {
   const units = state.settings.units;
   const [sheet, setSheet] = useState<SheetKind>(null);
   const [dialog, setDialog] = useState<DialogKind>(null);
-  const [conds, setConds] = useState<string[]>([]);
 
   const scrollY = useSharedValue(0);
   const onScroll = useAnimatedScrollHandler((e) => {
@@ -182,7 +176,6 @@ export function ProfileBody({ mode }: { mode: "tab" | "stack" }) {
   const b = bmiLabel(t.bmi);
   const goal = goalSummary(p, t, units);
   const restrictions = realRestrictions(p.restrictions);
-  const conditions = realConditions(p.conditions);
   const premium = isPremiumActive(state.premium) ? state.premium : null;
   const access = useAccess();
   const coach = trainerById(state.trainerId);
@@ -190,20 +183,11 @@ export function ProfileBody({ mode }: { mode: "tab" | "stack" }) {
   const planTill = premium
     ? fmtFull(planEnd(premium.since, premium.months))
     : "";
-  const condOptions = Array.from(new Set([...CONDITIONS, ...conditions]));
   const program = programById(p.program);
   const done = Math.min(PROGRAM_DAYS, state.programProgress[program.id] ?? 0);
   const nextDay = Math.min(PROGRAM_DAYS, done + 1);
   const streak = workoutStreak(state);
 
-  const openMedical = () => {
-    setConds(conditions);
-    setSheet("medical");
-  };
-  const go = (href: string) => {
-    close();
-    setTimeout(() => router.push(href), 250);
-  };
   const confirmDialog = () => {
     const kind = dialog;
     setDialog(null);
@@ -643,15 +627,6 @@ export function ProfileBody({ mode }: { mode: "tab" | "stack" }) {
             />
             <Divider style={shared.inset} />
             <Row
-              icon="language"
-              color={C.steps}
-              bg={C.stepsSoft}
-              title="Language"
-              subtitle={state.settings.language}
-              onPress={() => setSheet("language")}
-            />
-            <Divider style={shared.inset} />
-            <Row
               icon="leaf"
               color={C.weight}
               bg={C.weightSoft}
@@ -683,17 +658,6 @@ export function ProfileBody({ mode }: { mode: "tab" | "stack" }) {
                 ))}
               </View>
             )}
-            <Divider style={shared.inset} />
-            <Row
-              icon="medkit"
-              color={C.danger}
-              bg={C.dangerSoft}
-              title="Health conditions"
-              subtitle={
-                conditions.length ? conditions.join(", ") : "None reported"
-              }
-              onPress={openMedical}
-            />
             <Divider style={shared.inset} />
             <Row
               icon="notifications"
@@ -842,80 +806,7 @@ export function ProfileBody({ mode }: { mode: "tab" | "stack" }) {
         ))}
       </Sheet>
 
-      {/* Medical sheet */}
-      <Sheet
-        visible={sheet === "medical"}
-        onClose={close}
-        title="Medical conditions"
-        scroll
-      >
-        <Text style={[T.small, { marginBottom: 14 }]}>
-          Your plan avoids foods that may worsen these, and your Pro coach sees
-          them before your first call.
-        </Text>
-        <View style={st.condWrap}>
-          {condOptions.map((c) => (
-            <Chip
-              key={c}
-              label={c}
-              selected={conds.includes(c)}
-              color={C.danger}
-              onPress={() =>
-                setConds((x) =>
-                  x.includes(c) ? x.filter((y) => y !== c) : [...x, c],
-                )
-              }
-            />
-          ))}
-        </View>
-        <PressableScale
-          scaleTo={0.98}
-          accessibilityRole="button"
-          onPress={() => {
-            tap();
-            go("/plans?tier=pro");
-          }}
-          style={{ marginTop: 18 }}
-        >
-          <LinearGradient
-            colors={PREMIUM_BG}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={st.proHint}
-          >
-            <Decor />
-            <LinearGradient
-              colors={GOLD}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={st.proHintIcon}
-            >
-              <Ionicons name="medkit" size={18} color={C.navy} />
-            </LinearGradient>
-            <View style={{ flex: 1 }}>
-              <Text style={st.proHintTitle}>
-                Managing diabetes, PCOS or thyroid?
-              </Text>
-              <Text style={st.proHintSub}>
-                Get a certified specialist with Fittelo Pro
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={C.gold} />
-          </LinearGradient>
-        </PressableScale>
-        <Button
-          title="Save"
-          style={{ marginTop: 16 }}
-          onPress={() => {
-            updateProfile({ conditions: conds.length ? conds : ["None"] });
-            toast("Medical conditions updated", "medkit");
-            close();
-          }}
-        />
-      </Sheet>
-
       <WorkoutSettingsSheet visible={sheet === "workout"} onClose={close} />
-      <LanguageSheet visible={sheet === "language"} onClose={close} />
       <RateSheet visible={sheet === "rate"} onClose={close} />
       <HelpSheet visible={sheet === "help"} onClose={close} />
       <AboutSheet visible={sheet === "about"} onClose={close} />
@@ -1252,25 +1143,6 @@ const st = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth * 2,
     borderColor: C.border,
   },
-  condWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  proHint: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    padding: 14,
-    borderRadius: R.md,
-    overflow: "hidden",
-  },
-  proHintIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 13,
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden",
-  },
-  proHintTitle: { fontSize: 14, fontWeight: "700", color: C.white },
-  proHintSub: { fontSize: 13, color: "rgba(255,255,255,0.75)", marginTop: 2 },
   demoCard: {
     borderRadius: R.lg,
     borderWidth: 1,

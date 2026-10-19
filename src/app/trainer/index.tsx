@@ -11,6 +11,7 @@ import { AvailabilityLine, TrainerAction, TrainerAvatar, TrainerPlanCard, openPl
 import { Card, CountUp, Divider, Header, IconTile, ListRow, Pill, PressableScale, ProgressBar, Screen, SectionTitle, T, enter, tap, type IconName } from '@/components/ui';
 import { planOnDay, weekPlan, type TrainerPlan } from '@/data/trainerPlans';
 import { WEEKDAYS, availability, bookedFor, firstName, trainerById, weekdayOf, type BookedSession, type Trainer } from '@/data/trainers';
+import { todayKey } from '@/lib/calc';
 import { useStore } from '@/lib/store';
 import { useAccess } from '@/lib/useAccess';
 import { C, G, R, fade, shadow, shadowSm } from '@/theme';
@@ -19,7 +20,10 @@ const openChat = () => {
   tap();
   router.push('/trainer/chat');
 };
-const openCall = (mode: 'audio' | 'video') => router.push({ pathname: '/trainer/call', params: { mode } });
+const requestSession = () => {
+  tap();
+  router.push('/trainer/request-session');
+};
 
 /** "Today" / "Tomorrow" / the weekday a booking lands on. */
 const whenLabel = (inDays: number) => {
@@ -41,7 +45,13 @@ export default function TrainerDashboardScreen() {
   const today = weekdayOf();
   const todayPlan = planOnDay(trainer.id, today);
   const plans = weekPlan(trainer.id);
-  const bookings = bookedFor(trainer.id);
+  const bookings = [
+    ...bookedFor(trainer.id).map((booking) => ({ ...booking, status: 'confirmed' as const })),
+    ...state.oneOnOneSessions
+      // A slot that has already passed is history, not an upcoming session.
+      .filter((session) => session.trainerId === trainer.id && session.date >= todayKey())
+      .map((session) => ({ ...session, inDays: Math.max(0, Math.round((new Date(`${session.date}T12:00:00`).getTime() - new Date().setHours(0, 0, 0, 0)) / 86_400_000)) })),
+  ].sort((a, b) => a.inDays - b.inDays || a.time.localeCompare(b.time));
 
   // A coach workout counts as done once any log carries its session key.
   const doneKeys = useMemo(() => new Set(state.workouts.flatMap((w) => (w.sessionKey ? [w.sessionKey] : []))), [state.workouts]);
@@ -95,8 +105,6 @@ export default function TrainerDashboardScreen() {
               <AvailabilityLine trainer={trainer} style={st.availPill} />
               <View style={{ flex: 1 }} />
               <TrainerAction icon="chatbubble-ellipses" label="Message your trainer" color={C.primary} onPress={openChat} />
-              <TrainerAction icon="call" label="Audio session" color="rgba(255,255,255,0.16)" onPress={() => openCall('audio')} />
-              <TrainerAction icon="videocam" label="Video session" color="rgba(255,255,255,0.16)" onPress={() => openCall('video')} />
             </View>
           </LinearGradient>
         </Animated.View>
@@ -142,13 +150,13 @@ export default function TrainerDashboardScreen() {
           </Card>
         </Animated.View>
 
-        <SectionTitle title="Upcoming sessions" />
+        <SectionTitle title="Upcoming sessions" action="Request session" onAction={requestSession} />
         <Animated.View entering={enter(3)}>
           <Card>
             {bookings.map((b, i) => (
               <Booking key={b.id} booking={b} first={i === 0} />
             ))}
-            <Text style={st.demoNote}>Demo bookings for the Pro preview — nothing here is on a real calendar.</Text>
+            <Text style={st.demoNote}>A request stays pending until your coach confirms it in your chat — open the chat to see their reply. Audio and video calls run from the chat.</Text>
           </Card>
         </Animated.View>
 
@@ -271,8 +279,9 @@ function RestCard({ trainer, next }: { trainer: Trainer; next?: TrainerPlan }) {
   );
 }
 
-function Booking({ booking, first }: { booking: BookedSession; first: boolean }) {
+function Booking({ booking, first }: { booking: BookedSession & { status: 'requested' | 'confirmed' }; first: boolean }) {
   const video = booking.kind === 'video';
+  const requested = booking.status === 'requested';
   return (
     <View style={[st.bookRow, !first && st.rowBorder]}>
       <View style={st.bookWhen}>
@@ -290,17 +299,13 @@ function Booking({ booking, first }: { booking: BookedSession; first: boolean })
           </Text>
         </View>
       </View>
-      <PressableScale
-        scaleTo={0.95}
-        accessibilityRole="button"
-        accessibilityLabel={`Join ${booking.topic}`}
-        onPress={() => {
-          tap();
-          openCall(booking.kind);
-        }}
-        style={st.join}>
-        <Text style={st.joinText}>Join</Text>
-      </PressableScale>
+      {requested ? (
+        <View style={st.pending}><Text style={st.pendingText}>Pending</Text></View>
+      ) : (
+        <PressableScale scaleTo={0.95} accessibilityRole="button" accessibilityLabel={`Open chat for ${booking.topic}`} onPress={openChat} style={st.join}>
+          <Text style={st.joinText}>Open chat</Text>
+        </PressableScale>
+      )}
     </View>
   );
 }
@@ -355,6 +360,8 @@ const st = StyleSheet.create({
   bookMetaText: { fontSize: 11.5, fontWeight: '600', color: C.muted, fontVariant: ['tabular-nums'] },
   join: { height: 32, paddingHorizontal: 14, borderRadius: R.pill, backgroundColor: C.primaryBright, alignItems: 'center', justifyContent: 'center', ...shadowSm },
   joinText: { fontSize: 13, fontWeight: '800', color: C.onPrimary, letterSpacing: 0.2 },
+  pending: { height: 30, paddingHorizontal: 10, borderRadius: R.pill, backgroundColor: C.warningSoft, alignItems: 'center', justifyContent: 'center' },
+  pendingText: { fontSize: 11, fontWeight: '800', color: C.warning },
   demoNote: { fontSize: 11, fontWeight: '600', color: C.muted, lineHeight: 16, marginTop: 10 },
 
   stats: { flexDirection: 'row', alignItems: 'flex-start' },

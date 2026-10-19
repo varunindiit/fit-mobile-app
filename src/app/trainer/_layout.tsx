@@ -28,6 +28,7 @@ export default function TrainerLayout() {
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: C.bg }, animation: 'ios_from_right' }}>
       <Stack.Screen name="index" />
       <Stack.Screen name="chat" />
+      <Stack.Screen name="request-session" />
       <Stack.Screen name="call" options={{ presentation: 'fullScreenModal', animation: 'fade', gestureEnabled: false }} />
     </Stack>
   );

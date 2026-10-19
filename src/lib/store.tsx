@@ -27,7 +27,6 @@ export type Profile = {
   diet: string;
   cuisines: string[];
   restrictions: string[];
-  conditions: string[];
   sleep: string;
   waterHabit: string;
   challenges: string[];
@@ -66,6 +65,19 @@ export type TrainerMsg = {
 };
 /** A finished (simulated) call with the trainer, kept so the dashboard can show history. */
 export type CallSession = { id: string; trainerId: string; kind: 'audio' | 'video'; at: number; seconds: number; outcome: 'ended' | 'missed' | 'declined' };
+/** A member's preferred slot for a one-to-one session. Only a coach may confirm it. */
+export type OneOnOneSession = {
+  id: string;
+  trainerId: string;
+  date: string;
+  time: string;
+  minutes: number;
+  kind: 'audio' | 'video';
+  topic: string;
+  status: 'requested' | 'confirmed';
+  requestedAt: number;
+  confirmedAt?: number;
+};
 export type WorkoutLog = { id: string; workoutId?: string; sessionKey?: string; title: string; emoji: string; minutes: number; kcal: number; date: string };
 export type WeightEntry = { id: string; date: string; kg: number };
 /** `cancelledAt` keeps access until the paid period ends. */
@@ -76,7 +88,6 @@ export type Settings = {
   waterReminders: boolean;
   weighInReminders: boolean;
   units: 'kg' | 'lb';
-  language: string;
   restSeconds: number;
   coachVoice: boolean;
   music: boolean;
@@ -133,6 +144,8 @@ export type AppState = {
   trainerChat: TrainerMsg[];
   /** Pro: simulated call history. */
   calls: CallSession[];
+  /** Pro: one-to-one sessions, awaiting or receiving coach confirmation. */
+  oneOnOneSessions: OneOnOneSession[];
   /**
    * The `premium.since` of the Pro activation whose welcome screen has been shown.
    * Keyed on `since` rather than a boolean so a renewal or a restore never repeats
@@ -158,7 +171,6 @@ export const DEFAULT_PROFILE: Profile = {
   diet: '',
   cuisines: [],
   restrictions: [],
-  conditions: [],
   sleep: '',
   waterHabit: '',
   challenges: [],
@@ -188,7 +200,7 @@ const INITIAL: AppState = {
   weights: [],
   premium: null,
   readNotifs: [],
-  settings: { mealReminders: true, waterReminders: true, weighInReminders: false, units: 'kg', language: 'English', restSeconds: 30, coachVoice: true, music: false, countdown: 10, classSpeed: 5, heightUnit: 'cm', lastActivity: { id: '', mins: 30 }, trainingPart: '', trainingCat: '' },
+  settings: { mealReminders: true, waterReminders: true, weighInReminders: false, units: 'kg', restSeconds: 30, coachVoice: true, music: false, countdown: 10, classSpeed: 5, heightUnit: 'cm', lastActivity: { id: '', mins: 30 }, trainingPart: '', trainingCat: '' },
   programProgress: {},
   backup: null,
   planEdits: {},
@@ -207,6 +219,7 @@ const INITIAL: AppState = {
   trainerId: null,
   trainerChat: [],
   calls: [],
+  oneOnOneSessions: [],
   proIntroFor: null,
 };
 
@@ -226,6 +239,20 @@ export function sanitize(s: AppState): AppState {
     coachChat: s.coachChat.filter((m) => m && typeof m.text === 'string' && (m.from === 'bot' || m.from === 'user')).slice(-MAX_CHAT),
     trainerChat: s.trainerChat.filter((m) => m && typeof m.id === 'string' && typeof m.text === 'string' && (m.from === 'user' || m.from === 'trainer') && isNum(m.at)).slice(-MAX_TRAINER_CHAT),
     calls: s.calls.filter((c) => c && typeof c.id === 'string' && isNum(c.at) && isNum(c.seconds) && (c.kind === 'audio' || c.kind === 'video')),
+    oneOnOneSessions: (s.oneOnOneSessions ?? []).filter(
+      (x) =>
+        x &&
+        typeof x.id === 'string' &&
+        typeof x.trainerId === 'string' &&
+        isDate(x.date) &&
+        typeof x.time === 'string' &&
+        isNum(x.minutes) &&
+        x.minutes > 0 &&
+        (x.kind === 'audio' || x.kind === 'video') &&
+        typeof x.topic === 'string' &&
+        (x.status === 'requested' || x.status === 'confirmed') &&
+        isNum(x.requestedAt),
+    ),
     trainerId: typeof s.trainerId === 'string' ? s.trainerId : null,
     proIntroFor: typeof s.proIntroFor === 'string' ? s.proIntroFor : null,
     recentSearches: s.recentSearches.filter((x) => typeof x === 'string').slice(0, MAX_RECENT),
@@ -511,6 +538,18 @@ function useAppStore() {
         update((s) => ({ ...s, calls: [{ ...c, id, at: Date.now() }, ...s.calls].slice(0, 50) }));
         return id;
       },
+      /** Member creates a preferred slot; it remains requested until a coach confirms it. */
+      requestOneOnOneSession: (session: Omit<OneOnOneSession, 'id' | 'status' | 'requestedAt' | 'confirmedAt'>) => {
+        const id = uid();
+        update((s) => ({ ...s, oneOnOneSessions: [...s.oneOnOneSessions, { ...session, id, status: 'requested', requestedAt: Date.now() }] }));
+        return id;
+      },
+      /** Coach/backend action. Members never call this from the customer interface. */
+      confirmOneOnOneSession: (id: string) =>
+        update((s) => ({
+          ...s,
+          oneOnOneSessions: s.oneOnOneSessions.map((session) => (session.id === id && session.status === 'requested' ? { ...session, status: 'confirmed', confirmedAt: Date.now() } : session)),
+        })),
 
       markNotifsRead: (ids: string[]) => update((s) => ({ ...s, readNotifs: Array.from(new Set([...s.readNotifs, ...ids])) })),
     }),

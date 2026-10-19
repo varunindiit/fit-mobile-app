@@ -3,14 +3,12 @@ import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
-import { Button, Divider, IconTile, ListRow, nativeOnly, OptionCard, PressableScale, Segmented, Sheet, Stepper, T, Toggle, tap, useToast } from '@/components/ui';
+import { Button, Divider, IconTile, ListRow, nativeOnly, PressableScale, Segmented, Sheet, Stepper, T, Toggle, tap, useToast } from '@/components/ui';
 import { useStore } from '@/lib/store';
 import { C, MOTION, R } from '@/theme';
 import { tint } from './shared';
 
 type SheetProps = { visible: boolean; onClose: () => void };
-
-export const LANGUAGES = ['English', 'हिन्दी (Hindi)', 'தமிழ் (Tamil)', 'తెలుగు (Telugu)', 'मराठी (Marathi)', 'বাংলা (Bengali)'];
 
 const COUNTDOWNS = [5, 10, 15];
 
@@ -81,27 +79,6 @@ export function WorkoutSettingsSheet({ visible, onClose }: SheetProps) {
           toast(`Workout settings saved · ${s.restSeconds}s rest, ${s.countdown}s countdown`, 'barbell');
         }}
       />
-    </Sheet>
-  );
-}
-
-export function LanguageSheet({ visible, onClose }: SheetProps) {
-  const { state, updateSettings } = useStore();
-  const toast = useToast();
-  return (
-    <Sheet visible={visible} onClose={onClose} title="Language options" scroll>
-      {LANGUAGES.map((l) => (
-        <OptionCard
-          key={l}
-          title={l}
-          selected={state.settings.language === l}
-          onPress={() => {
-            updateSettings({ language: l });
-            toast(`Language set to ${l} (demo: UI stays in English)`, 'language');
-            setTimeout(onClose, 250);
-          }}
-        />
-      ))}
     </Sheet>
   );
 }

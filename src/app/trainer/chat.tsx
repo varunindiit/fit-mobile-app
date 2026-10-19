@@ -24,7 +24,8 @@ import { Dialog, EASE_OUT, IconButton, layoutTransition, nativeOnly, PressableSc
 import { QUICK_ASKS, seedConversation, trainerReply, type ReplyBubble } from '@/data/trainerChat';
 import { trainerPlanByKey } from '@/data/trainerPlans';
 import { availability, firstName as coachFirstName, trainerById } from '@/data/trainers';
-import { useStore, type MsgStatus } from '@/lib/store';
+import { fmtDate, todayKey } from '@/lib/calc';
+import { useStore, type MsgStatus, type OneOnOneSession } from '@/lib/store';
 import { useAccess } from '@/lib/useAccess';
 import { C, fade, MOTION, onFill, R } from '@/theme';
 
@@ -55,9 +56,12 @@ const BUBBLE_IN = nativeOnly(FadeInDown.duration(MOTION.base).easing(EASE_OUT).w
 const LIST = layoutTransition;
 // Hide the browser focus ring on react-native-web.
 const webNoOutline = Platform.OS === 'web' ? ({ outlineStyle: 'none' } as object) : null;
+/** How long the coach "checks the calendar" before answering a session request. */
+const CONFIRM_DELAY = 1800;
+const sessionWhen = (x: OneOnOneSession) => `${x.date === todayKey() ? 'today' : fmtDate(x.date)} at ${x.time}`;
 
 export default function TrainerChatScreen() {
-  const { state, hydrated, addTrainerMsg, setMsgStatus, markTrainerChatRead, clearTrainerChat } = useStore();
+  const { state, hydrated, addTrainerMsg, setMsgStatus, markTrainerChatRead, clearTrainerChat, confirmOneOnOneSession } = useStore();
   const access = useAccess();
   const toast = useToast();
   const insets = useSafeAreaInsets();
@@ -111,6 +115,27 @@ export default function TrainerChatScreen() {
   const later = (ms: number, fn: () => void) => {
     timers.current.push(setTimeout(fn, ms));
   };
+
+  // A requested one-to-one is answered where it belongs: the coach confirms it in the thread,
+  // and the call for it later starts from this same screen.
+  const awaiting = state.oneOnOneSessions.find((x) => x.trainerId === trainer.id && x.status === 'requested');
+  const answered = useRef(new Set<string>());
+  useEffect(() => {
+    if (!hydrated || !awaiting || answered.current.has(awaiting.id)) return;
+    answered.current.add(awaiting.id);
+    setTyping(true);
+    timers.current.push(
+      setTimeout(() => {
+        setTyping(false);
+        confirmOneOnOneSession(awaiting.id);
+        addRef.current({
+          from: 'trainer',
+          text: `Confirmed — ${sessionWhen(awaiting)} for ${awaiting.topic}. I'll start the ${awaiting.kind} call right here in the chat, so keep it open at that time.`,
+          status: 'read',
+        });
+      }, CONFIRM_DELAY),
+    );
+  }, [hydrated, awaiting, confirmOneOnOneSession]);
 
   const send = (raw: string) => {
     const text = raw.trim();

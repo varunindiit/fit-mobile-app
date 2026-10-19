@@ -64,8 +64,6 @@ export const dietKind = (diet: string): DietKind => {
   return 'veg';
 };
 
-export const CONDITIONS = ['Diabetes / Pre-diabetes', 'PCOS / PCOD', 'Thyroid', 'Hypertension (BP)', 'High cholesterol', 'Fatty liver'];
-export const realConditions = (c: string[]) => c.filter((x) => x.toLowerCase() !== 'none');
 export const realRestrictions = (r: string[]) => r.filter((x) => !x.toLowerCase().startsWith('no restriction'));
 
 export const GOALS: { value: Goal; title: string; emoji: string; sub: string }[] = [

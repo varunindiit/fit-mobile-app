@@ -67,6 +67,7 @@ export function MonthCalendar({ month, days, selected, onSelect }: { month: Date
   const count = new Date(y, m + 1, 0).getDate();
   const cells: (string | null)[] = [...Array.from({ length: lead }, () => null), ...Array.from({ length: count }, (_, i) => dateKey(new Date(y, m, i + 1)))];
   while (cells.length % 7) cells.push(null);
+  const weeks = Array.from({ length: cells.length / 7 }, (_, w) => cells.slice(w * 7, w * 7 + 7));
   const isDone = (i: number) => {
     const c = cells[i];
     return !!c && days.has(c);
@@ -80,35 +81,37 @@ export function MonthCalendar({ month, days, selected, onSelect }: { month: Date
           </Text>
         ))}
       </View>
-      <View style={[s.row, { flexWrap: 'wrap' }]}>
-        {cells.map((k, i) => {
-          if (!k) return <View key={`b${i}`} style={s.cell} />;
-          const done = days.has(k);
-          const isToday = k === today;
-          const isSel = k === selected;
-          const future = k > today;
-          const col = i % 7;
-          const joinL = done && col > 0 && isDone(i - 1);
-          const joinR = done && col < 6 && isDone(i + 1);
-          return (
-            <Pressable
-              key={k}
-              accessibilityRole="button"
-              accessibilityState={{ selected: isSel }}
-              onPress={() => {
-                tap();
-                onSelect?.(k);
-              }}
-              style={({ pressed }) => [s.cell, pressed && { opacity: 0.7 }]}>
-              {joinL && <View style={[s.band, { left: 0, right: '50%' }]} />}
-              {joinR && <View style={[s.band, { left: '50%', right: 0 }]} />}
-              <View style={[s.mCircle, isToday && s.mToday, done && s.mDone, isToday && done && !isSel && s.mTodayDone, isSel && !done && s.mSel, isSel && done && s.mSelDone]}>
-                <Text style={[s.mNum, future && { color: C.muted }, (done || isSel) && { color: done ? C.onPrimary : C.white, fontWeight: '700' }, isToday && !done && !isSel && { color: C.primaryDark, fontWeight: '800' }]}>{parseKey(k).getDate()}</Text>
-              </View>
-            </Pressable>
-          );
-        })}
-      </View>
+      {weeks.map((week, w) => (
+        <View key={w} style={s.row}>
+          {week.map((k, c) => {
+            const i = w * 7 + c;
+            if (!k) return <View key={`b${i}`} style={s.cell} />;
+            const done = days.has(k);
+            const isToday = k === today;
+            const isSel = k === selected;
+            const future = k > today;
+            const joinL = done && c > 0 && isDone(i - 1);
+            const joinR = done && c < 6 && isDone(i + 1);
+            return (
+              <Pressable
+                key={k}
+                accessibilityRole="button"
+                accessibilityState={{ selected: isSel }}
+                onPress={() => {
+                  tap();
+                  onSelect?.(k);
+                }}
+                style={({ pressed }) => [s.cell, pressed && { opacity: 0.7 }]}>
+                {joinL && <View style={[s.band, { left: 0, right: '50%' }]} />}
+                {joinR && <View style={[s.band, { left: '50%', right: 0 }]} />}
+                <View style={[s.mCircle, isToday && s.mToday, done && s.mDone, isToday && done && !isSel && s.mTodayDone, isSel && !done && s.mSel, isSel && done && s.mSelDone]}>
+                  <Text style={[s.mNum, future && { color: C.muted }, (done || isSel) && { color: done ? C.onPrimary : C.white, fontWeight: '700' }, isToday && !done && !isSel && { color: C.primaryDark, fontWeight: '800' }]}>{parseKey(k).getDate()}</Text>
+                </View>
+              </Pressable>
+            );
+          })}
+        </View>
+      ))}
     </View>
   );
 }
@@ -124,7 +127,7 @@ const s = StyleSheet.create({
   dayTodayDone: { borderWidth: 2.5, borderColor: C.primaryDark },
   dayNum: { fontSize: 14, fontWeight: '700', color: C.text, fontVariant: ['tabular-nums'] },
   row: { flexDirection: 'row' },
-  cell: { width: `${100 / 7}%`, height: 44, alignItems: 'center', justifyContent: 'center', textAlign: 'center' },
+  cell: { flex: 1, height: 44, alignItems: 'center', justifyContent: 'center', textAlign: 'center' },
   head: { height: 28, fontSize: 11, fontWeight: '700', color: C.muted, lineHeight: 28, letterSpacing: 0.4 },
   band: { position: 'absolute', top: 6, height: 32, backgroundColor: C.primarySoft },
   mCircle: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'transparent' },

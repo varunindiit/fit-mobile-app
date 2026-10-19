@@ -5,7 +5,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
 import { AboutSheet, ConnectedAppsCard, fmtFull, GroupLabel, HelpSheet, planEnd, RemindersCard, shared, tint, UnitsRow } from '@/components/profile/shared';
-import { LanguageSheet, WorkoutSettingsSheet } from '@/components/profile/sheets';
+import { WorkoutSettingsSheet } from '@/components/profile/sheets';
 import { Card, Divider, enter, Header, ListRow, Pill, Screen, Toggle, useToast } from '@/components/ui';
 import { NOTIFICATIONS } from '@/data/notifications';
 import { isPremiumActive, useStore } from '@/lib/store';
@@ -16,7 +16,7 @@ const LOGO = require('@/assets/images/logo-mark.png');
 export default function SettingsScreen() {
   const { state, updateProfile } = useStore();
   const toast = useToast();
-  const [sheet, setSheet] = useState<null | 'help' | 'about' | 'workout' | 'language'>(null);
+  const [sheet, setSheet] = useState<null | 'help' | 'about' | 'workout'>(null);
   const unread = NOTIFICATIONS.filter((n) => !state.readNotifs.includes(n.id)).length;
   const premium = isPremiumActive(state.premium) ? state.premium : null;
   const planName = premium ? `Fittelo ${premium.tier === 'pro' ? 'Pro' : 'Smart'}` : '';
@@ -39,8 +39,6 @@ export default function SettingsScreen() {
           <GroupLabel title="Preferences" />
           <Card style={shared.listCard}>
             <UnitsRow />
-            <Divider style={shared.inset} />
-            <ListRow icon="language" iconColor={C.steps} iconBg={C.stepsSoft} title="Language" subtitle={state.settings.language} onPress={() => setSheet('language')} />
             <Divider style={shared.inset} />
             <ListRow
               icon="barbell-outline"
@@ -120,7 +118,6 @@ export default function SettingsScreen() {
       <HelpSheet visible={sheet === 'help'} onClose={() => setSheet(null)} />
       <AboutSheet visible={sheet === 'about'} onClose={() => setSheet(null)} />
       <WorkoutSettingsSheet visible={sheet === 'workout'} onClose={() => setSheet(null)} />
-      <LanguageSheet visible={sheet === 'language'} onClose={() => setSheet(null)} />
     </Screen>
   );
 }
