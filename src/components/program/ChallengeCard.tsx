@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect } from 'react';
 import { StyleSheet, Text, View, type ViewStyle } from 'react-native';
@@ -8,10 +9,13 @@ import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, w
 import { Glyph } from '@/components/Glyph';
 import { Bolts } from '@/components/program/PlanAccordion';
 import { PressableScale, Ring, tap, type IconName } from '@/components/ui';
-import { C, INK, R, glow, ink } from '@/theme';
+import { C, INK, R, fade, glow, ink } from '@/theme';
 
 /** Neutral black at 0.9, so the warm canvas barely lifts it; depth comes from the white halo. */
 const SURFACE: [string, string, string] = [ink(0.9), ink(0.9), ink(0.9)];
+
+/** `SURFACE` as it actually renders over the canvas (`C.bg`), so the photo scrims fade into the card seamlessly. */
+const FACE = '#222223';
 
 const DAYS = 30;
 
@@ -29,6 +33,8 @@ export type ChallengeCardProps = {
   note?: string;
   emoji: string;
   art?: number;
+  /** Athlete photography for the day, shown on the right of the card in place of the floating `art`. */
+  photo?: number;
   cta: string;
   ctaIcon?: IconName;
   /** Small line above the button, e.g. this week's count. */
@@ -41,7 +47,7 @@ export type ChallengeCardProps = {
  * The 30-day program's "today" card: big day number, stat chips, a figure that floats out of the
  * corner, a 30-segment journey strip and a full-width start button. Used on Home and Training.
  */
-export function ChallengeCard({ title, bolts, colors, day, done, stats, note, emoji, art, cta, ctaIcon = 'play', footnote, onPress, style }: ChallengeCardProps) {
+export function ChallengeCard({ title, bolts, colors, day, done, stats, note, emoji, art, photo, cta, ctaIcon = 'play', footnote, onPress, style }: ChallengeCardProps) {
   const reduce = useReducedMotion();
   const y = useSharedValue(0);
   useEffect(() => {
@@ -57,19 +63,30 @@ export function ChallengeCard({ title, bolts, colors, day, done, stats, note, em
   return (
     <PressableScale scaleTo={0.98} accessibilityRole="button" accessibilityLabel={`${title}, day ${day}. ${cta}`} onPress={press} style={[s.shell, glow(INK), style]}>
       <LinearGradient colors={SURFACE} locations={[0, 0.55, 1]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.card}>
-        {/* Soft halo behind the figure + concentric rings */}
-        <Svg pointerEvents="none" width={320} height={320} style={s.glowA}>
-          <Defs>
-            <RadialGradient id="chGlow" cx="50%" cy="50%" r="50%">
-              <Stop offset="0" stopColor={C.white} stopOpacity={0.1} />
-              <Stop offset="1" stopColor={C.white} stopOpacity={0} />
-            </RadialGradient>
-          </Defs>
-          <Circle cx={160} cy={160} r={160} fill="url(#chGlow)" />
-          <Circle cx={160} cy={160} r={118} fill="none" stroke={C.white} strokeOpacity={0.1} strokeWidth={1} />
-          <Circle cx={160} cy={160} r={78} fill="none" stroke={C.white} strokeOpacity={0.08} strokeWidth={1} />
-        </Svg>
-        <View pointerEvents="none" style={s.glowB} />
+        {photo ? (
+          <View pointerEvents="none" style={s.photo}>
+            <Image source={photo} style={StyleSheet.absoluteFill} contentFit="cover" transition={180} />
+            {/* Card surface washing over the photo's left edge (under the day and chips) and bottom (under the strip) */}
+            <LinearGradient colors={[FACE, fade(FACE, 0.45), fade(FACE, 0)]} locations={[0, 0.3, 0.62]} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={StyleSheet.absoluteFill} />
+            <LinearGradient colors={[fade(FACE, 0.5), fade(FACE, 0), fade(FACE, 0), FACE]} locations={[0, 0.24, 0.7, 1]} style={StyleSheet.absoluteFill} />
+          </View>
+        ) : (
+          <>
+            {/* Soft halo behind the figure + concentric rings */}
+            <Svg pointerEvents="none" width={320} height={320} style={s.glowA}>
+              <Defs>
+                <RadialGradient id="chGlow" cx="50%" cy="50%" r="50%">
+                  <Stop offset="0" stopColor={C.white} stopOpacity={0.1} />
+                  <Stop offset="1" stopColor={C.white} stopOpacity={0} />
+                </RadialGradient>
+              </Defs>
+              <Circle cx={160} cy={160} r={160} fill="url(#chGlow)" />
+              <Circle cx={160} cy={160} r={118} fill="none" stroke={C.white} strokeOpacity={0.1} strokeWidth={1} />
+              <Circle cx={160} cy={160} r={78} fill="none" stroke={C.white} strokeOpacity={0.08} strokeWidth={1} />
+            </Svg>
+            <View pointerEvents="none" style={s.glowB} />
+          </>
+        )}
 
         <View style={s.top}>
           <View style={s.pill}>
@@ -101,9 +118,14 @@ export function ChallengeCard({ title, bolts, colors, day, done, stats, note, em
               !!note && <Text style={s.note}>{note}</Text>
             )}
           </View>
-          <Animated.View pointerEvents="none" style={[s.art, float]}>
-            <View style={s.artHalo} />
-            <Glyph emoji={emoji} src={art} size={art ? 132 : 70} />
+          {/* With a photo the slot stays as a spacer, so the day and chips wrap exactly as before */}
+          <Animated.View pointerEvents="none" style={[s.art, !photo && float]}>
+            {!photo && (
+              <>
+                <View style={s.artHalo} />
+                <Glyph emoji={emoji} src={art} size={art ? 132 : 70} />
+              </>
+            )}
           </Animated.View>
         </View>
 
@@ -141,6 +163,8 @@ const s = StyleSheet.create({
   shell: { borderRadius: R.xl },
   card: { borderRadius: R.xl, padding: 18, overflow: 'hidden' },
   glowA: { position: 'absolute', right: -110, top: -40 },
+  /** Right-hand photo panel, from the top edge down to just above the start button. */
+  photo: { position: 'absolute', top: 0, right: 0, bottom: 84, width: '60%' },
   glowB: { position: 'absolute', width: 180, height: 180, borderRadius: 90, left: -70, bottom: -90, backgroundColor: 'rgba(255,255,255,0.05)' },
   dot: { width: 8, height: 8, borderRadius: 4, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.7)' },
   top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },

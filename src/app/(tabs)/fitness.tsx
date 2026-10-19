@@ -26,7 +26,7 @@ import { useAccess } from '@/lib/useAccess';
 import { useToday } from '@/lib/useToday';
 import { C, G, ink, INK, MOTION, R, shadowSm } from '@/theme';
 import { Glyph } from '@/components/Glyph';
-import { FOCUS_PHOTO, logArt, sessionArt, WORKOUT_ART, WORKOUT_PHOTO } from '@/components/glyphs';
+import { FOCUS_PHOTO, logArt, programPhoto, sessionArt, WORKOUT_ART, WORKOUT_PHOTO } from '@/components/glyphs';
 
 const SOURCE = Platform.OS === 'ios' ? 'Apple Health' : 'Google Fit';
 type Focus = (typeof FOCUS_SESSIONS)[number];
@@ -222,6 +222,7 @@ export default function TrainingScreen() {
             note={finished ? 'All 30 days done. Legend!' : 'Rest day · stretch & recover'}
             emoji={finished ? '🏆' : session.emoji}
             art={finished ? undefined : sessionArt(session.key)}
+            photo={programPhoto(session.key)}
             cta={finished ? 'Go again' : session.restDay ? 'Open rest day' : `Start Day ${day}`}
             ctaIcon={finished ? 'refresh' : session.restDay ? 'moon' : 'play'}
             onPress={openChallenge}

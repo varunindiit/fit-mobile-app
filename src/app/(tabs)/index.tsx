@@ -17,7 +17,7 @@ import { WaterBottle } from '@/components/home/WaterBottle';
 import { WeekStrip } from '@/components/home/WeekStrip';
 import { WeightSparkline } from '@/components/home/WeightSparkline';
 import { ChallengeCard } from '@/components/program/ChallengeCard';
-import { sessionArt } from '@/components/glyphs';
+import { programPhoto, sessionArt } from '@/components/glyphs';
 import {
   Button,
   Card,
@@ -430,6 +430,7 @@ export default function Home() {
             note={doneToday ? 'Done for today. Great work!' : 'Rest day · stretch & recover'}
             emoji={nextSession.emoji}
             art={sessionArt(nextSession.key)}
+            photo={programPhoto(nextSession.key)}
             footnote={`This week: ${wk.done} of ${p.weeklyGoal} sessions`}
             cta={doneToday ? "View today's workout" : nextSession.restDay ? 'Open rest day' : `Start Day ${nextDay}`}
             ctaIcon={doneToday ? 'eye' : nextSession.restDay ? 'moon' : 'play'}

@@ -280,6 +280,33 @@ export const FOCUS_HERO: Record<string, number> = {
 /** The mascot resting, shown on every rest day instead of the generic 😴 glyph. */
 export const REST_ART: number = require('@/assets/images/glyphs/p-yoga.webp');
 
+/**
+ * Athlete photography for the 30-day programs' "Today's workout" card, keyed by program id, plus
+ * `rest` for rest days. Files live in `assets/images/programs/` (see
+ * `scripts/today-workout-photos/README.md` for the prompts, the personas and the optimiser).
+ */
+export const PROGRAM_PHOTO: Record<string, number> = {
+  belly: require('@/assets/images/programs/belly.webp'),
+  abs: require('@/assets/images/programs/abs.webp'),
+  sixpack: require('@/assets/images/programs/sixpack.webp'),
+  rest: require('@/assets/images/programs/rest.webp'),
+};
+
+/** The same photography at full-screen width and 3:2, for the program day detail hero. */
+export const PROGRAM_HERO: Record<string, number> = {
+  belly: require('@/assets/images/programs/belly-hero.webp'),
+  abs: require('@/assets/images/programs/abs-hero.webp'),
+  sixpack: require('@/assets/images/programs/sixpack-hero.webp'),
+  rest: require('@/assets/images/programs/rest-hero.webp'),
+};
+
+/** Photo for a program day key (`program:<id>:<day>`) from `set`; undefined for any other key, so callers fall back. */
+export function programPhoto(key: string | undefined, set: Record<string, number> = PROGRAM_PHOTO): number | undefined {
+  if (!key?.startsWith('program:')) return undefined;
+  const [, pid, day] = key.split(':');
+  return set[isRestDay(Number(day)) ? 'rest' : pid];
+}
+
 /** Artwork for a session key (program day, body-focus session or trainer plan); undefined for unknown keys so callers fall back to the emoji. */
 export function sessionArt(key?: string): number | undefined {
   if (!key) return undefined;

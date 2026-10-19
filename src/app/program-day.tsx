@@ -35,7 +35,7 @@ import { useStore } from '@/lib/store';
 import { useAccess } from '@/lib/useAccess';
 import { C, G, ink, INK, MOTION, R, shadowLg, shadowSm } from '@/theme';
 import { Glyph } from '@/components/Glyph';
-import { FOCUS_HERO, sessionArt } from '@/components/glyphs';
+import { FOCUS_HERO, PROGRAM_HERO, programPhoto, sessionArt } from '@/components/glyphs';
 
 const goBack = () => (router.canGoBack() ? router.back() : router.replace('/fitness'));
 const restTips = (t: Accent): { icon: IconName; color: string; bg: string; t: string }[] => [
@@ -90,7 +90,7 @@ function DayPlan({ session }: { session: Session }) {
   const meta = sessionMeta(session);
   // A photo hero is neutral, so the screen takes the brand green (same as the Let's go CTA)
   // instead of the session's card colour.
-  const photo = FOCUS_HERO[session.key];
+  const photo = FOCUS_HERO[session.key] ?? programPhoto(session.key, PROGRAM_HERO);
   const t = useMemo(() => accentTheme(photo ? BRAND : session.colors), [photo, session.colors]);
   const HERO = insets.top + 236;
 

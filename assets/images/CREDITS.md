@@ -31,6 +31,15 @@
   first as its identity reference. No real people, third-party likeness or branding; the coaches are
   fictional. Cropped and compressed to WebP by `scripts/workout-photos/optimize.py`.
 
+## Today's workout card photography
+
+- `programs/*.webp` — original images generated with OpenAI image generation via Codex (`codex exec`,
+  `image_generation` feature) for the 30-day program's "Today's workout" card and program day detail hero,
+  from the prompts in `scripts/today-workout-photos/README.md`. Each athlete was generated with their
+  existing "Level up" / "Train with a coach" photo attached as the identity reference. No real people,
+  third-party likeness or branding; the athletes are fictional. Cropped and compressed to WebP by
+  `scripts/today-workout-photos/optimize.py`.
+
 ## Exercise animations
 
 - `exercises/*.webp` and `exercises/anim/*.webp` — exercise animations and their opening still frames.

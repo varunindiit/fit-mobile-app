@@ -19,7 +19,7 @@ CARD = (0.9, 720, 80)  # ratio (w/h), width, quality
 HERO = (1.5, 1170, 76)
 # Horizontal centre of the athlete in each source, as a fraction of its width. The card crop is
 # centred on it so the athlete sits in the middle of the photo panel, clear of the left-hand scrim.
-FOCUS_X = {"belly": 0.68, "abs": 0.68, "sixpack": 0.68, "rest": 0.68}
+FOCUS_X = {"belly": 0.72, "abs": 0.66, "sixpack": 0.64, "rest": 0.66}
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "assets" / "images" / "programs"
 
