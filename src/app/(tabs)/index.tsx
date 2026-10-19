@@ -113,7 +113,6 @@ export default function Home() {
   const access = useAccess();
   // Pro members land on their coaching dashboard; Smart on the AI coach; Free on the paywall.
   const coach = trainerById(state.trainerId);
-  const coachUnread = state.trainerChat.filter((m) => m.from === 'trainer' && m.status !== 'read').length;
   const premiumCard = access.can('trainer')
     ? { href: '/trainer' as const, label: 'YOUR COACH', title: `${trainerFirstName(coach)} is your coach`, sub: 'Plans, chat and calls — all in one place', cta: 'Open coaching' }
     : premiumTier
@@ -338,7 +337,7 @@ export default function Home() {
         {/* Pro: the coach assigned on purchase. The entitlement layer decides — Free and Smart never see it. */}
         {access.can('trainer') && (
           <Animated.View entering={enter(2)}>
-            <AssignedCoachCard trainerId={state.trainerId} unread={coachUnread} />
+            <AssignedCoachCard trainerId={state.trainerId} />
           </Animated.View>
         )}
 
