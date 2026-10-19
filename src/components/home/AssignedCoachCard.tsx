@@ -6,7 +6,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import Animated, { cancelAnimation, Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 
 import { TrainerAvatar } from '@/components/trainer/parts';
-import { PressableScale, tap, type IconName } from '@/components/ui';
+import { PressableScale, tap } from '@/components/ui';
 import { availability, trainerById } from '@/data/trainers';
 import { C, G, R, shadow } from '@/theme';
 
@@ -14,14 +14,6 @@ const openCoach = () => {
   tap();
   router.push('/trainer');
 };
-
-/** Shortcuts into the coach features Pro already has: chat, calls and the trainer-built plan. */
-const ACTIONS: { key: string; icon: IconName; label: string; go: () => void }[] = [
-  { key: 'chat', icon: 'chatbubbles', label: 'Chat', go: () => router.push('/trainer/chat') },
-  { key: 'audio', icon: 'call', label: 'Call', go: () => router.push({ pathname: '/trainer/call', params: { mode: 'audio' } }) },
-  { key: 'video', icon: 'videocam', label: 'Video', go: () => router.push({ pathname: '/trainer/call', params: { mode: 'video' } }) },
-  { key: 'plan', icon: 'barbell', label: 'Workouts', go: openCoach },
-];
 
 /**
  * Pro only: the coach the member has been assigned, and the way into their profile.
@@ -83,26 +75,6 @@ export function AssignedCoachCard({ trainerId }: { trainerId: string | null }) {
                 {s}
               </Text>
             </View>
-          ))}
-        </View>
-
-        <View style={st.actions}>
-          {ACTIONS.map((a) => (
-            <PressableScale
-              key={a.key}
-              scaleTo={0.94}
-              accessibilityRole="button"
-              accessibilityLabel={a.key === 'plan' ? `Open workouts from ${coach.name}` : `${a.label} ${coach.name}`}
-              onPress={() => {
-                tap();
-                a.go();
-              }}
-              style={st.action}>
-              <Ionicons name={a.icon} size={18} color={C.gold} />
-              <Text style={st.actionText} numberOfLines={1}>
-                {a.label}
-              </Text>
-            </PressableScale>
           ))}
         </View>
       </LinearGradient>
@@ -184,10 +156,6 @@ const st = StyleSheet.create({
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 12 },
   chip: { borderRadius: R.pill, paddingHorizontal: 9, paddingVertical: 4, backgroundColor: 'rgba(255,255,255,0.08)' },
   chipText: { color: 'rgba(255,255,255,0.78)', fontSize: 11, fontWeight: '700' },
-
-  actions: { flexDirection: 'row', gap: 8, marginTop: 14 },
-  action: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 4, minHeight: 56, borderRadius: R.sm, backgroundColor: 'rgba(245,196,81,0.1)', borderWidth: 1, borderColor: 'rgba(245,196,81,0.22)' },
-  actionText: { color: C.white, fontSize: 11.5, fontWeight: '700' },
 
   pendingRow: { flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 12 },
   pendingArt: { width: 52, height: 52, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(245,196,81,0.12)', borderWidth: 1, borderColor: 'rgba(245,196,81,0.28)' },
