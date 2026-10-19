@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
@@ -23,9 +24,9 @@ import { kcalFromSteps, kmFromSteps } from '@/lib/calc';
 import { burnedOn, useStore, weekProgress, workoutStreak, type WorkoutLog } from '@/lib/store';
 import { useAccess } from '@/lib/useAccess';
 import { useToday } from '@/lib/useToday';
-import { C, G, MOTION, R, shadowSm } from '@/theme';
+import { C, fade, G, MOTION, R, shadowSm } from '@/theme';
 import { Glyph } from '@/components/Glyph';
-import { logArt, sessionArt, WORKOUT_ART } from '@/components/glyphs';
+import { FOCUS_PHOTO, logArt, sessionArt, WORKOUT_ART, WORKOUT_PHOTO } from '@/components/glyphs';
 
 const SOURCE = Platform.OS === 'ios' ? 'Apple Health' : 'Google Fit';
 type Focus = (typeof FOCUS_SESSIONS)[number];
@@ -354,6 +355,7 @@ export default function TrainingScreen() {
           <View style={st.grid}>
             {classes.map((w) => {
               const lock = access.lockClass(w.level);
+              const photo = WORKOUT_PHOTO[w.id];
               return (
               <Animated.View key={w.id} entering={rowIn} layout={listLayout} style={st.wCell}>
                 <PressableScale
@@ -364,14 +366,17 @@ export default function TrainingScreen() {
                     router.push('/workout/' + w.id);
                   }}
                   style={st.wCard}>
-                  <View style={[st.wHead, { backgroundColor: w.color + '17' }]}>
-                    <Glyph emoji={w.emoji} src={WORKOUT_ART[w.id]} size={54} />
+                  <View style={st.wHead}>
+                    {photo ? (
+                      <Image source={photo} style={st.wPhoto} contentFit="cover" transition={180} />
+                    ) : (
+                      <View style={[st.wPhoto, st.wArt, { backgroundColor: w.color + '17' }]}>
+                        <Glyph emoji={w.emoji} src={WORKOUT_ART[w.id]} size={72} />
+                      </View>
+                    )}
                     <View style={st.wTime}>
-                      <Ionicons name="time-outline" size={11} color={C.text} />
+                      <Ionicons name="time-outline" size={12} color={C.text} />
                       <Text style={st.wTimeText}>{w.minutes} min</Text>
-                    </View>
-                    <View style={st.wLevel}>
-                      <Text style={st.wLevelText}>{w.level}</Text>
                     </View>
                     {lock ? <LockBadge need={lock.need} style={st.wLock} /> : doneToday.has(w.id) ? (
                       <View style={st.wDone}>
@@ -379,19 +384,19 @@ export default function TrainingScreen() {
                       </View>
                     ) : null}
                   </View>
-                  <View style={{ padding: 12, paddingTop: 10 }}>
+                  <View style={st.wBody}>
                     <Text style={st.wTitle} numberOfLines={2}>
                       {w.title}
                     </Text>
                     <View style={st.wFoot}>
-                      <View style={st.wKcal}>
-                        <Ionicons name="flame" size={11} color={C.accent} />
-                        <Text style={st.wMeta}>{w.kcal}</Text>
-                      </View>
-                      <Text style={st.wCoach} numberOfLines={1}>
-                        {w.coach}
+                      <Ionicons name="flame" size={12} color={C.accent} />
+                      <Text style={st.wMeta} numberOfLines={1}>
+                        {w.kcal} kcal<Text style={st.wLevelText}> · {w.level}</Text>
                       </Text>
                     </View>
+                    <Text style={st.wCoach} numberOfLines={1}>
+                      {w.coach}
+                    </Text>
                   </View>
                 </PressableScale>
               </Animated.View>
@@ -565,6 +570,7 @@ function Carousel({ items, lockOf, pro }: { items: Focus[]; lockOf: (key: string
     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -16 }} contentContainerStyle={st.carousel} decelerationRate="fast" snapToInterval={252}>
       {items.map((s) => {
         const lock = lockOf(s.key);
+        const photo = FOCUS_PHOTO[s.key];
         return (
         <PressableScale
           key={s.key}
@@ -576,8 +582,18 @@ function Carousel({ items, lockOf, pro }: { items: Focus[]; lockOf: (key: string
           }}
           style={[st.cShell, { backgroundColor: s.colors[1] }]}>
           <LinearGradient colors={s.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.cCard}>
-            <Deco size={180} style={{ right: -50, bottom: -70 }} />
-            <Glyph emoji={s.emoji} src={sessionArt(s.key)} size={72} style={st.cEmoji} />
+            {photo ? (
+              <>
+                <Image source={photo} style={StyleSheet.absoluteFill} contentFit="cover" transition={180} />
+                {/* Brand colour on the left for the title, clearing to the athlete on the right */}
+                <LinearGradient colors={[s.colors[0], fade(s.colors[0], 0.92), fade(s.colors[1], 0.5), fade(s.colors[1], 0)]} locations={[0, 0.34, 0.66, 1]} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={StyleSheet.absoluteFill} pointerEvents="none" />
+              </>
+            ) : (
+              <>
+                <Deco size={180} style={{ right: -50, bottom: -70 }} />
+                <Glyph emoji={s.emoji} src={sessionArt(s.key)} size={72} style={st.cEmoji} />
+              </>
+            )}
             <Text style={st.cTitle} numberOfLines={2}>
               {s.title}
             </Text>
@@ -651,17 +667,19 @@ const st = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 12 },
   wCell: { width: '48.3%' },
   wCard: { backgroundColor: C.card, borderRadius: R.lg, borderWidth: StyleSheet.hairlineWidth, borderColor: C.borderSoft, overflow: 'hidden', ...shadowSm },
-  wHead: { height: 110, alignItems: 'center', justifyContent: 'center' },
-  wLevel: { position: 'absolute', left: 8, top: 8, backgroundColor: 'rgba(28,25,23,0.72)', borderRadius: R.pill, paddingHorizontal: 7, paddingVertical: 3 },
-  wLevelText: { fontSize: 10, fontWeight: '800', color: C.white, letterSpacing: 0.3 },
-  wFoot: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 },
-  wKcal: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: C.accentSoft, borderRadius: R.pill, paddingHorizontal: 7, paddingVertical: 3 },
-  wTime: { position: 'absolute', left: 8, bottom: 8, flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: C.card, borderRadius: R.pill, paddingHorizontal: 7, paddingVertical: 3 },
-  wTimeText: { fontSize: 11, fontWeight: '700', color: C.text, fontVariant: ['tabular-nums'] },
+  // Photo header: a 1.14:1 crop so the card keeps the reference's portrait-leaning hero on every screen width.
+  wHead: { width: '100%', aspectRatio: 1.14, backgroundColor: C.surfaceAlt },
+  wPhoto: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
+  wArt: { alignItems: 'center', justifyContent: 'center' },
+  wLevelText: { color: C.textSoft, fontWeight: '600' },
+  wFoot: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 7 },
+  wBody: { paddingHorizontal: 12, paddingTop: 11, paddingBottom: 13 },
+  wTime: { position: 'absolute', left: 9, bottom: 9, flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: C.card, borderRadius: R.pill, paddingHorizontal: 9, height: 24, ...shadowSm },
+  wTimeText: { fontSize: 11.5, fontWeight: '800', color: C.text, fontVariant: ['tabular-nums'] },
   wDone: { position: 'absolute', right: 8, top: 8, width: 22, height: 22, borderRadius: 11, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center' },
-  wTitle: { fontSize: 14, fontWeight: '700', color: C.text, minHeight: 36, lineHeight: 18, letterSpacing: -0.1 },
-  wMeta: { fontSize: 11.5, color: C.accent, fontWeight: '800', fontVariant: ['tabular-nums'] },
-  wCoach: { flex: 1, fontSize: 11.5, color: C.muted, fontWeight: '600' },
+  wTitle: { fontSize: 15, fontWeight: '800', color: C.text, minHeight: 38, lineHeight: 19, letterSpacing: -0.2 },
+  wMeta: { flex: 1, fontSize: 12, color: C.text, fontWeight: '800', fontVariant: ['tabular-nums'] },
+  wCoach: { fontSize: 11.5, color: C.muted, fontWeight: '600', marginTop: 4 },
   goalPick: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 18 },
   goalOpt: { width: 42, height: 42, borderRadius: 21, borderWidth: 1.5, borderColor: C.border, alignItems: 'center', justifyContent: 'center', backgroundColor: C.card },
   goalOptOn: { backgroundColor: C.primaryDark, borderColor: C.primaryDark },

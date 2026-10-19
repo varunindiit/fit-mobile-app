@@ -222,6 +222,51 @@ export const WORKOUT_ART: Record<string, number> = {
   'core-blast': EXERCISE_ART['abdominal-crunches'],
 };
 
+/**
+ * Coach photography shown as the header of each "Train with a coach" card, keyed by workout id.
+ * Files live in `assets/images/workouts/<workout id>.webp` (see `scripts/workout-photos/README.md`
+ * for the prompts and the optimiser). A workout with no entry here falls back to its tinted colour
+ * plus `WORKOUT_ART`/emoji, so the grid is never broken while the set is being filled in.
+ */
+export const WORKOUT_PHOTO: Record<string, number> = {
+  'morning-yoga': require('@/assets/images/workouts/morning-yoga.webp'),
+  'fat-burn-hiit': require('@/assets/images/workouts/fat-burn-hiit.webp'),
+  'full-body-strength': require('@/assets/images/workouts/full-body-strength.webp'),
+  'brisk-walk': require('@/assets/images/workouts/brisk-walk.webp'),
+  'dance-cardio': require('@/assets/images/workouts/dance-cardio.webp'),
+  'core-blast': require('@/assets/images/workouts/core-blast.webp'),
+  'power-yoga': require('@/assets/images/workouts/power-yoga.webp'),
+  'cycling': require('@/assets/images/workouts/cycling.webp'),
+};
+
+/** The same photography at full-screen width and 3:2, for the workout detail hero. Falls back like `WORKOUT_PHOTO`. */
+export const WORKOUT_HERO: Record<string, number> = {
+  'morning-yoga': require('@/assets/images/workouts/morning-yoga-hero.webp'),
+  'fat-burn-hiit': require('@/assets/images/workouts/fat-burn-hiit-hero.webp'),
+  'full-body-strength': require('@/assets/images/workouts/full-body-strength-hero.webp'),
+  'brisk-walk': require('@/assets/images/workouts/brisk-walk-hero.webp'),
+  'dance-cardio': require('@/assets/images/workouts/dance-cardio-hero.webp'),
+  'core-blast': require('@/assets/images/workouts/core-blast-hero.webp'),
+  'power-yoga': require('@/assets/images/workouts/power-yoga-hero.webp'),
+  'cycling': require('@/assets/images/workouts/cycling-hero.webp'),
+};
+
+/**
+ * Athlete photography shown behind each "Level up" carousel card, keyed by focus session key.
+ * Files live in `assets/images/focus/<key without the focus: prefix>.webp` (see
+ * `scripts/level-up-photos/README.md` for the prompts, the personas and the optimiser). A session
+ * with no entry here falls back to its brand gradient plus the mascot artwork, so the carousel is
+ * never broken while the set is being filled in.
+ */
+export const FOCUS_PHOTO: Record<string, number> = {
+  'focus:rock-hard': require('@/assets/images/focus/rock-hard.webp'),
+  'focus:intense-shred': require('@/assets/images/focus/intense-shred.webp'),
+  'focus:stronger-abs': require('@/assets/images/focus/stronger-abs.webp'),
+  'focus:chest-dumbbell': require('@/assets/images/focus/chest-dumbbell.webp'),
+  'focus:leg-day': require('@/assets/images/focus/leg-day.webp'),
+  'focus:ultimate-core': require('@/assets/images/focus/ultimate-core.webp'),
+};
+
 /** The mascot resting, shown on every rest day instead of the generic 😴 glyph. */
 export const REST_ART: number = require('@/assets/images/glyphs/p-yoga.webp');
 

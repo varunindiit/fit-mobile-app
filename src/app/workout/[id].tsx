@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -16,7 +17,7 @@ import { useStore } from '@/lib/store';
 import { useAccess } from '@/lib/useAccess';
 import { C, MOTION, R, shadow, shadowSm } from '@/theme';
 import { Glyph } from '@/components/Glyph';
-import { WORKOUT_ART } from '@/components/glyphs';
+import { WORKOUT_ART, WORKOUT_HERO } from '@/components/glyphs';
 
 type Phase = 'overview' | 'player' | 'done';
 type Run = { idx: number; left: number; elapsed: number; prep: number; finished: boolean };
@@ -373,6 +374,7 @@ function WorkoutFlow({ w }: { w: Workout }) {
 
   /* ---------- Overview ---------- */
   const coachText = /\s\w\.$/.test(w.coach) ? `with ${w.coach}` : w.coach;
+  const photo = WORKOUT_HERO[w.id];
   const meta: [IconName, string, string, string, string][] = [
     ['time', `${w.minutes} min`, 'Duration', C.water, C.waterSoft],
     ['flame', `${w.kcal} kcal`, 'Burn', C.accent, C.accentSoft],
@@ -385,22 +387,34 @@ function WorkoutFlow({ w }: { w: Workout }) {
       <StatusBar style="light" />
       <ScrollView contentContainerStyle={{ paddingBottom: 110 + insets.bottom }} showsVerticalScrollIndicator={false}>
         <LinearGradient colors={[w.color, w.color + 'C7']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[st.hero, { paddingTop: insets.top + 8 }]}>
-          <View pointerEvents="none" style={st.heroDeco}>
-            <Svg width={320} height={320}>
-              <Circle cx={160} cy={160} r={160} fill={C.white} opacity={0.08} />
-              <Circle cx={160} cy={160} r={104} fill="none" stroke={C.white} strokeOpacity={0.16} strokeWidth={1.5} />
-              <Circle cx={160} cy={160} r={50} fill={C.white} opacity={0.07} />
-            </Svg>
-          </View>
+          {photo ? (
+            <>
+              <Image source={photo} style={st.heroPhoto} contentFit="cover" transition={220} />
+              {/* Scrim: keeps the back button and the white title legible over any photo. */}
+              <LinearGradient pointerEvents="none" colors={['rgba(12,10,9,0.38)', 'rgba(12,10,9,0.08)', 'rgba(12,10,9,0.74)']} locations={[0, 0.4, 1]} style={st.heroPhoto} />
+            </>
+          ) : (
+            <View pointerEvents="none" style={st.heroDeco}>
+              <Svg width={320} height={320}>
+                <Circle cx={160} cy={160} r={160} fill={C.white} opacity={0.08} />
+                <Circle cx={160} cy={160} r={104} fill="none" stroke={C.white} strokeOpacity={0.16} strokeWidth={1.5} />
+                <Circle cx={160} cy={160} r={50} fill={C.white} opacity={0.07} />
+              </Svg>
+            </View>
+          )}
           <View style={st.heroTop}>
             <IconButton icon="arrow-back" color={C.white} bg="rgba(255,255,255,0.2)" onPress={goBack} />
             <View style={st.catPill}>
               <Text style={st.catText}>{w.category}</Text>
             </View>
           </View>
-          <Animated.View entering={nativeOnly(ZoomIn.duration(MOTION.enter))} style={st.heroDisc}>
-            <Glyph emoji={w.emoji} src={WORKOUT_ART[w.id]} size={WORKOUT_ART[w.id] ? 100 : 74} />
-          </Animated.View>
+          {photo ? (
+            <View style={st.heroPhotoGap} />
+          ) : (
+            <Animated.View entering={nativeOnly(ZoomIn.duration(MOTION.enter))} style={st.heroDisc}>
+              <Glyph emoji={w.emoji} src={WORKOUT_ART[w.id]} size={WORKOUT_ART[w.id] ? 100 : 74} />
+            </Animated.View>
+          )}
           <Text style={st.heroTitle}>{w.title}</Text>
           <Text style={st.heroCoach}>{coachText}</Text>
         </LinearGradient>
@@ -523,6 +537,9 @@ function Ctrl({ icon, label, onPress }: { icon: IconName; label: string; onPress
 const st = StyleSheet.create({
   hero: { paddingHorizontal: 20, paddingBottom: 48, alignItems: 'center', overflow: 'hidden' },
   heroDeco: { position: 'absolute', top: -110, right: -120 },
+  heroPhoto: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
+  // Same footprint as the glyph disc (104 + 4 margin), so the hero keeps its height when a photo replaces it.
+  heroPhotoGap: { height: 108 },
   heroTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', alignSelf: 'stretch' },
   catPill: { backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: R.pill },
   catText: { color: C.white, fontSize: 12, fontWeight: '700', letterSpacing: 0.2 },

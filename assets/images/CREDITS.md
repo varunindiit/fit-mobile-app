@@ -16,6 +16,13 @@
   likeness or branding; the coaches they depict are fictional. Resized and compressed to WebP.
   `trainers/arjun-mehta.webp` is the same asset as `onboarding/coach.webp`.
 
+## Level up card photography
+
+- `focus/*.webp` — original images generated with OpenAI image generation via Codex for Fittelo's
+  "Level up" carousel, using the prompts and personas in `scripts/level-up-photos/README.md`. No real
+  people, third-party likeness or branding; the athletes are fictional. Cropped, resized and
+  compressed to WebP with `scripts/level-up-photos/optimize.py`.
+
 ## Exercise animations
 
 - `exercises/*.webp` and `exercises/anim/*.webp` — exercise animations and their opening still frames.
