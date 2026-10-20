@@ -230,10 +230,27 @@ export const uid = () => `${Date.now().toString(36)}${(idSeq++).toString(36)}${M
 /** Drop malformed records (bad dates, NaN numbers) that would crash screens or skew totals. */
 const isDate = (d: unknown): d is string => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d);
 const isNum = (n: unknown): n is number => typeof n === 'number' && Number.isFinite(n);
+/** Collapse repeat logs of the same food in the same meal on the same day into one row (first id/position kept, qty summed). */
+export function mergeEntries(entries: FoodEntry[]): FoodEntry[] {
+  const byKey = new Map<string, number>();
+  const out: FoodEntry[] = [];
+  for (const e of entries) {
+    const key = `${e.date}|${e.meal}|${e.foodId}`;
+    const at = byKey.get(key);
+    if (at === undefined) {
+      byKey.set(key, out.length);
+      out.push(e);
+    } else {
+      out[at] = { ...out[at], qty: Math.round((out[at].qty + e.qty) * 100) / 100 };
+    }
+  }
+  return out;
+}
+
 export function sanitize(s: AppState): AppState {
   return {
     ...s,
-    entries: s.entries.filter((e) => e && typeof e.id === 'string' && typeof e.foodId === 'string' && isDate(e.date) && isNum(e.qty) && e.qty > 0),
+    entries: mergeEntries(s.entries.filter((e) => e && typeof e.id === 'string' && typeof e.foodId === 'string' && isDate(e.date) && isNum(e.qty) && e.qty > 0)),
     workouts: s.workouts.filter((w) => w && typeof w.id === 'string' && isDate(w.date) && isNum(w.minutes) && isNum(w.kcal)),
     weights: s.weights.filter((w) => w && typeof w.id === 'string' && isDate(w.date) && isNum(w.kg) && w.kg > 0),
     readNotifs: s.readNotifs.filter((x) => typeof x === 'string'),
@@ -395,7 +412,7 @@ function useAppStore() {
       updateSettings: (patch: Partial<Settings>) => update((s) => ({ ...s, settings: { ...s.settings, ...patch } })),
 
       addFood: (foodId: string, meal: MealKey, qty: number, date = todayKey()) =>
-        update((s) => (Number.isFinite(qty) && qty > 0 ? { ...s, entries: [...s.entries, { id: uid(), foodId, meal, qty, date }] } : s)),
+        update((s) => (Number.isFinite(qty) && qty > 0 ? { ...s, entries: mergeEntries([...s.entries, { id: uid(), foodId, meal, qty, date }]) } : s)),
       updateFood: (id: string, patch: Partial<Omit<FoodEntry, 'id'>>) =>
         update((s) => {
           if (patch.qty !== undefined && !(Number.isFinite(patch.qty) && patch.qty > 0)) return s;
@@ -424,7 +441,7 @@ function useAppStore() {
           const items = snap.items.filter((i) => i.qty > 0);
           if (!items.length) return s;
           const entries = items.map((i) => ({ id: uid(), foodId: i.foodId, qty: i.qty, meal: snap.meal, date: snap.date, snapId: id }));
-          return { ...s, snaps: [{ ...snap, items, id }, ...s.snaps], entries: [...s.entries, ...entries] };
+          return { ...s, snaps: [{ ...snap, items, id }, ...s.snaps], entries: mergeEntries([...s.entries, ...entries]) };
         }),
       toggleFavorite: (foodId: string) =>
         update((s) => ({ ...s, favoriteFoods: s.favoriteFoods.includes(foodId) ? s.favoriteFoods.filter((f) => f !== foodId) : [foodId, ...s.favoriteFoods] })),

@@ -117,6 +117,8 @@ describe('every user action survives an app restart', () => {
     await act(async () => a().completeOnboarding(profile));
     // The demo history already fills today, so these checks are relative to it.
     const water0 = a().state.water[todayKey()] ?? 0;
+    const dalLunch = () => a().state.entries.filter((e) => e.foodId === 'dal' && e.meal === 'lunch' && e.date === todayKey());
+    const dal0 = dalLunch()[0]?.qty ?? 0;
     await act(async () => {
       a().addFood('dal', 'lunch', 2);
       a().addWater(1);
@@ -137,7 +139,8 @@ describe('every user action survives an app restart', () => {
     const s = a().state;
     const t = todayKey();
     expect(s.onboarded).toBe(true);
-    expect(own(s.entries)).toEqual([expect.objectContaining({ foodId: 'dal', meal: 'lunch', qty: 2, date: t })]);
+    // A repeat food in the same meal merges into the existing row (demo or not) instead of adding a second one.
+    expect(dalLunch()).toEqual([expect.objectContaining({ foodId: 'dal', meal: 'lunch', qty: dal0 + 2, date: t })]);
     expect(s.water[t]).toBe(water0 + 3);
     expect(s.steps[t]).toBe(5400);
     expect(s.weights.find((w) => w.date === t)?.kg).toBe(69.5);
@@ -228,6 +231,22 @@ describe('actions handle edge cases', () => {
     expect(h.result.current.state.entries).toHaveLength(1);
     await act(async () => h.result.current.updateFood(e.id, { qty: -1 }));
     expect(h.result.current.state.entries[0].qty).toBe(1.5);
+  });
+
+  it('adding the same food to the same meal bumps qty instead of a second row', async () => {
+    const h = await launch();
+    await act(async () => {
+      h.result.current.addFood('roti', 'breakfast', 1, '2026-10-20');
+      h.result.current.addFood('dal', 'breakfast', 1, '2026-10-20');
+      h.result.current.addFood('roti', 'breakfast', 1, '2026-10-20');
+      h.result.current.addFood('roti', 'lunch', 1, '2026-10-20');
+    });
+    const own = h.result.current.state.entries.filter((e) => e.date === '2026-10-20');
+    expect(own.map((e) => [e.meal, e.foodId, e.qty])).toEqual([
+      ['breakfast', 'roti', 2],
+      ['breakfast', 'dal', 1],
+      ['lunch', 'roti', 1],
+    ]);
   });
 
   it('undo restores a deleted entry with the same id and position', async () => {
