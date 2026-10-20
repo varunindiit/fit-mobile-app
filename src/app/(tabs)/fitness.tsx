@@ -26,7 +26,7 @@ import { useAccess } from '@/lib/useAccess';
 import { useToday } from '@/lib/useToday';
 import { C, G, ink, INK, MOTION, R, shadowSm } from '@/theme';
 import { Glyph } from '@/components/Glyph';
-import { AREA_PHOTO, FOCUS_PHOTO, logArt, programPhoto, sessionArt, WORKOUT_ART, WORKOUT_PHOTO } from '@/components/glyphs';
+import { ACTIVITY_PHOTO, AREA_PHOTO, FOCUS_PHOTO, logArt, programPhoto, sessionArt, WORKOUT_ART, WORKOUT_PHOTO } from '@/components/glyphs';
 
 const SOURCE = Platform.OS === 'ios' ? 'Apple Health' : 'Google Fit';
 type Focus = (typeof FOCUS_SESSIONS)[number];
@@ -267,11 +267,13 @@ export default function TrainingScreen() {
             ) : (
               todays.map((w, i) => {
                 const linked = !!(w.sessionKey || w.workoutId);
+                // Manual logs only store the activity's label, so match on it to find the photo.
+                const photo = linked ? undefined : ACTIVITY_PHOTO[ACTIVITIES.find((a) => a.label === w.title)?.id ?? ''];
                 return (
                   <Animated.View key={w.id} entering={rowIn} exiting={rowOut} layout={listLayout}>
                     <Pressable onPress={() => linked && openLogged(w)} style={({ pressed }) => [st.actRow, i > 0 && st.actBorder, pressed && linked && st.rowPressed]}>
                       <View style={st.actEmoji}>
-                        <Glyph emoji={w.emoji} src={logArt(w)} size={30} />
+                        {photo ? <Image source={photo} style={st.fill} contentFit="cover" /> : <Glyph emoji={w.emoji} src={logArt(w)} size={30} />}
                       </View>
                       <View style={{ flex: 1 }}>
                         <Text style={st.actTitle} numberOfLines={1}>
@@ -466,7 +468,7 @@ export default function TrainingScreen() {
                 }}
                 style={st.actItem}>
                 <View style={[st.actTile, on && st.actTileOn]}>
-                  <Glyph emoji={a.emoji} size={34} />
+                  {ACTIVITY_PHOTO[a.id] ? <Image source={ACTIVITY_PHOTO[a.id]} style={st.fill} contentFit="cover" /> : <Glyph emoji={a.emoji} size={34} />}
                 </View>
                 <Text style={[st.actLabel, on && { color: C.primaryDark }]} numberOfLines={1}>
                   {a.label}
@@ -484,7 +486,7 @@ export default function TrainingScreen() {
         </View>
         <View style={st.kcalBox}>
           <View style={st.kcalEmoji}>
-            <Glyph emoji={act.emoji} size={32} />
+            {ACTIVITY_PHOTO[act.id] ? <Image source={ACTIVITY_PHOTO[act.id]} style={st.fill} contentFit="cover" transition={180} /> : <Glyph emoji={act.emoji} size={32} />}
           </View>
           <View style={{ flex: 1 }}>
             <CountUp value={actKcal} style={st.kcalBig}>
@@ -655,7 +657,8 @@ const st = StyleSheet.create({
   actRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, paddingHorizontal: 8, marginHorizontal: -8, borderRadius: R.sm },
   actBorder: { borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: C.borderSoft, borderTopLeftRadius: 0, borderTopRightRadius: 0 },
   rowPressed: { backgroundColor: C.surfaceAlt },
-  actEmoji: { width: 44, height: 44, borderRadius: 14, backgroundColor: C.workoutSoft, alignItems: 'center', justifyContent: 'center' },
+  actEmoji: { width: 44, height: 44, borderRadius: 14, backgroundColor: C.workoutSoft, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  fill: { width: '100%', height: '100%' },
   actTitle: { fontSize: 15, fontWeight: '700', color: C.text, marginBottom: 3, letterSpacing: -0.1 },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   metaText: { fontSize: 13, color: C.textSoft, fontWeight: '500' },
@@ -693,12 +696,12 @@ const st = StyleSheet.create({
   goalHint: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 16, backgroundColor: C.surfaceAlt, borderRadius: R.sm, paddingHorizontal: 12, paddingVertical: 10 },
   actGrid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 14 },
   actItem: { width: '25%', alignItems: 'center', gap: 6 },
-  actTile: { width: 58, height: 58, borderRadius: 18, backgroundColor: C.surfaceAlt, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: C.borderSoft },
+  actTile: { width: 58, height: 58, borderRadius: 18, backgroundColor: C.surfaceAlt, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: C.borderSoft, overflow: 'hidden' },
   actTileOn: { backgroundColor: C.primarySoft, borderColor: C.primary },
   actLabel: { fontSize: 12, fontWeight: '600', color: C.textSoft },
   durRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 22 },
   kcalBox: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: C.accentSoft, borderRadius: R.md, padding: 14, marginTop: 18 },
-  kcalEmoji: { width: 44, height: 44, borderRadius: 14, backgroundColor: C.card, alignItems: 'center', justifyContent: 'center' },
+  kcalEmoji: { width: 44, height: 44, borderRadius: 14, backgroundColor: C.card, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   kcalBig: { fontSize: 22, fontWeight: '800', color: C.text, fontVariant: ['tabular-nums'], letterSpacing: -0.4 },
   kcalUnit: { fontSize: 14, fontWeight: '600', color: C.textSoft, letterSpacing: 0 },
 });

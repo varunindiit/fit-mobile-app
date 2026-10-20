@@ -49,6 +49,22 @@
   "Train with a coach" photo attached as the identity reference. No real people, third-party likeness or
   branding; the athletes are fictional. Cropped and compressed to WebP by `scripts/area-photos/optimize.py`.
 
+## Training plan disc photography
+
+- `plans/*.webp` — original images generated with OpenAI image generation via Codex (`codex exec`,
+  `image_generation` feature) for the "Select Training Plan" cards, from the prompts in
+  `scripts/plan-photos/README.md`. Each athlete was generated with their existing "Level up" photo
+  attached as the identity reference. No real people, third-party likeness or branding; the athletes
+  are fictional. Cropped and compressed to WebP by `scripts/plan-photos/optimize.py`.
+
+## Log activity tile photography
+
+- `activities/*.webp` — original images generated with OpenAI image generation via Codex (`codex exec`,
+  `image_generation` feature) for the "Log activity" sheet tiles, from the prompts in
+  `scripts/activity-photos/README.md`. Each athlete was generated with their existing "Level up" /
+  "Train with a coach" photo attached as the identity reference. No real people, third-party likeness or
+  branding; the athletes are fictional. Cropped and compressed to WebP by `scripts/activity-photos/optimize.py`.
+
 ## Exercise animations
 
 - `exercises/*.webp` and `exercises/anim/*.webp` — exercise animations and their opening still frames.

@@ -300,6 +300,19 @@ export const AREA_PHOTO: Record<string, number> = {
   'focus:ultimate-core': require('@/assets/images/areas/ultimate-core.webp'),
 };
 
+/** Square athlete photo for each manual activity (ACTIVITIES), shown in the "Log activity" sheet and on its log rows.
+ *  See scripts/activity-photos/. */
+export const ACTIVITY_PHOTO: Record<string, number> = {
+  walking: require('@/assets/images/activities/walking.webp'),
+  running: require('@/assets/images/activities/running.webp'),
+  cycling: require('@/assets/images/activities/cycling.webp'),
+  yoga: require('@/assets/images/activities/yoga.webp'),
+  swimming: require('@/assets/images/activities/swimming.webp'),
+  badminton: require('@/assets/images/activities/badminton.webp'),
+  cricket: require('@/assets/images/activities/cricket.webp'),
+  gym: require('@/assets/images/activities/gym.webp'),
+};
+
 /** The mascot resting, shown on every rest day instead of the generic 😴 glyph. */
 export const REST_ART: number = require('@/assets/images/glyphs/p-yoga.webp');
 
@@ -313,6 +326,16 @@ export const PROGRAM_PHOTO: Record<string, number> = {
   abs: require('@/assets/images/programs/abs.webp'),
   sixpack: require('@/assets/images/programs/sixpack.webp'),
   rest: require('@/assets/images/programs/rest.webp'),
+};
+
+/**
+ * Athlete photo filling the right side of the expanded "Select Training Plan" card, keyed by program id.
+ * Files live in `assets/images/plans/` (see `scripts/plan-photos/README.md`).
+ */
+export const PLAN_PHOTO: Record<string, number> = {
+  belly: require('@/assets/images/plans/belly.webp'),
+  abs: require('@/assets/images/plans/abs.webp'),
+  sixpack: require('@/assets/images/plans/sixpack.webp'),
 };
 
 /** The same photography at full-screen width and 3:2, for the program day detail hero. */
