@@ -57,8 +57,8 @@ function PlanCard({ p, open, done, cta, onChange, onStart }: { p: Program; open:
   }, [open, turn]);
   const chevron = useAnimatedStyle(() => ({ transform: [{ rotate: `${turn.get() * 90}deg` }] }));
   const photo = PLAN_PHOTO[p.id];
-  // With its photo showing, the card drops the program colour for a plain ink shade so the athlete reads as a photo.
-  const shaded = open && !!photo;
+  // A card with a photo drops the program colour for a plain ink shade so the athlete reads as a photo.
+  const shaded = !!photo;
 
   return (
     <Animated.View layout={layout} style={[s.shell, { backgroundColor: shaded ? INK : p.colors[1] }]}>
@@ -70,14 +70,19 @@ function PlanCard({ p, open, done, cta, onChange, onStart }: { p: Program; open:
           onChange(p.id);
         }}>
         <LinearGradient colors={shaded ? [INK, INK] : p.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.card}>
-          {open && photo ? (
-            <Animated.View entering={photoIn} exiting={photoOut} pointerEvents="none" style={StyleSheet.absoluteFill}>
-              <Image source={photo} style={s.media} contentFit="cover" transition={MOTION.base} accessibilityIgnoresInvertColors />
+          {photo ? (
+            <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+              {/* Pinned to the top so a collapsed card still frames the athlete's face and shoulders */}
+              <Image source={photo} style={s.media} contentFit="cover" contentPosition="top" transition={MOTION.base} accessibilityIgnoresInvertColors />
               {/* Black shade on the left behind the title, clearing to the athlete on the right */}
               <LinearGradient colors={ramp(INK, SIDE_ALPHA)} locations={SIDE_STOPS} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={StyleSheet.absoluteFill} />
               {/* Black shade again under the description and CTA */}
-              <LinearGradient colors={ramp(INK, BOTTOM_ALPHA)} locations={BOTTOM_STOPS} style={StyleSheet.absoluteFill} />
-            </Animated.View>
+              {open && (
+                <Animated.View entering={photoIn} exiting={photoOut} style={StyleSheet.absoluteFill}>
+                  <LinearGradient colors={ramp(INK, BOTTOM_ALPHA)} locations={BOTTOM_STOPS} style={StyleSheet.absoluteFill} />
+                </Animated.View>
+              )}
+            </View>
           ) : (
             <Svg width={220} height={220} style={s.deco} pointerEvents="none">
               <Circle cx={150} cy={70} r={92} fill={C.white} opacity={0.09} />
