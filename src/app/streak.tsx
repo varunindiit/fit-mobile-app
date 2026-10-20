@@ -82,8 +82,8 @@ export default function StreakScreen() {
 
   const stats: { icon: IconName; color: string; bg: string; value: string; label: string }[] = [
     { icon: 'flame', color: C.accent, bg: C.accentSoft, value: p.kcal ?? '0', label: 'kcal' },
-    { icon: 'time', color: C.water, bg: C.waterSoft, value: p.minutes ?? '0', label: 'minutes' },
-    { icon: 'barbell', color: C.workout, bg: C.workoutSoft, value: p.exercises ?? '0', label: 'exercises' },
+    { icon: 'time', color: C.water, bg: C.waterSoft, value: p.minutes ?? '0', label: p.minutes === '1' ? 'minute' : 'minutes' },
+    { icon: 'barbell', color: C.workout, bg: C.workoutSoft, value: p.exercises ?? '0', label: p.exercises === '1' ? 'exercise' : 'exercises' },
   ];
 
   return (
@@ -185,7 +185,7 @@ export default function StreakScreen() {
         <View style={s.sheetHero}>
           <IconTile icon="gift" color={C.white} bg={C.accent} size={44} />
           <Text style={[T.body, { flex: 1 }]}>
-            Work out for <Text style={{ fontWeight: '700', color: C.text }}>7 days</Text> to unlock <Text style={{ fontWeight: '700', color: C.accent }}>50% off Fittelo Premium</Text> — personal coach, custom meal plans and every training program.
+            Work out for <Text style={{ fontWeight: '700', color: C.text }}>7 days</Text> to unlock <Text style={{ fontWeight: '700', color: C.accent }}>50% off Fittelo Premium</Text> — every program day, full analytics and a personal trainer on Pro.
           </Text>
         </View>
         <View style={{ marginTop: 16, gap: 10 }}>

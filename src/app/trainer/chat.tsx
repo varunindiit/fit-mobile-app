@@ -202,7 +202,7 @@ export default function TrainerChatScreen() {
       <View style={st.notice}>
         <Ionicons name="information-circle-outline" size={13} color={C.muted} />
         <Text style={st.noticeText} numberOfLines={2}>
-          Demo coaching chat · {trainer.name} is a sample coach and every reply is scripted
+          Your chat with {trainer.name} stays on this device
         </Text>
         <IconButton icon="refresh" size={16} bg={C.surfaceAlt} style={st.noticeBtn} onPress={() => setConfirmClear(true)} />
       </View>
@@ -219,8 +219,7 @@ export default function TrainerChatScreen() {
               <TrainerAvatar trainer={trainer} size={68} />
               <Text style={st.emptyTitle}>Say hello to {coach}</Text>
               <Text style={st.emptyText}>
-                Ask for a workout, say how a session felt, or flag an ache before you train.{'\n\n'}This is a demo thread — replies are written into the app, so no real person reads
-                what you send here.
+                Ask for a workout, say how a session felt, or flag an ache before you train.
               </Text>
             </Animated.View>
           )}
@@ -315,7 +314,7 @@ export default function TrainerChatScreen() {
         visible={confirmClear}
         iconName="chatbubbles"
         title="Start a new conversation?"
-        text={`This clears your demo thread with ${trainer.name}.`}
+        text={`This clears your conversation with ${trainer.name}.`}
         confirm="New conversation"
         cancel="Cancel"
         onConfirm={newConversation}

@@ -10,7 +10,9 @@ import Svg, { Circle } from 'react-native-svg';
 
 import { Button, CountUp, Dialog, EASE_OUT, nativeOnly, Ring, Sheet, tap, type IconName } from '@/components/ui';
 import { DEFAULT_MONTHS, PlanPicker, planFor } from '@/components/plans/PlanPicker';
+import { FOODS } from '@/data/foods';
 import { formatUSD, type PlanTier } from '@/data/plans';
+import { EXERCISES, PROGRAM_DAYS } from '@/data/program';
 import { bmi, targets } from '@/lib/calc';
 import type { Profile } from '@/lib/store';
 import { BRAND, C, glow, ink, MOTION, R, shadow, shadowLg, shadowSm } from '@/theme';
@@ -36,10 +38,11 @@ const rise = (delay: number) => nativeOnly(FadeInDown.duration(MOTION.enter + 80
 
 /* ---------------- 0 · Intro ---------------- */
 
+/** Product facts counted from the app's own data, so the strip never claims more than ships. */
 const INTRO_STATS: { label: string; value: number; format: (n: number) => string }[] = [
-  { label: 'workouts logged', value: 300, format: (n) => `${Math.round(n)}M+` },
-  { label: 'kcal torched', value: 15, format: (n) => `${Math.round(n)}B+` },
-  { label: 'user rating', value: 4.9, format: (n) => `${n.toFixed(1)}★` },
+  { label: 'day programs', value: PROGRAM_DAYS, format: (n) => `${Math.round(n)}` },
+  { label: 'guided exercises', value: EXERCISES.length, format: (n) => `${Math.round(n)}` },
+  { label: 'Indian foods', value: FOODS.length, format: (n) => `${Math.round(n)}` },
 ];
 
 const LOGO = require('@/assets/images/logo-mark.png');
@@ -632,7 +635,7 @@ export function Paywall({ male, gaining, onSkip, onPaid, onDone }: { male: boole
         visible={confirm}
         iconName="gift"
         title={`Welcome to ${plan.name}!`}
-        text={`Your ${dur.months}-month plan is active. Demo mode: no payment is taken.`}
+        text={`Your ${dur.months}-month plan is active.`}
         confirm="Let's go"
         onConfirm={() => {
           setConfirm(false);

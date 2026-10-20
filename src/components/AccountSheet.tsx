@@ -78,9 +78,9 @@ export function Initial({ name, color = C.primary, size = 44 }: { name: string; 
   );
 }
 
-const COPY: Record<Provider, { title: string; add: string; note: string }> = {
-  google: { title: 'Choose an account', add: 'Add another account', note: 'Demo sign-in — no data leaves this device' },
-  apple: { title: 'Sign in with Apple', add: 'Use a different Apple Account', note: 'Demo sign-in — no data leaves this device' },
+const COPY: Record<Provider, { title: string; add: string }> = {
+  google: { title: 'Choose an account', add: 'Add another account' },
+  apple: { title: 'Sign in with Apple', add: 'Use a different Apple Account' },
 };
 
 /** Free / Smart / Pro chip shown next to an account that brings its plan along. */
@@ -133,16 +133,12 @@ export function AccountSheet({ visible, provider, accounts, onClose, onPick, sho
             </View>
           );
         })}
-        <Pressable accessibilityRole="button" onPress={() => toast('Demo only — pick one of the accounts above', 'information-circle')} style={({ pressed }) => [st.row, pressed && { backgroundColor: C.surfaceAlt }]}>
+        <Pressable accessibilityRole="button" onPress={() => toast('Pick one of the accounts above', 'information-circle')} style={({ pressed }) => [st.row, pressed && { backgroundColor: C.surfaceAlt }]}>
           <View style={st.addIcon}>
             <Ionicons name="person-add-outline" size={18} color={C.textSoft} />
           </View>
           <Text style={st.name}>{copy.add}</Text>
         </Pressable>
-      </View>
-      <View style={st.note}>
-        <Ionicons name="lock-closed" size={12} color={C.muted} />
-        <Text style={T.tiny}>{copy.note}</Text>
       </View>
     </Sheet>
   );
@@ -160,5 +156,4 @@ const st = StyleSheet.create({
   chipText: { fontSize: 10.5, fontWeight: '800', letterSpacing: 0.4, textTransform: 'uppercase' },
   hideIcon: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   addIcon: { width: 40, height: 40, borderRadius: 20, borderWidth: 1.5, borderColor: C.border, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' },
-  note: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, marginTop: 14 },
 });

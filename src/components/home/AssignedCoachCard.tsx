@@ -52,9 +52,6 @@ export function AssignedCoachCard({ trainerId }: { trainerId: string | null }) {
               {coach.role}
             </Text>
             <View style={st.meta}>
-              <Ionicons name="star" size={11} color={C.gold} />
-              <Text style={st.metaStrong}>{coach.rating.toFixed(1)}</Text>
-              <View style={st.metaDot} />
               <Text style={st.metaSoft}>{coach.years} yrs</Text>
               <View style={st.metaDot} />
               <Text style={[st.metaSoft, { flexShrink: 1 }]} numberOfLines={1}>

@@ -341,7 +341,7 @@ const HELP = [
   { q: 'How do I log food faster?', a: 'Tap the + button and choose Snap to photograph your plate, or search from 50+ Indian dishes. Portions use familiar units like katori, roti and plate.' },
   { q: 'Can I change my goal later?', a: 'Yes. Go to Profile → Edit goals. Your calorie budget, macros and goal date are recalculated instantly.' },
   { q: `How do I sync steps from ${HEALTH_APP}?`, a: `Turn on ${HEALTH_APP} under Connected apps. Steps and workouts then sync automatically in the background.` },
-  { q: 'What do I get with Premium?', a: 'Smart unlocks unlimited Saathi chats, Snap scans and personalised plans. Pro adds a dedicated nutritionist and coach with weekly video check-ins.' },
+  { q: 'What do I get with Premium?', a: 'Smart unlocks every program day, the full class library, complete analytics and workout customisation. Pro adds a personal trainer with chat, calls and trainer-written workouts.' },
 ];
 
 export function HelpSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
@@ -373,14 +373,14 @@ const ABOUT: { icon: IconName; color: string; bg: string; title: string; text: s
     color: C.primaryDark,
     bg: C.primarySoft,
     title: 'About',
-    text: `${BRAND} helps you eat better the Indian way — track meals in katoris and rotis, get coached by Saathi, our AI nutritionist, and reach your goals with certified experts.`,
+    text: `${BRAND} brings workouts, guided 30-day programs, a food diary built for Indian meals and progress analytics together in one app, with Saathi, the in-app coach, on hand.`,
   },
   {
     icon: 'lock-closed',
     color: C.protein,
     bg: tint(C.protein),
     title: 'Your privacy',
-    text: 'This is a client demo. Everything you enter stays on this device — nothing is uploaded to a server, and no real payments are ever processed.',
+    text: 'Everything you enter stays on this device — nothing is uploaded to a server.',
   },
   {
     icon: 'medical',
@@ -400,7 +400,7 @@ export function AboutSheet({ visible, onClose }: { visible: boolean; onClose: ()
         </View>
         <View style={{ flex: 1, gap: 4 }}>
           <Text style={T.h3}>{BRAND}</Text>
-          <Pill text="VERSION 1.0.0 · DEMO BUILD" color={C.textSoft} bg="#EEEDEB" />
+          <Pill text="VERSION 1.0.0" color={C.textSoft} bg="#EEEDEB" />
         </View>
       </View>
       {ABOUT.map((x) => (

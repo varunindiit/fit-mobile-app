@@ -214,7 +214,7 @@ function StreakBox({ icon, color, bg, value, label }: { icon: IconName; color: s
       <IconTile icon={icon} color={color} bg={bg} size={40} />
       <View>
         <CountUp value={value} format={fmtNum} fromZero style={st.streakNum}>
-          <Text style={st.streakUnit}> days</Text>
+          <Text style={st.streakUnit}>{value === 1 ? ' day' : ' days'}</Text>
         </CountUp>
         <Text style={T.tiny}>{label}</Text>
       </View>

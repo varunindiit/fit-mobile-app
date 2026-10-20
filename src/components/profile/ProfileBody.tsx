@@ -74,6 +74,8 @@ import {
 import { RateSheet, WorkoutSettingsSheet } from "./sheets";
 
 const LOGO = require("@/assets/images/logo-mark.png");
+/** Presenter-only controls (restart onboarding, reset data, log out). Flip to true to show them again. */
+const SHOW_PRESENTER_CONTROLS = false;
 
 type SheetKind =
   | null
@@ -739,6 +741,8 @@ export function ProfileBody({ mode }: { mode: "tab" | "stack" }) {
 
         {/* Demo controls (presenter only, de-emphasised) */}
         <Animated.View entering={enter(6)}>
+          {SHOW_PRESENTER_CONTROLS && (
+          <>
           <GroupLabel
             title="Demo controls"
             right={<Pill text="PRESENTER ONLY" color={C.muted} bg="#EEEDEB" />}
@@ -766,12 +770,14 @@ export function ProfileBody({ mode }: { mode: "tab" | "stack" }) {
               onPress={() => setDialog("logout")}
             />
           </View>
+          </>
+          )}
           <View style={st.footer}>
             <View style={st.footerLogo}>
               <Image source={LOGO} style={{ width: 13, height: 13 }} contentFit="contain" />
             </View>
             <Text style={st.footerText}>
-              Fittelo v1.0.0 · Demo build · data stored on this device
+              Fittelo v1.0.0
             </Text>
           </View>
         </Animated.View>

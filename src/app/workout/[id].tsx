@@ -25,7 +25,8 @@ type Run = { idx: number; left: number; elapsed: number; prep: number; finished:
 type Result = { completed: boolean; kcal: number; minutes: number; done: number };
 
 const PREP = 3; // real seconds of "get ready"
-const SPEEDS = [1, 5, 10];
+/** Classes play in real time. */
+const CLASS_SPEED = 1;
 const clock = (s: number, up = false) => {
   const t = Math.max(0, up ? Math.floor(s) : Math.ceil(s));
   return `${Math.floor(t / 60)}:${pad(t % 60)}`;
@@ -63,7 +64,7 @@ export default function WorkoutScreen() {
 }
 
 function WorkoutFlow({ w }: { w: Workout }) {
-  const { state, logWorkout, removeWorkout, saveClassRun, updateSettings } = useStore();
+  const { state, logWorkout, removeWorkout, saveClassRun } = useStore();
   const toast = useToast();
   const insets = useSafeAreaInsets();
   const n = w.exercises.length;
@@ -72,7 +73,7 @@ function WorkoutFlow({ w }: { w: Workout }) {
   const [phase, setPhase] = useState<Phase>('overview');
   const [run, setRun] = useState<Run>(() => freshRun(w));
   const [paused, setPaused] = useState(false);
-  const speed = SPEEDS.includes(state.settings.classSpeed) ? state.settings.classSpeed : 5;
+  const speed = CLASS_SPEED;
   const [askEnd, setAskEnd] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
   const wasPaused = useRef(false);
@@ -290,19 +291,8 @@ function WorkoutFlow({ w }: { w: Workout }) {
           <Text style={st.pTopTitle} numberOfLines={1}>
             {prepping ? w.title : `Exercise ${run.idx + 1} of ${n}`}
           </Text>
-          <PressableScale
-            hitSlop={8}
-            scaleTo={0.92}
-            accessibilityRole="button"
-            accessibilityLabel={`Demo speed ${speed}x`}
-            onPress={() => {
-              tap();
-              updateSettings({ classSpeed: SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length] });
-            }}
-            style={st.speed}>
-            <Ionicons name="speedometer-outline" size={13} color={C.white} />
-            <Text style={st.speedText}>{speed}×</Text>
-          </PressableScale>
+          {/* Balances the close button so the title stays centred. */}
+          <View style={{ width: 40 }} />
         </View>
 
         <View style={st.segs}>
@@ -512,7 +502,7 @@ function WorkoutFlow({ w }: { w: Workout }) {
           </Animated.View>
           <Animated.View entering={enter(3)} style={st.tip}>
             <IconTile icon="bulb" color={C.warning} bg={C.warningSoft} size={34} />
-            <Text style={[T.small, { flex: 1 }]}>Keep water nearby and stop if you feel dizzy or any sharp pain. Demo runs at {speed}× speed — tap the speed badge to change it.</Text>
+            <Text style={[T.small, { flex: 1 }]}>Keep water nearby and stop if you feel dizzy or any sharp pain.</Text>
           </Animated.View>
         </View>
       </Animated.ScrollView>
@@ -650,8 +640,6 @@ const st = StyleSheet.create({
   player: { flex: 1, paddingHorizontal: 20 },
   pTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   pTopTitle: { color: C.white, fontSize: 15, fontWeight: '700', flex: 1, textAlign: 'center' },
-  speed: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(255,255,255,0.16)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)', paddingHorizontal: 10, height: 32, borderRadius: R.pill, minWidth: 40, justifyContent: 'center' },
-  speedText: { color: C.white, fontSize: 13, fontWeight: '700', fontVariant: ['tabular-nums'] },
   segs: { flexDirection: 'row', gap: 4, marginTop: 16 },
   seg: { flex: 1, height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.2)', overflow: 'hidden' },
   segFill: { height: '100%', backgroundColor: C.white, borderRadius: 3 },

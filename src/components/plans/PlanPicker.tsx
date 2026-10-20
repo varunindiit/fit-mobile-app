@@ -109,7 +109,7 @@ const ROWS: { feature: Feature; label: string; partial?: string }[] = [
   { feature: 'trainer.call', label: 'Trainer audio call' },
   { feature: 'trainer.call', label: 'Trainer video call' },
   { feature: 'trainer.plans', label: 'Trainer-built plans' },
-  { feature: 'trainer.demos', label: 'Trainer photo demos' },
+  { feature: 'trainer.demos', label: 'Real-athlete exercise videos' },
 ];
 
 /** Free / Smart / Pro feature matrix. Read-only — picking a plan stays with `PlanPicker`. */

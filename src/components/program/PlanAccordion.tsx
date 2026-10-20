@@ -7,7 +7,7 @@ import Animated, { FadeIn, FadeInDown, FadeOut, FadeOutUp, useAnimatedStyle, use
 import Svg, { Circle } from 'react-native-svg';
 
 import { EASE_OUT, layoutTransition, nativeOnly, PressableScale, ProgressBar, tap } from '@/components/ui';
-import { PROGRAMS, type ProgramId } from '@/data/program';
+import { PROGRAM_DAYS, PROGRAMS, type ProgramId } from '@/data/program';
 import { C, fade, INK, MOTION, R } from '@/theme';
 import { Glyph } from '@/components/Glyph';
 import { PLAN_PHOTO, PROGRAM_ART } from '@/components/glyphs';
@@ -109,8 +109,8 @@ function PlanCard({ p, open, done, cta, onChange, onStart }: { p: Program; open:
               {photo ? (
                 <View style={s.photoRow}>
                   <View style={s.users}>
-                    <Ionicons name="people" size={14} color={C.white} />
-                    <Text style={s.usersText}>{p.users} users</Text>
+                    <Ionicons name="calendar" size={14} color={C.white} />
+                    <Text style={s.usersText}>{PROGRAM_DAYS} days</Text>
                   </View>
                 </View>
               ) : (
@@ -119,8 +119,8 @@ function PlanCard({ p, open, done, cta, onChange, onStart }: { p: Program; open:
                     <Glyph emoji={p.emoji} src={PROGRAM_ART[p.id]} size={PROGRAM_ART[p.id] ? 110 : 70} />
                   </View>
                   <View style={s.users}>
-                    <Ionicons name="people" size={14} color={C.white} />
-                    <Text style={s.usersText}>{p.users} users</Text>
+                    <Ionicons name="calendar" size={14} color={C.white} />
+                    <Text style={s.usersText}>{PROGRAM_DAYS} days</Text>
                   </View>
                 </View>
               )}

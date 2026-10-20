@@ -83,10 +83,6 @@ export default function TrainerDashboardScreen() {
             </View>
 
             <View style={st.heroMeta}>
-              <Ionicons name="star" size={13} color={C.gold} />
-              <Text style={st.metaStrong}>{trainer.rating.toFixed(1)}</Text>
-              <Text style={st.metaSoft}>({trainer.reviews})</Text>
-              <View style={st.metaDot} />
               <Text style={st.metaSoft}>{trainer.years} yrs coaching</Text>
               <View style={st.metaDot} />
               <Ionicons name="location-outline" size={12} color="rgba(255,255,255,0.58)" />
@@ -265,7 +261,6 @@ export default function TrainerDashboardScreen() {
           </Card>
         </Animated.View>
 
-        <Text style={st.footNote}>Coach profiles, calls and messages in this preview are simulated, not a real person.</Text>
       </ScrollView>
     </Screen>
   );
@@ -394,5 +389,4 @@ const st = StyleSheet.create({
   certTitle: { fontSize: 14, fontWeight: '700', color: C.text, lineHeight: 18 },
   certBody: { fontSize: 12, fontWeight: '600', color: C.muted, marginTop: 2, fontVariant: ['tabular-nums'] },
 
-  footNote: { fontSize: 11, fontWeight: '600', color: C.muted, lineHeight: 16, textAlign: 'center', marginTop: 22, paddingHorizontal: 12 },
 });

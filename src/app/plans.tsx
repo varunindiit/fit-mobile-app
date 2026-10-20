@@ -20,17 +20,19 @@ import Svg, { Circle } from 'react-native-svg';
 
 import { Accordion, Decor, fmtFull, GOLD, planEnd, PREMIUM_BG } from '@/components/profile/shared';
 import { Button, Card, Dialog, EASE_OUT, enter, IconButton, IconTile, nativeOnly, PressableScale, Screen, SectionTitle, Sheet, T, tap, useToast, type IconName } from '@/components/ui';
-import { COACHES, formatUSD, PLAN_TIERS, TESTIMONIALS, type PlanTier } from '@/data/plans';
+import { formatUSD, PLAN_TIERS, type PlanTier } from '@/data/plans';
+import { EXERCISES, PROGRAMS, PROGRAM_DAYS } from '@/data/program';
 import { fmtDate, todayKey } from '@/lib/calc';
 import { FREE_PROGRAM_DAYS, planStatus, TIER_LABEL } from '@/lib/entitlements';
 import { TrainerAvatar } from '@/components/trainer/parts';
 import { trainerById } from '@/data/trainers';
 import { useStore, type Premium } from '@/lib/store';
 import { C, glow, MOTION, R } from '@/theme';
-import { Glyph } from '@/components/Glyph';
 import { ACCENT, DEFAULT_MONTHS, pctOff, PlanComparison, PlanPicker, planFor } from '@/components/plans/PlanPicker';
 
 const COUPON = { code: 'FIT40', off: 4 };
+/** Biggest discount on offer, worked out from the plan prices themselves. */
+const MAX_OFF = Math.max(...PLAN_TIERS.flatMap((p) => p.durations.map(pctOff)));
 const METHODS: { id: string; title: string; sub: string; icon: IconName }[] = [
   { id: 'card', title: 'Credit / Debit card', sub: 'Visa, Mastercard, Amex, Discover', icon: 'card-outline' },
   { id: 'applepay', title: 'Apple Pay', sub: 'Pay with Face ID or Touch ID', icon: 'logo-apple' },
@@ -39,7 +41,7 @@ const METHODS: { id: string; title: string; sub: string; icon: IconName }[] = [
 ];
 const FAQ = [
   { q: 'Can I cancel anytime?', a: 'Yes. You can cancel from Profile → Manage plan. You keep premium access until the end of your billing period.' },
-  { q: 'How do I talk to my coach?', a: 'Pro members get in-app chat with their nutritionist and trainer, plus a weekly 1-on-1 video check-in at a time that suits you.' },
+  { q: 'How do I talk to my coach?', a: 'Pro members get in-app chat with their personal trainer, plus audio and video calls you can start from the chat.' },
   { q: 'Will it work for a vegetarian diet?', a: 'Absolutely. Every plan is built around Indian food and your diet preference — veg, Jain, eggetarian, vegan or non-veg.' },
 ];
 
@@ -48,7 +50,7 @@ export default function PlansScreen() {
   const { state, subscribe, cancelPremium, setPremium } = useStore();
   const toast = useToast();
   const insets = useSafeAreaInsets();
-  const { width, height } = useWindowDimensions();
+  const { height } = useWindowDimensions();
   const focused = useIsFocused();
   const bar = <StatusBar style={focused ? 'light' : 'dark'} />;
   // One read of the entitlement rules covers every state this screen shows: Free, active, cancelled and lapsed.
@@ -67,7 +69,6 @@ export default function PlansScreen() {
   const [paying, setPaying] = useState(false);
   const [askCancel, setAskCancel] = useState(false);
   const [success, setSuccess] = useState<{ tier: PlanTier; months: number } | null>(null);
-  const [slide, setSlide] = useState(0);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mounted = useRef(true);
   useEffect(() => {
@@ -82,7 +83,6 @@ export default function PlansScreen() {
   const discount = dur.was - dur.price;
   const total = Math.max(0, dur.price - (coupon ? COUPON.off : 0));
   const cta = status.purchased === tier ? 'Renew' : status.tier === 'smart' && tier === 'pro' ? 'Upgrade' : 'Continue';
-  const slideW = width - 100;
   const accent = ACCENT[tier];
 
   const back = () => (router.canGoBack() ? router.back() : router.replace('/(tabs)'));
@@ -140,7 +140,7 @@ export default function PlansScreen() {
               <IconButton icon="arrow-back" color={C.white} bg="rgba(255,255,255,0.12)" onPress={back} />
               <LinearGradient colors={GOLD} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={st.offer}>
                 <Ionicons name="flame" size={12} color={C.navy} />
-                <Text style={st.offerText}>UP TO 62% OFF · ENDS SUNDAY</Text>
+                <Text style={st.offerText}>UP TO {MAX_OFF}% OFF</Text>
               </LinearGradient>
             </View>
             <Animated.View entering={enter(0)} style={st.heroMedalWrap}>
@@ -152,22 +152,14 @@ export default function PlansScreen() {
             </Animated.View>
             <Animated.View entering={enter(1)}>
               <Text style={st.heroTitle}>Fittelo Premium</Text>
-              <Text style={st.heroSub}>Reach your goal faster with Saathi AI and real Indian nutrition experts.</Text>
-              <View style={st.proof}>
-                <View style={st.stars}>
-                  {[0, 1, 2, 3, 4].map((i) => (
-                    <Ionicons key={i} name="star" size={13} color={C.gold} />
-                  ))}
-                </View>
-                <Text style={st.proofText}>4.8 · Loved by 2 lakh+ members</Text>
-              </View>
+              <Text style={st.heroSub}>Reach your goal faster with Saathi AI, the full program and a personal trainer on Pro.</Text>
             </Animated.View>
             <Animated.View entering={enter(2)} style={st.heroStats}>
-              <HeroStat value="−6.8 kg" label="avg. in 90 days" />
+              <HeroStat value={`${PROGRAM_DAYS}`} label="program days" />
               <View style={st.heroDiv} />
-              <HeroStat value="24×7" label="AI coaching" />
+              <HeroStat value={`${PROGRAMS.length}`} label="training plans" />
               <View style={st.heroDiv} />
-              <HeroStat value="500+" label="certified coaches" />
+              <HeroStat value={`${EXERCISES.length}`} label="guided exercises" />
             </Animated.View>
           </LinearGradient>
 
@@ -189,7 +181,7 @@ export default function PlansScreen() {
                     </View>
                   </View>
                   {!premium.cancelledAt && (
-                    <Button title="Cancel plan (demo)" variant="danger" small icon="close-circle-outline" style={{ marginTop: 14 }} onPress={() => setAskCancel(true)} />
+                    <Button title="Cancel plan" variant="danger" small icon="close-circle-outline" style={{ marginTop: 14 }} onPress={() => setAskCancel(true)} />
                   )}
                 </Card>
               </Animated.View>
@@ -254,79 +246,6 @@ export default function PlansScreen() {
               </Animated.View>
             )}
 
-            {/* Coaches + testimonials on deep teal */}
-            <Animated.View entering={enter(6)}>
-              <View style={st.band}>
-                {tier === 'pro' && (
-                  <Animated.View entering={nativeOnly(FadeIn.duration(MOTION.base))} style={{ marginBottom: 22 }}>
-                    <Text style={st.bandEyebrow}>CERTIFIED COACHES</Text>
-                    <Text style={st.bandTitle}>Your expert team</Text>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={st.bandScroll}>
-                      {COACHES.map((c) => (
-                        <View key={c.name} style={st.coach}>
-                          <View style={st.coachAvatar}>
-                            <Glyph emoji={c.emoji} size={56} />
-                          </View>
-                          <View style={st.coachNameRow}>
-                            <Text style={st.coachName} numberOfLines={1}>
-                              {c.name}
-                            </Text>
-                            <Ionicons name="checkmark-circle" size={14} color={C.primary} />
-                          </View>
-                          <Text style={[T.small, { textAlign: 'center' }]} numberOfLines={1}>
-                            {c.role}
-                          </Text>
-                          <View style={st.coachMeta}>
-                            <Ionicons name="star" size={12} color={C.gold} />
-                            <Text style={st.coachMetaText}>
-                              {c.rating} · {c.exp}
-                            </Text>
-                          </View>
-                        </View>
-                      ))}
-                    </ScrollView>
-                  </Animated.View>
-                )}
-
-                <Text style={st.bandEyebrow}>SUCCESS STORIES</Text>
-                <Text style={st.bandTitle}>Real results</Text>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  snapToInterval={slideW + 12}
-                  decelerationRate="fast"
-                  contentContainerStyle={st.bandScroll}
-                  scrollEventThrottle={16}
-                  onScroll={(e) => setSlide(Math.round(e.nativeEvent.contentOffset.x / (slideW + 12)))}>
-                  {TESTIMONIALS.map((t) => (
-                    <View key={t.name} style={[st.quote, { width: slideW }]}>
-                      <View style={st.quoteAvatar}>
-                        <Text style={st.quoteInitial}>{t.name.slice(0, 1)}</Text>
-                      </View>
-                      <View style={st.quoteStars}>
-                        {[0, 1, 2, 3, 4].map((i) => (
-                          <Ionicons key={i} name="star" size={15} color={C.gold} />
-                        ))}
-                      </View>
-                      <Text style={st.quoteText}>“{t.text}”</Text>
-                      <View style={st.quoteFoot}>
-                        <Text style={st.quoteName}>{t.name}</Text>
-                        <View style={st.kgPill}>
-                          <Ionicons name="trending-down" size={13} color={C.primaryDark} />
-                          <Text style={st.kgText}>{t.kg}</Text>
-                        </View>
-                      </View>
-                    </View>
-                  ))}
-                </ScrollView>
-                <View style={st.dots}>
-                  {TESTIMONIALS.map((t, i) => (
-                    <Dot key={t.name} on={i === slide} />
-                  ))}
-                </View>
-              </View>
-            </Animated.View>
-
             {/* Restore */}
             <Animated.View entering={enter(7)}>
               <SectionTitle title="Already subscribed?" />
@@ -339,7 +258,6 @@ export default function PlansScreen() {
                   </View>
                 </View>
                 <Button title="Restore purchases" variant="outline" small icon="refresh" style={{ marginTop: 14 }} onPress={restore} />
-                <Text style={[T.tiny, { marginTop: 8, lineHeight: 16 }]}>Demo store — purchases are saved on this device only, so there is no app-store receipt to check.</Text>
               </Card>
             </Animated.View>
 
@@ -440,10 +358,6 @@ export default function PlansScreen() {
             );
           })}
         </ScrollView>
-        <View style={st.demoNote}>
-          <Ionicons name="information-circle" size={18} color={C.warning} />
-          <Text style={st.demoText}>Demo mode — no real payment will be made.</Text>
-        </View>
         <Button title={`Pay ${formatUSD(total)}`} icon="lock-closed" loading={paying} onPress={pay} />
         <Text style={[T.tiny, { textAlign: 'center', marginTop: 8 }]}>100% secure · Cancel anytime</Text>
       </Sheet>
@@ -452,7 +366,7 @@ export default function PlansScreen() {
         visible={askCancel}
         icon="😢"
         title={`Cancel Fittelo ${premium?.tier === 'pro' ? 'Pro' : 'Smart'}?`}
-        text={`You keep premium until ${premium ? fmtFull(planEnd(premium.since, premium.months)) : 'your plan ends'}, then lose Saathi's unlimited chats and personalised plans. This is a demo, so nothing is charged or refunded.`}
+        text={`You keep premium until ${premium ? fmtFull(planEnd(premium.since, premium.months)) : 'your plan ends'}, then lose Saathi's unlimited chats and personalised plans.`}
         confirm="Cancel plan"
         cancel="Keep plan"
         danger
@@ -465,15 +379,6 @@ export default function PlansScreen() {
       />
     </Screen>
   );
-}
-
-function Dot({ on }: { on: boolean }) {
-  const p = useSharedValue(on ? 1 : 0);
-  useEffect(() => {
-    p.set(withTiming(on ? 1 : 0, { duration: MOTION.base, easing: EASE_OUT }));
-  }, [on, p]);
-  const style = useAnimatedStyle(() => ({ width: interpolate(p.get(), [0, 1], [6, 18]), opacity: interpolate(p.get(), [0, 1], [0.35, 1]) }));
-  return <Animated.View style={[st.dot, style]} />;
 }
 
 function HeroStat({ value, label }: { value: string; label: string }) {
@@ -600,9 +505,6 @@ const st = StyleSheet.create({
   heroMedal: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   heroTitle: { fontSize: 32, fontWeight: '800', color: C.white, letterSpacing: -0.8, marginTop: 12 },
   heroSub: { fontSize: 15, color: 'rgba(255,255,255,0.78)', lineHeight: 22, marginTop: 6 },
-  proof: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12 },
-  stars: { flexDirection: 'row', gap: 1 },
-  proofText: { color: 'rgba(255,255,255,0.85)', fontSize: 13, fontWeight: '600' },
   heroStats: { flexDirection: 'row', alignItems: 'center', marginTop: 18, paddingVertical: 14, borderRadius: R.md, backgroundColor: 'rgba(255,255,255,0.07)', borderWidth: StyleSheet.hairlineWidth * 2, borderColor: 'rgba(255,255,255,0.12)' },
   heroDiv: { width: StyleSheet.hairlineWidth * 2, height: 28, backgroundColor: 'rgba(255,255,255,0.16)' },
   hsValue: { color: C.white, fontSize: 18, fontWeight: '800', fontVariant: ['tabular-nums'], letterSpacing: -0.3 },
@@ -617,27 +519,7 @@ const st = StyleSheet.create({
   ria: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 16, backgroundColor: C.aiSoft, borderWidth: 1, borderColor: C.aiBorder, shadowOpacity: 0, elevation: 0 },
   tryPill: { backgroundColor: C.card, borderRadius: R.pill, paddingHorizontal: 12, paddingVertical: 7, borderWidth: 1, borderColor: C.aiBorder },
   tryText: { fontSize: 13, fontWeight: '700', color: C.ai },
-  band: { marginTop: 26, borderRadius: R.xl, paddingVertical: 22, overflow: 'hidden', backgroundColor: C.surfaceAlt, borderWidth: StyleSheet.hairlineWidth * 2, borderColor: C.borderSoft },
-  bandEyebrow: { color: C.muted, fontSize: 11, fontWeight: '700', letterSpacing: 1, paddingHorizontal: 20 },
-  bandTitle: { color: C.text, fontSize: 22, fontWeight: '800', letterSpacing: -0.4, marginTop: 4, marginBottom: 14, paddingHorizontal: 20 },
-  bandScroll: { paddingHorizontal: 20, gap: 12 },
-  coach: { width: 148, alignItems: 'center', gap: 2, backgroundColor: C.card, borderRadius: R.lg, paddingVertical: 16, paddingHorizontal: 10, borderWidth: StyleSheet.hairlineWidth * 2, borderColor: C.borderSoft },
-  coachAvatar: { width: 64, height: 64, borderRadius: 32, backgroundColor: C.primarySoft, alignItems: 'center', justifyContent: 'center', marginBottom: 8, borderWidth: 3, borderColor: C.primaryTint },
-  coachNameRow: { flexDirection: 'row', alignItems: 'center', gap: 4, maxWidth: '100%' },
   coachName: { fontSize: 15, fontWeight: '700', color: C.text, flexShrink: 1 },
-  coachMeta: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6, backgroundColor: C.surfaceAlt, borderRadius: R.pill, paddingHorizontal: 8, paddingVertical: 3 },
-  coachMetaText: { fontSize: 12, fontWeight: '700', color: C.textSoft, fontVariant: ['tabular-nums'] },
-  quote: { backgroundColor: C.card, borderRadius: R.lg, paddingTop: 34, paddingBottom: 16, paddingHorizontal: 18, marginTop: 26, alignItems: 'center', borderWidth: StyleSheet.hairlineWidth * 2, borderColor: C.borderSoft },
-  quoteAvatar: { position: 'absolute', top: -26, width: 52, height: 52, borderRadius: 26, backgroundColor: C.primarySoft, borderWidth: 3, borderColor: C.card, alignItems: 'center', justifyContent: 'center' },
-  quoteInitial: { fontSize: 20, fontWeight: '800', color: C.primaryDark },
-  quoteStars: { flexDirection: 'row', gap: 3 },
-  quoteText: { fontSize: 15, color: C.text, fontWeight: '600', lineHeight: 22, textAlign: 'center', marginTop: 10 },
-  quoteFoot: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', alignSelf: 'stretch', marginTop: 14, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: C.borderSoft },
-  quoteName: { fontSize: 13, color: C.textSoft, fontWeight: '700' },
-  kgPill: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: C.primarySoft, borderRadius: R.pill, paddingHorizontal: 10, paddingVertical: 4 },
-  kgText: { color: C.primaryDark, fontWeight: '800', fontSize: 13, fontVariant: ['tabular-nums'] },
-  dots: { flexDirection: 'row', justifyContent: 'center', gap: 6, marginTop: 16 },
-  dot: { height: 6, borderRadius: 3, backgroundColor: C.text },
   trust: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 18 },
   cta: { backgroundColor: C.card, paddingHorizontal: 16, paddingTop: 10, borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: C.border },
   ctaSum: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8 },
@@ -663,8 +545,6 @@ const st = StyleSheet.create({
   methodSub: { fontSize: 12, color: C.textSoft, marginTop: 1 },
   radio: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: C.border, alignItems: 'center', justifyContent: 'center' },
   radioDot: { width: 11, height: 11, borderRadius: 6 },
-  demoNote: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: C.warningSoft, borderRadius: R.sm, padding: 10, marginVertical: 12 },
-  demoText: { flex: 1, fontSize: 13, fontWeight: '600', color: C.text },
   success: { flexGrow: 1, alignItems: 'center', paddingHorizontal: 24 },
   celebrate: { width: 222, height: 222, alignItems: 'center', justifyContent: 'center' },
   halo: { position: 'absolute', width: 132, height: 132, borderRadius: 66, borderWidth: 2, borderColor: C.gold },

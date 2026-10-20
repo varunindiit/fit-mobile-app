@@ -242,7 +242,7 @@ function reply(raw: string, c: Ctx): Reply {
 
   if (has('diabetes', 'sugar', 'pcos', 'pcod', 'thyroid', 'bp', 'pressure', 'cholesterol', 'liver', 'doctor', 'nutritionist', 'coach', 'trainer', 'expert', 'human')) {
     return {
-      text: `For medical conditions, a personalised plan really matters. The basics:\n\n• Choose low-GI carbs — brown rice, ragi, jowar, oats\n• Add protein to every meal\n• Eat fibre first, carbs last\n• Limit sweets, juices and maida\n\nWith Fittelo Pro, a certified specialist like Sneha Kulkarni (Diabetes Educator) builds your plan and reviews your logs every week.`,
+      text: `For medical conditions, a personalised plan really matters. The basics:\n\n• Choose low-GI carbs — brown rice, ragi, jowar, oats\n• Add protein to every meal\n• Eat fibre first, carbs last\n• Limit sweets, juices and maida\n\nWith Fittelo Pro, a personal trainer writes your workouts and is a chat or call away. For a medical condition, check with your doctor too.`,
       action: { label: 'See Pro plans', icon: 'diamond', href: '/plans?tier=pro' },
     };
   }
@@ -275,7 +275,7 @@ function reply(raw: string, c: Ctx): Reply {
     return {
       text: c.premium
         ? `You're already on Fittelo ${c.premium.tier === 'pro' ? 'Pro' : 'Smart'} — enjoy unlimited chats with me!`
-        : `Fittelo Smart starts at $17.99 for 3 months and unlocks unlimited Saathi chats, Snap scans and personalised plans. Pro adds your own nutritionist and trainer.`,
+        : `Fittelo Smart starts at $17.99 for 3 months and unlocks every program day, the full class library and complete analytics. Pro adds your own personal trainer.`,
       action: { label: 'See plans', icon: 'diamond', href: '/plans' },
     };
   }
@@ -288,7 +288,7 @@ function reply(raw: string, c: Ctx): Reply {
   }
 
   return {
-    text: `Hmm, I'm still learning about that one\n\nI can help with your calories, meals, high-protein snacks, workouts, water and weight goal. For anything medical, a Fittelo Pro nutritionist is the best person to ask.`,
+    text: `Hmm, I'm still learning about that one\n\nI can help with your calories, meals, high-protein snacks, workouts, water and weight goal. For anything medical, please check with your doctor.`,
     action: { label: 'Talk to a human coach', icon: 'people', href: '/plans?tier=pro' },
   };
 }

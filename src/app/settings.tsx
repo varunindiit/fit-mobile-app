@@ -111,7 +111,7 @@ export default function SettingsScreen() {
             <View style={st.footerLogo}>
               <Image source={LOGO} style={{ width: 13, height: 13 }} contentFit="contain" />
             </View>
-            <Text style={st.footerText}>Fittelo v1.0.0 · Demo build</Text>
+            <Text style={st.footerText}>Fittelo v1.0.0</Text>
           </View>
         </Animated.View>
       </ScrollView>

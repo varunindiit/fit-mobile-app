@@ -363,7 +363,7 @@ export default function SnapScreen() {
           <PressableScale scaleTo={0.96} onPress={nextSample} style={st.sampleChip} accessibilityRole="button">
             <Ionicons name="shuffle" size={15} color={C.white} />
             <Text style={st.sampleText}>
-              Sample: {sample.title} · <Text style={{ color: C.gold }}>Try another</Text>
+              {sample.title} · <Text style={{ color: C.gold }}>Try another</Text>
             </Text>
           </PressableScale>
         )}

@@ -204,8 +204,6 @@ export default function ProWelcomeScreen() {
             </View>
 
             <View style={st.coachStats}>
-              <Stat icon="star" value={trainer.rating.toFixed(1)} label={`${trainer.reviews} reviews`} gold />
-              <View style={st.vDivider} />
               <Stat icon="time-outline" value={`${trainer.years} yrs`} label="Coaching" />
               <View style={st.vDivider} />
               <Stat icon="ribbon-outline" value={String(trainer.certifications.length)} label="Certified" />
@@ -259,7 +257,6 @@ export default function ProWelcomeScreen() {
             <BenefitCard key={b.id} benefit={b} index={i} open={open.includes(b.id)} onToggle={() => toggle(b.id)} />
           ))}
 
-          <Text style={st.footNote}>Coach profiles, calls and messages in this Pro preview are simulated, not a real person.</Text>
         </View>
       </ScrollView>
 
@@ -391,7 +388,6 @@ const st = StyleSheet.create({
   benefitLine: { color: 'rgba(255,255,255,0.62)', fontSize: 12.5, fontWeight: '500', lineHeight: 17, marginTop: 2 },
   benefitDetail: { color: 'rgba(255,255,255,0.78)', fontSize: 13, lineHeight: 19, marginTop: 11, paddingTop: 11, borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: 'rgba(255,255,255,0.14)' },
 
-  footNote: { color: 'rgba(255,255,255,0.5)', fontSize: 11, fontWeight: '600', lineHeight: 16, textAlign: 'center', marginTop: 18, paddingHorizontal: 8 },
 
   footer: { paddingHorizontal: 20, paddingTop: 12, backgroundColor: 'rgba(11,11,12,0.94)', borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: 'rgba(255,255,255,0.12)' },
   primaryBtn: { alignSelf: 'stretch', backgroundColor: C.gold, borderColor: C.gold },

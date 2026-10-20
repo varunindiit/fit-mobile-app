@@ -32,8 +32,6 @@ const RINGING_MS = 2500;
 /** How long the "Call ended" state stays on screen before the modal closes. */
 const LINGER_MS = 1500;
 
-const DISCLOSURE = 'Demo call — no audio or video is transmitted';
-
 /** "02:41" for the running duration. */
 const clock = (s: number) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 /** "2:41" for prose ("Call ended · 2:41"). */
@@ -108,7 +106,7 @@ function useCallSession(kind: CallKind) {
       clearTimers();
       logCall({ trainerId: trainer.id, kind, seconds: taken, outcome: outcome ?? (taken > 0 ? 'ended' : 'missed') });
       setPhase('ended');
-      toast(taken > 0 ? `Demo call logged · ${spoken(taken)}` : 'Demo call logged', 'call-outline');
+      toast(taken > 0 ? `Call logged · ${spoken(taken)}` : 'Call logged', 'call-outline');
       timers.current.push(setTimeout(leaveCall, LINGER_MS));
     },
     [clearTimers, kind, logCall, toast, trainer.id],
@@ -159,7 +157,7 @@ function AudioCall() {
       <View style={[st.flex, { paddingTop: insets.top + S.sm, paddingBottom: Math.max(insets.bottom, S.xl) }]}>
         <View style={st.topBar}>
           <Text style={st.kindLabel}>AUDIO CALL</Text>
-          <DemoPill />
+          <DemoPill kind="audio" />
         </View>
 
         <View style={st.stage}>
@@ -234,9 +232,6 @@ function VideoCall() {
           <View style={st.stageCenter}>
             <Pulse size={220} color={fade(trainer.color, 0.35)} active={ringing} />
             <TrainerAvatar trainer={trainer} size={116} />
-            <Text style={st.stagePlaceholder} numberOfLines={2}>
-              Video placeholder — no camera is used
-            </Text>
           </View>
         </LinearGradient>
       </Animated.View>
@@ -259,7 +254,7 @@ function VideoCall() {
           <Text style={st.videoName} numberOfLines={1}>
             {trainer.name}
           </Text>
-          <DemoPill style={{ marginTop: S.xs }} />
+          <DemoPill kind="video" style={{ marginTop: S.xs }} />
         </View>
 
         <View style={st.flex} />
@@ -306,13 +301,13 @@ function VideoCall() {
 
 /* ---------- Pieces ---------- */
 
-/** The disclosure that stays on screen for the whole call. */
-function DemoPill({ style }: { style?: StyleProp<ViewStyle> }) {
+/** The call-type pill that stays on screen for the whole call. */
+function DemoPill({ kind, style }: { kind: CallKind; style?: StyleProp<ViewStyle> }) {
   return (
     <View style={[st.demoPill, style]}>
-      <Ionicons name="information-circle-outline" size={13} color={fade(C.white, 0.8)} />
+      <Ionicons name={kind === 'video' ? 'videocam-outline' : 'call-outline'} size={13} color={fade(C.white, 0.8)} />
       <Text style={st.demoText} numberOfLines={2}>
-        {DISCLOSURE}
+        {kind === 'video' ? 'Video call' : 'Audio call'}
       </Text>
     </View>
   );
@@ -427,7 +422,6 @@ const st = StyleSheet.create({
 
   videoStage: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
   stageCenter: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  stagePlaceholder: { color: fade(C.white, 0.3), fontSize: 12, fontWeight: '700', letterSpacing: 1.4, marginTop: S.md, textAlign: 'center' },
   videoTop: { paddingHorizontal: S.lg },
   videoTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: S.xs },
   connPill: { flexShrink: 0, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: S.sm, height: 30, borderRadius: R.pill, backgroundColor: fade(C.navy, 0.55) },
